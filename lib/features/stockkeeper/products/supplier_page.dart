@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import '../supplier/add_supplier_page.dart';
 class SupplierPage extends StatelessWidget {
   const SupplierPage({Key? key}) : super(key: key);
 
@@ -89,10 +89,12 @@ class SupplierPage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Add Supplier tapped')));
-        },
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => const AddSupplierPage()),
+  );
+},
+
         backgroundColor: Colors.blueAccent,
         icon: const Icon(Icons.add),
         label: const Text('Add Supplier'),
