@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../widget/stockKeeperReportCard.dart';
 
-// Constants for better maintainability        
+// Constants for better maintainability
 class AppConstants {
   static const primaryDark = Color(0xFF0B1623);
   static const cardPadding = EdgeInsets.all(20.0);
@@ -18,9 +19,13 @@ class StockKeeperReports extends StatefulWidget {
 }
 
 class _StockKeeperReportsState extends State<StockKeeperReports> {
-  final Set<String> _loadingReports = {};
   final Set<String> _downloadingReports = {};
   DateTimeRange? _selectedDateRange;
+  Map<String, dynamic> _quickSalesData = {
+    'totalSales': 0,
+    'totalItems': 0,
+    'topProducts': [],
+  };
 
   @override
   void initState() {
@@ -31,6 +36,24 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
       start: DateTime(now.year, now.month, 1),
       end: now,
     );
+    _loadQuickSalesData();
+  }
+
+  Future<void> _loadQuickSalesData() async {
+    // Simulate API call to get sales data
+    await Future.delayed(const Duration(seconds: 1));
+
+    setState(() {
+      _quickSalesData = {
+        'totalSales': 12540.75,
+        'totalItems': 342,
+        'topProducts': [
+          {'name': 'Premium Widget', 'sales': 4200},
+          {'name': 'Standard Gadget', 'sales': 3800},
+          {'name': 'Basic Tool', 'sales': 2100},
+        ],
+      };
+    });
   }
 
   @override
@@ -38,7 +61,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Select report to view or print',
+          'Stock Keeper Reports',
           style: TextStyle(color: Colors.white, fontSize: 18),
         ),
         backgroundColor: AppConstants.primaryDark,
@@ -75,8 +98,11 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
             constraints: const BoxConstraints(maxWidth: 1000),
             child: Column(
               children: [
-                // Quick info card
-                _buildQuickInfoCard(),
+                // Quick info card with date range
+                _buildDateRangeCard(),
+                const SizedBox(height: 20),
+                // Quick sales report
+                _buildQuickSalesReport(),
                 const SizedBox(height: 20),
                 // Reports grid
                 LayoutBuilder(
@@ -98,8 +124,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       mainAxisSpacing: AppConstants.gridSpacing,
                       childAspectRatio: 1.3,
                       children: [
-                        _buildReportCardWithButtons(
-                          context,
+                        StockKeeperReportCard(
                           reportId: 'daily',
                           title: 'Daily Report',
                           subtitle: 'View today\'s sales & transactions',
@@ -107,14 +132,16 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           gradientColors: [
                             const Color(0xFF1e3c72),
                             const Color(0xFF2a5298),
-                          ], // Deep Navy Blue
-                          onViewTap: () =>
-                              _handleViewReport('daily', 'Daily Report'),
+                          ],
+                          onViewTap: () => _showReportPreview(
+                            'Daily Sales Report',
+                            'This report shows all sales transactions for ${_getFormattedDate(DateTime.now())}.\n\n• Total Sales: Rs${_quickSalesData['totalSales']}\n• Items Sold: ${_quickSalesData['totalItems']}\n• Top Products: ${_quickSalesData['topProducts'].map((p) => p['name']).join(', ')}',
+                          ),
                           onDownloadTap: () =>
                               _handleDownloadReport('daily', 'Daily Report'),
+                          isDownloading: _downloadingReports.contains('daily'),
                         ),
-                        _buildReportCardWithButtons(
-                          context,
+                        StockKeeperReportCard(
                           reportId: 'weekly',
                           title: 'Weekly Report',
                           subtitle: 'Analyze weekly performance',
@@ -122,14 +149,17 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           gradientColors: [
                             const Color(0xFF134e5e),
                             const Color(0xFF71b280),
-                          ], // Dark Teal to Forest Green
-                          onViewTap: () =>
-                              _handleViewReport('weekly', 'Weekly Report'),
+                          ],
+                          onViewTap: () => _showReportPreview(
+                            'Weekly Sales Report',
+                            'Weekly sales summary for ${_getDateRangeText()}:\n\n• Total Revenue: Rs${(_quickSalesData['totalSales'] * 4).toStringAsFixed(2)}\n• Average Daily Sales: Rs${(_quickSalesData['totalSales'] / 7).toStringAsFixed(2)}\n• Most Sold Day: Friday\n• Product Trends: Premium products up 12%',
+                          ),
                           onDownloadTap: () =>
                               _handleDownloadReport('weekly', 'Weekly Report'),
+                          isDownloading: _downloadingReports.contains('weekly'),
                         ),
-                        _buildReportCardWithButtons(
-                          context,
+
+                        StockKeeperReportCard(
                           reportId: 'monthly',
                           title: 'Monthly Report',
                           subtitle: 'Monthly business insights',
@@ -137,16 +167,20 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           gradientColors: [
                             const Color(0xFF8B4513),
                             const Color(0xFFD2691E),
-                          ], // Dark Brown to Bronze
-                          onViewTap: () =>
-                              _handleViewReport('monthly', 'Monthly Report'),
+                          ],
+                          onViewTap: () => _showReportPreview(
+                            'Monthly Sales Report',
+                            'Monthly performance overview:\n\n• Total Sales: Rs${(_quickSalesData['totalSales'] * 30).toStringAsFixed(2)}\n• New Customers: 45\n• Returns: 5 (1.2% of sales)\n• Inventory Turnover: 2.4x\n• Profit Margin: 32.5%',
+                          ),
                           onDownloadTap: () => _handleDownloadReport(
                             'monthly',
                             'Monthly Report',
                           ),
+                          isDownloading: _downloadingReports.contains(
+                            'monthly',
+                          ),
                         ),
-                        _buildReportCardWithButtons(
-                          context,
+                        StockKeeperReportCard(
                           reportId: 'sales',
                           title: 'Sales Report',
                           subtitle: 'Detailed sales analytics',
@@ -154,14 +188,16 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           gradientColors: [
                             const Color(0xFF2C5364),
                             const Color(0xFF203A43),
-                          ], // Dark Slate Blue
-                          onViewTap: () =>
-                              _handleViewReport('sales', 'Sales Report'),
+                          ],
+                          onViewTap: () => _showReportPreview(
+                            'Detailed Sales Analysis',
+                            'Comprehensive sales data for ${_getDateRangeText()}:\n\n• Sales by Category:\n   - Electronics: 42%\n   - Home Goods: 28%\n   - Clothing: 22%\n   - Other: 8%\n\n• Sales by Hour:\n   - Peak: 2PM (18% of sales)\n   - Slowest: 9AM (4% of sales)\n\n• Customer Demographics:\n   - Repeat Customers: 65%\n   - New Customers: 35%',
+                          ),
                           onDownloadTap: () =>
                               _handleDownloadReport('sales', 'Sales Report'),
+                          isDownloading: _downloadingReports.contains('sales'),
                         ),
-                        _buildReportCardWithButtons(
-                          context,
+                        StockKeeperReportCard(
                           reportId: 'inventory',
                           title: 'Inventory Report',
                           subtitle: 'Stock levels & movements',
@@ -169,18 +205,20 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           gradientColors: [
                             const Color(0xFF4B0082),
                             const Color(0xFF8B008B),
-                          ], // Deep Purple to Dark Magenta
-                          onViewTap: () => _handleViewReport(
-                            'inventory',
-                            'Inventory Report',
+                          ],
+                          onViewTap: () => _showReportPreview(
+                            'Inventory Status Report',
+                            'Current inventory status:\n\n• Total SKUs: 142\n• Low Stock Items: 18\n• Out of Stock: 5\n• Overstocked Items: 7\n\nRecent Movements:\n• Received: 45 items\n• Sold: 342 items\n• Damaged: 3 items\n• Returned: 12 items',
                           ),
                           onDownloadTap: () => _handleDownloadReport(
                             'inventory',
                             'Inventory Report',
                           ),
+                          isDownloading: _downloadingReports.contains(
+                            'inventory',
+                          ),
                         ),
-                        _buildReportCardWithButtons(
-                          context,
+                        StockKeeperReportCard(
                           reportId: 'profit',
                           title: 'Profit Report',
                           subtitle: 'Profit margins & analysis',
@@ -188,11 +226,14 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           gradientColors: [
                             const Color(0xFF1a252f),
                             const Color(0xFF2b5876),
-                          ], // Midnight Blue to Steel Blue
-                          onViewTap: () =>
-                              _handleViewReport('profit', 'Profit Report'),
+                          ],
+                          onViewTap: () => _showReportPreview(
+                            'Profitability Analysis',
+                            'Profit report for ${_getDateRangeText()}:\n\n• Gross Revenue: Rs${(_quickSalesData['totalSales'] * 30).toStringAsFixed(2)}\n• COGS: Rs${(_quickSalesData['totalSales'] * 30 * 0.6).toStringAsFixed(2)}\n• Gross Profit: Rs${(_quickSalesData['totalSales'] * 30 * 0.4).toStringAsFixed(2)}\n• Expenses: Rs${(_quickSalesData['totalSales'] * 30 * 0.08).toStringAsFixed(2)}\n• Net Profit: Rs${(_quickSalesData['totalSales'] * 30 * 0.32).toStringAsFixed(2)}\n\nProfit by Category:\n• Electronics: 38%\n• Home Goods: 42%\n• Clothing: 15%\n• Other: 5%',
+                          ),
                           onDownloadTap: () =>
                               _handleDownloadReport('profit', 'Profit Report'),
+                          isDownloading: _downloadingReports.contains('profit'),
                         ),
                       ],
                     );
@@ -206,149 +247,32 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     );
   }
 
-  // Handler methods for report actions
-  Future<void> _handleViewReport(String reportId, String reportName) async {
-    setState(() {
-      _loadingReports.add(reportId);
-    });
-
-    try {
-      // Show loading message
-      _showSnackBar('Loading $reportName...', isLoading: true);
-
-      // Simulate report loading delay
-      await Future.delayed(const Duration(seconds: 2));
-
-      // Here you would navigate to the actual report view
-      // Navigator.pushNamed(context, '/report-view', arguments: reportId);
-
-      _showSnackBar('$reportName loaded successfully!', isSuccess: true);
-    } catch (e) {
-      _showSnackBar(
-        'Failed to load $reportName. Please try again.',
-        isError: true,
-      );
-    } finally {
-      setState(() {
-        _loadingReports.remove(reportId);
-      });
-    }
-  }
-
-  Future<void> _handleDownloadReport(String reportId, String reportName) async {
-    setState(() {
-      _downloadingReports.add(reportId);
-    });
-
-    try {
-      // Show downloading message
-      _showSnackBar('Downloading $reportName...', isLoading: true);
-
-      // Simulate download delay
-      await Future.delayed(const Duration(seconds: 3));
-
-      // Here you would implement the actual download logic
-      // await _downloadService.downloadReport(reportId);
-
-      _showSnackBar('$reportName downloaded successfully!', isSuccess: true);
-    } catch (e) {
-      _showSnackBar(
-        'Failed to download $reportName. Please try again.',
-        isError: true,
-      );
-    } finally {
-      setState(() {
-        _downloadingReports.remove(reportId);
-      });
-    }
-  }
-
-  void _showSnackBar(
-    String message, {
-    bool isLoading = false,
-    bool isSuccess = false,
-    bool isError = false,
-  }) {
-    Color backgroundColor;
-    IconData icon;
-
-    if (isLoading) {
-      backgroundColor = Colors.blue.shade600;
-      icon = Icons.info_outline;
-    } else if (isSuccess) {
-      backgroundColor = Colors.green.shade600;
-      icon = Icons.check_circle_outline;
-    } else if (isError) {
-      backgroundColor = Colors.red.shade600;
-      icon = Icons.error_outline;
-    } else {
-      backgroundColor = Colors.grey.shade600;
-      icon = Icons.info_outline;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(icon, color: Colors.white, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: backgroundColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
-        ),
+  // New method to show report preview
+  void _showReportPreview(String title, String content) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(child: Text(content)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showSnackBar('Report exported successfully!', isSuccess: true);
+            },
+            child: const Text('Export as PDF'),
+          ),
+        ],
       ),
     );
   }
 
-  // Helper methods for date range functionality
-  Future<void> _showDateRangePicker() async {
-    final DateTimeRange? picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      initialDateRange: _selectedDateRange,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF2a5298),
-              onPrimary: Colors.white,
-              surface: Color(0xFF1a252f),
-              onSurface: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null && picked != _selectedDateRange) {
-      setState(() {
-        _selectedDateRange = picked;
-      });
-      _showSnackBar('Date range updated successfully!', isSuccess: true);
-    }
-  }
-
-  String _getDateRangeText() {
-    if (_selectedDateRange == null) return 'Select Date Range';
-
-    final startDate = _selectedDateRange!.start;
-    final endDate = _selectedDateRange!.end;
-
-    return '${startDate.day}/${startDate.month} - ${endDate.day}/${endDate.month}';
-  }
-
-  Widget _buildQuickInfoCard() {
+  // Enhanced date range card
+  Widget _buildDateRangeCard() {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -364,41 +288,88 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
             end: Alignment.bottomRight,
           ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.info_outline, color: Colors.white, size: 24),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Reports for selected period',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+            Row(
+              children: [
+                const Icon(Icons.date_range, color: Colors.white, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'Selected Date Range',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _selectedDateRange != null
-                        ? 'From ${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month}/${_selectedDateRange!.start.year} to ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}/${_selectedDateRange!.end.year}'
-                        : 'Select a date range to filter reports',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            TextButton(
-              onPressed: _showDateRangePicker,
-              child: const Text(
-                'Change',
-                style: TextStyle(color: Colors.white),
-              ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'From:',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        _selectedDateRange != null
+                            ? _getFormattedDate(_selectedDateRange!.start)
+                            : 'Not selected',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'To:',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        _selectedDateRange != null
+                            ? _getFormattedDate(_selectedDateRange!.end)
+                            : 'Not selected',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: _showDateRangePicker,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.15),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.buttonBorderRadius,
+                      ),
+                    ),
+                  ),
+                  child: const Text('Change Range'),
+                ),
+              ],
             ),
           ],
         ),
@@ -406,219 +377,238 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     );
   }
 
-  Widget _buildReportCardWithButtons(
-    BuildContext context, {
-    required String reportId,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required List<Color> gradientColors,
-    required VoidCallback onViewTap,
-    required VoidCallback onDownloadTap,
-  }) {
-    final isViewLoading = _loadingReports.contains(reportId);
-    final isDownloadLoading = _downloadingReports.contains(reportId);
-
-    return Semantics(
-      label: '$title card. $subtitle',
-      button: true,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Tooltip(
-          message: 'Click to view or download $title',
-          child: Card(
-            elevation: 8,
-            shadowColor: Colors.black26,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-            ),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-                gradient: LinearGradient(
-                  colors: gradientColors,
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+  // New quick sales report widget
+  Widget _buildQuickSalesReport() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF4B0082), Color(0xFF8B008B)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.bar_chart, color: Colors.white, size: 24),
+                const SizedBox(width: 12),
+                const Text(
+                  'Quick Sales Summary',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: gradientColors[0].withOpacity(0.4),
-                    offset: const Offset(0, 8),
-                    blurRadius: 16,
-                    spreadRadius: 1,
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  onPressed: _loadQuickSalesData,
+                  tooltip: 'Refresh sales data',
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _buildSalesMetric(
+                  'Total Sales',
+                  '${_quickSalesData['totalSales'].toStringAsFixed(2)}',
+                  Icons.attach_money,
+                ),
+                const SizedBox(width: 16),
+                _buildSalesMetric(
+                  'Items Sold',
+                  _quickSalesData['totalItems'].toString(),
+                  Icons.shopping_cart,
+                ),
+                const SizedBox(width: 16),
+                _buildSalesMetric(
+                  'Avg. Order',
+                  '${(_quickSalesData['totalSales'] / (_quickSalesData['totalItems'] > 0 ? _quickSalesData['totalItems'] : 1)).toStringAsFixed(2)}',
+                  Icons.assessment,
+                  prefix: 'LKR',
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_quickSalesData['topProducts'].isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Top Selling Products:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    offset: const Offset(0, 2),
-                    blurRadius: 6,
-                    spreadRadius: 0,
-                  ),
+                  const SizedBox(height: 8),
+                  ..._quickSalesData['topProducts'].map<Widget>((product) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              product['name'],
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
+                          ),
+                          Text(
+                            'Rs${product['sales']}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 ],
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.1),
-                  width: 1,
-                ),
               ),
-              child: Padding(
-                padding: AppConstants.cardPadding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        _buildReportIcon(icon),
-                        const Spacer(),
-                        _buildStatusIndicator(
-                          isViewLoading || isDownloadLoading,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 13,
-                        color: Colors.white.withOpacity(0.9),
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildActionButtons(
-                      context,
-                      onViewTap: onViewTap,
-                      onDownloadTap: onDownloadTap,
-                      gradientColors: gradientColors,
-                      isViewLoading: isViewLoading,
-                      isDownloadLoading: isDownloadLoading,
-                      reportTitle: title,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildReportIcon(IconData icon) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(AppConstants.iconContainerRadius),
-      ),
-      child: Icon(icon, size: 24, color: Colors.white),
-    );
-  }
-
-  Widget _buildStatusIndicator(bool isLoading) {
-    if (!isLoading) return const SizedBox.shrink();
-
-    return Container(
-      width: 20,
-      height: 20,
-      padding: const EdgeInsets.all(2),
-      child: const CircularProgressIndicator(
-        strokeWidth: 2,
-        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildActionButtons(
-    BuildContext context, {
-    required VoidCallback onViewTap,
-    required VoidCallback onDownloadTap,
-    required List<Color> gradientColors,
-    required bool isViewLoading,
-    required bool isDownloadLoading,
-    required String reportTitle,
+  Widget _buildSalesMetric(
+    String label,
+    String value,
+    IconData icon, {
+    String? prefix,
   }) {
-    return Row(
-      children: [
-        Expanded(
-          child: Semantics(
-            label: 'View $reportTitle',
-            button: true,
-            child: ElevatedButton.icon(
-              onPressed: isViewLoading || isDownloadLoading ? null : onViewTap,
-              icon: isViewLoading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.visibility, size: 16),
-              label: Text(isViewLoading ? 'Loading...' : 'View'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.15),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppConstants.buttonBorderRadius,
-                  ),
-                  side: BorderSide(
-                    color: Colors.white.withOpacity(0.3),
-                    width: 1,
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 7),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 16, color: Colors.white.withOpacity(0.8)),
+                const SizedBox(width: 7),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 12,
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-              ),
+              ],
             ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Semantics(
-            label: 'Download $reportTitle',
-            button: true,
-            child: ElevatedButton.icon(
-              onPressed: isViewLoading || isDownloadLoading
-                  ? null
-                  : onDownloadTap,
-              icon: isDownloadLoading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : const Icon(Icons.download, size: 16),
-              label: Text(isDownloadLoading ? 'Downloading...' : 'Download'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: gradientColors[1].withOpacity(0.8),
-                foregroundColor: Colors.white,
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppConstants.buttonBorderRadius,
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (prefix != null)
+                  Text(
+                    prefix,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 8),
-              ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper methods for date formatting
+  String _getFormattedDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _getDateRangeText() {
+    if (_selectedDateRange == null) return 'Select Date Range';
+
+    final startDate = _selectedDateRange!.start;
+    final endDate = _selectedDateRange!.end;
+
+    return '${_getFormattedDate(startDate)} - ${_getFormattedDate(endDate)}';
+  }
+
+  // Method to handle report download
+  void _handleDownloadReport(String reportId, String reportName) async {
+    setState(() {
+      _downloadingReports.add(reportId);
+    });
+
+    // Simulate download delay
+    await Future.delayed(const Duration(seconds: 2));
+
+    setState(() {
+      _downloadingReports.remove(reportId);
+    });
+
+    _showSnackBar('$reportName downloaded successfully!', isSuccess: true);
+  }
+
+  // Method to show the date range picker dialog
+  Future<void> _showDateRangePicker() async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: _selectedDateRange,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: AppConstants.primaryDark,
+              onPrimary: Colors.white,
+              surface: Colors.white,
+              onSurface: AppConstants.primaryDark,
             ),
           ),
-        ),
-      ],
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDateRange) {
+      setState(() {
+        _selectedDateRange = picked;
+      });
+      _loadQuickSalesData();
+    }
+  }
+
+  // Helper method to show a SnackBar
+  void _showSnackBar(String message, {bool isSuccess = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isSuccess ? Colors.green : Colors.red,
+        duration: const Duration(seconds: 2),
+      ),
     );
   }
 }
