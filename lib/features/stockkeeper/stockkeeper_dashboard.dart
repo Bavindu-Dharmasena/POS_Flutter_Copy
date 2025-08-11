@@ -24,22 +24,122 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard> {
   final List<String> topProducts = ["Product A","Product B","Product C","Product D","Product E"];
   final List<String> topCategories = ["Beverages","Snacks","Dairy","Bakery","Fruits"];
 
-  // Focus nodes: 4 stats + 2 list cards + 1 back (exclude placeholder)
-  final List<FocusNode> _nodes = List.generate(7, (i) => FocusNode(debugLabel: 'dash_$i'));
+  // Drag & drop items: 4 stats + 2 lists + Back
+  late List<_ItemSpec> _items;
+
+  // Focus management mirrors the item order
+  final List<FocusNode> _nodes = [];
   int _focusedIndex = 0;
+
+  // Drag visual state
+  int? _draggingIndex;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_nodes[_focusedIndex].hasFocus) _nodes[_focusedIndex].requestFocus();
-    });
-  }
 
-  @override
-  void dispose() {
-    for (final n in _nodes) n.dispose();
-    super.dispose();
+    _items = [
+      _ItemSpec(
+        id: 'monthly_sales',
+        builder: (focus, s) => ModernStatTile(
+          focusNode: focus,
+          title: 'Monthly Sales',
+          value: 'Rs. 250,000',
+          icon: Feather.trending_up,
+          sizeScale: s,
+          gradient: const LinearGradient(
+            colors: [Color(0xFFEF4444), Color(0xFFEC4899)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+          onActivate: () => _navigateTo(const StockKeeperReports()),
+        ),
+      ),
+      _ItemSpec(
+        id: 'total_sales',
+        builder: (focus, s) => ModernStatTile(
+          focusNode: focus,
+          title: 'Total Sales',
+          value: 'Rs. 3,400,000',
+          icon: Feather.credit_card,
+          sizeScale: s,
+          gradient: const LinearGradient(
+            colors: [Color(0xFF10B981), Color(0xFF059669)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+          onActivate: () => _navigateTo(const StockKeeperReports()),
+        ),
+      ),
+      _ItemSpec(
+        id: 'net_profit',
+        builder: (focus, s) => ModernStatTile(
+          focusNode: focus,
+          title: 'Net Profit',
+          value: 'Rs. 750,000',
+          icon: Feather.bar_chart,
+          sizeScale: s,
+          gradient: const LinearGradient(
+            colors: [Color.fromARGB(255, 8, 26, 56), Color.fromARGB(255, 1, 14, 37)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+          onActivate: () => _navigateTo(const StockKeeperReports()),
+        ),
+      ),
+      _ItemSpec(
+        id: 'daily_sales',
+        builder: (focus, s) => ModernStatTile(
+          focusNode: focus,
+          title: 'Daily Sales Amount',
+          value: 'Rs. 15,800',
+          icon: Feather.dollar_sign,
+          sizeScale: s,
+          gradient: const LinearGradient(
+            colors: [Color.fromARGB(255, 17, 1, 55), Color.fromARGB(255, 9, 5, 73)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+          onActivate: () => _navigateTo(const StockKeeperCashier()),
+        ),
+      ),
+      _ItemSpec(
+        id: 'top_products',
+        builder: (focus, s) => ModernListTileCard(
+          focusNode: focus,
+          title: 'Top Products',
+          icon: Feather.package,
+          sizeScale: s,
+          gradient: const LinearGradient(
+            colors: [Color(0xFFF97316), Color(0xFFEAB308)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+          items: topProducts,
+          onActivate: () => _navigateTo(const StockKeeperProducts()),
+        ),
+      ),
+      _ItemSpec(
+        id: 'top_categories',
+        builder: (focus, s) => ModernListTileCard(
+          focusNode: focus,
+          title: 'Top Categories',
+          icon: Feather.layers,
+          sizeScale: s,
+          gradient: const LinearGradient(
+            colors: [Color(0xFFEC4899), Color(0xFFF43F5E)],
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+          ),
+          items: topCategories,
+          onActivate: () => _navigateTo(const StockKeeperInventory()),
+        ),
+      ),
+      _ItemSpec(
+        id: 'back',
+        builder: (focus, s) => _BackTile(
+          focusNode: focus,
+          sizeScale: s,
+          onActivate: () => Navigator.pop(context),
+        ),
+      ),
+    ];
+
+    _ensureNodes(_items.length, requestFirstFocus: true);
   }
 
   /* ---------- Responsiveness helpers ---------- */
@@ -52,10 +152,30 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard> {
 
   double _calcAspectRatio(int cols) {
     switch (cols) {
-      case 1: return 1.05;  // a bit taller on single column
-      case 2: return 1.10;  // comfy phone/tablet
-      case 3: return 1.25;  // wider on tablet/desktop
-      default: return 1.40; // roomy on large desktop
+      case 1: return 1.25;
+      case 2: return 1.22;
+      case 3: return 1.30;
+      default: return 1.40;
+    }
+  }
+
+  double _calcSizeScale(double tileWidth, double textScale) {
+    // Scales font/paddings so tiles are smaller on mobile but still readable
+    return (tileWidth / 260.0).clamp(0.78, 1.05) * textScale.clamp(1.0, 1.12);
+  }
+
+  void _ensureNodes(int count, {bool requestFirstFocus = false}) {
+    while (_nodes.length > count) {
+      _nodes.removeLast().dispose();
+    }
+    while (_nodes.length < count) {
+      _nodes.add(FocusNode(debugLabel: 'dash_${_nodes.length}'));
+    }
+    if (requestFirstFocus && _nodes.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _focusedIndex = _focusedIndex.clamp(0, _nodes.length - 1);
+        if (!_nodes[_focusedIndex].hasFocus) _nodes[_focusedIndex].requestFocus();
+      });
     }
   }
 
@@ -104,8 +224,43 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard> {
     );
   }
 
+  void _reorder(int from, int to) {
+    if (from == to || from < 0 || to < 0 || from >= _items.length || to >= _items.length) return;
+
+    final FocusNode? focusedNode =
+        (_nodes.isNotEmpty && _focusedIndex < _nodes.length) ? _nodes[_focusedIndex] : null;
+
+    setState(() {
+      final spec = _items.removeAt(from);
+      _items.insert(to, spec);
+
+      final node = _nodes.removeAt(from);
+      _nodes.insert(to, node);
+
+      if (focusedNode != null) {
+        final idx = _nodes.indexOf(focusedNode);
+        if (idx != -1) _focusedIndex = idx;
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_nodes.isNotEmpty && _focusedIndex < _nodes.length) {
+        _nodes[_focusedIndex].requestFocus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    for (final n in _nodes) n.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final textScale = media.textScaleFactor;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0B1623),
       appBar: AppBar(
@@ -136,89 +291,11 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard> {
               final cols = _calcColumns(constraints.maxWidth);
               final ratio = _calcAspectRatio(cols);
 
-              // Build tiles (exclude placeholder for narrow screens to keep focus logic intuitive)
-              final List<Widget> tiles = [
-                // 0 - Monthly Sales → Reports
-                ModernStatTile(
-                  focusNode: _nodes[0],
-                  title: 'Monthly Sales',
-                  value: 'Rs. 250,000',
-                  icon: Feather.trending_up,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFEF4444), Color(0xFFEC4899)],
-                    begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  ),
-                  onActivate: () => _navigateTo(const StockKeeperReports()),
-                ),
-                // 1 - Total Sales → Reports
-                ModernStatTile(
-                  focusNode: _nodes[1],
-                  title: 'Total Sales',
-                  value: 'Rs. 3,400,000',
-                  icon: Feather.credit_card,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF10B981), Color(0xFF059669)],
-                    begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  ),
-                  onActivate: () => _navigateTo(const StockKeeperReports()),
-                ),
-                // 2 - Net Profit → Reports
-                ModernStatTile(
-                  focusNode: _nodes[2],
-                  title: 'Net Profit',
-                  value: 'Rs. 750,000',
-                  icon: Feather.bar_chart,
-                  gradient: const LinearGradient(
-                    colors: [Color.fromARGB(255, 8, 26, 56), Color.fromARGB(255, 1, 14, 37)],
-                    begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  ),
-                  onActivate: () => _navigateTo(const StockKeeperReports()),
-                ),
-                // 3 - Daily Sales Amount → Cashier
-                ModernStatTile(
-                  focusNode: _nodes[3],
-                  title: 'Daily Sales Amount',
-                  value: 'Rs. 15,800',
-                  icon: Feather.dollar_sign,
-                  gradient: const LinearGradient(
-                    colors: [Color.fromARGB(255, 17, 1, 55), Color.fromARGB(255, 9, 5, 73)],
-                    begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  ),
-                  onActivate: () => _navigateTo(const StockKeeperCashier()),
-                ),
-                // 4 - Top Products → Products
-                ModernListTileCard(
-                  focusNode: _nodes[4],
-                  title: 'Top Products',
-                  icon: Feather.package,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFF97316), Color(0xFFEAB308)],
-                    begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  ),
-                  items: topProducts,
-                  onActivate: () => _navigateTo(const StockKeeperProducts()),
-                ),
-                // 5 - Top Categories → Inventory
-                ModernListTileCard(
-                  focusNode: _nodes[5],
-                  title: 'Top Categories',
-                  icon: Feather.layers,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFEC4899), Color(0xFFF43F5E)],
-                    begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  ),
-                  items: topCategories,
-                  onActivate: () => _navigateTo(const StockKeeperInventory()),
-                ),
-                // 6 - Back
-                _BackTile(
-                  focusNode: _nodes[6],
-                  onActivate: () => Navigator.pop(context),
-                ),
-              ];
-
-              // Placeholder only on roomier screens (>= 3 columns)
-              final showPlaceholder = cols >= 3;
+              const gridHPadding = 8.0 * 2;
+              const crossSpacing = 16.0;
+              final tileWidth =
+                  (constraints.maxWidth - gridHPadding - (cols - 1) * crossSpacing) / cols;
+              final sizeScale = _calcSizeScale(tileWidth, textScale);
 
               return Focus(
                 autofocus: true,
@@ -236,13 +313,14 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard> {
                     actions: <Type, Action<Intent>>{
                       DirectionalFocusIntent: CallbackAction<DirectionalFocusIntent>(
                         onInvoke: (intent) {
-                          final key = switch (intent.direction) {
-                            TraversalDirection.left  => LogicalKeyboardKey.arrowLeft,
-                            TraversalDirection.right => LogicalKeyboardKey.arrowRight,
-                            TraversalDirection.up    => LogicalKeyboardKey.arrowUp,
-                            TraversalDirection.down  => LogicalKeyboardKey.arrowDown,
-                            _ => LogicalKeyboardKey.arrowRight,
-                          };
+                          LogicalKeyboardKey key;
+                          switch (intent.direction) {
+                            case TraversalDirection.left:  key = LogicalKeyboardKey.arrowLeft;  break;
+                            case TraversalDirection.right: key = LogicalKeyboardKey.arrowRight; break;
+                            case TraversalDirection.up:    key = LogicalKeyboardKey.arrowUp;    break;
+                            case TraversalDirection.down:  key = LogicalKeyboardKey.arrowDown;  break;
+                            default:                       key = LogicalKeyboardKey.arrowRight; break;
+                          }
                           final next = _nextIndex(
                             current: _focusedIndex,
                             cols: cols,
@@ -276,12 +354,26 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard> {
                             mainAxisSpacing: 16,
                             childAspectRatio: ratio,
                           ),
-                          itemCount: tiles.length + (showPlaceholder ? 1 : 0),
+                          itemCount: _items.length,
                           itemBuilder: (context, index) {
-                            if (showPlaceholder && index == tiles.length) {
-                              return _placeholderCard();
-                            }
-                            return tiles[index];
+                            return _DraggableDashTile(
+                              key: ValueKey(_items[index].id),
+                              index: index,
+                              isDragging: _draggingIndex == index,
+                              focusNode: _nodes[index],
+                              sizeScale: sizeScale,
+                              buildTile: () => _items[index].builder(_nodes[index], sizeScale),
+                              buildFeedback: () => _items[index].builder(null, (sizeScale * 0.92).clamp(0.7, 1.0)),
+                              onActivate: () {
+                                final ctx = _nodes[index].context;
+                                if (ctx != null) {
+                                  Actions.invoke(ctx, const ActivateIntent());
+                                }
+                              },
+                              onDragStarted: () => setState(() => _draggingIndex = index),
+                              onDragEnded: () => setState(() => _draggingIndex = null),
+                              onAccept: (from) => _reorder(from, index),
+                            );
                           },
                         ),
                       ),
@@ -295,56 +387,82 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard> {
       ),
     );
   }
+}
 
-  Widget _placeholderCard() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [const Color(0xFF475569).withOpacity(0.5), const Color(0xFF334155).withOpacity(0.5)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            offset: const Offset(0, 8),
-            blurRadius: 16,
+/* -------------------- Item spec -------------------- */
+class _ItemSpec {
+  final String id;
+  final Widget Function(FocusNode? focusNode, double sizeScale) builder;
+  _ItemSpec({required this.id, required this.builder});
+}
+
+/* -------------------- Draggable wrapper -------------------- */
+class _DraggableDashTile extends StatelessWidget {
+  final int index;
+  final bool isDragging;
+  final FocusNode? focusNode;
+  final double sizeScale;
+  final Widget Function() buildTile;
+  final Widget Function() buildFeedback;
+  final VoidCallback onActivate;
+  final VoidCallback onDragStarted;
+  final VoidCallback onDragEnded;
+  final ValueChanged<int> onAccept;
+
+  const _DraggableDashTile({
+    super.key,
+    required this.index,
+    required this.isDragging,
+    required this.focusNode,
+    required this.sizeScale,
+    required this.buildTile,
+    required this.buildFeedback,
+    required this.onActivate,
+    required this.onDragStarted,
+    required this.onDragEnded,
+    required this.onAccept,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DragTarget<int>(
+      onWillAccept: (from) => from != null && from != index,
+      onAccept: onAccept,
+      builder: (context, candidateData, rejected) {
+        final isReceiving = candidateData.isNotEmpty;
+
+        return Draggable<int>(
+          data: index,
+          onDragStarted: onDragStarted,
+          onDragEnd: (_) => onDragEnded(),
+          feedback: Material(
+            color: Colors.transparent,
+            child: Transform.scale(
+              scale: 0.9,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 160, maxWidth: 200),
+                child: buildFeedback(),
+              ),
+            ),
           ),
-        ],
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 64, height: 64,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(32),
-              ),
-              child: Center(
-                child: Container(
-                  width: 32, height: 32,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-              ),
+          childWhenDragging: Opacity(opacity: 0.30, child: buildTile()),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(26),
+              boxShadow: isReceiving
+                  ? [BoxShadow(color: Colors.white.withOpacity(0.35), blurRadius: 18, spreadRadius: 1)]
+                  : null,
             ),
-            const SizedBox(height: 16),
-            Text('More stats coming soon',
-              style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14),
-            ),
-          ],
-        ),
-      ),
+            child: buildTile(),
+          ),
+        );
+      },
     );
   }
 }
 
-/* -------------------- Tiles -------------------- */
+/* -------------------- Tiles (with size scaling) -------------------- */
 
 class ModernStatTile extends StatefulWidget {
   final String title;
@@ -353,6 +471,7 @@ class ModernStatTile extends StatefulWidget {
   final LinearGradient gradient;
   final FocusNode? focusNode;
   final VoidCallback? onActivate;
+  final double sizeScale;
 
   const ModernStatTile({
     super.key,
@@ -362,6 +481,7 @@ class ModernStatTile extends StatefulWidget {
     required this.gradient,
     this.focusNode,
     this.onActivate,
+    this.sizeScale = 1.0,
   });
 
   @override
@@ -384,6 +504,8 @@ class _ModernStatTileState extends State<ModernStatTile>
 
   @override
   Widget build(BuildContext context) {
+    final s = widget.sizeScale;
+
     return FocusableActionDetector(
       focusNode: widget.focusNode,
       onShowFocusHighlight: (hasFocus) => setState(() => _focused = hasFocus),
@@ -409,7 +531,7 @@ class _ModernStatTileState extends State<ModernStatTile>
               child: Container(
                 decoration: BoxDecoration(
                   gradient: widget.gradient,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular((24 * s).clamp(18, 24)),
                   border: Border.all(
                     color: _focused ? Colors.white.withOpacity(0.9) : Colors.white.withOpacity(0.08),
                     width: _focused ? 2 : 1,
@@ -428,17 +550,25 @@ class _ModernStatTileState extends State<ModernStatTile>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(widget.icon, size: 48, color: Colors.white),
-                      const SizedBox(height: 16),
+                      Icon(widget.icon, size: (44 * s).clamp(34, 48), color: Colors.white),
+                      SizedBox(height: (14 * s).clamp(10, 16)),
                       Text(
                         widget.title,
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: TextStyle(
+                          fontSize: (16 * s).clamp(14, 18),
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                         textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: (6 * s).clamp(4, 8)),
                       Text(
                         widget.value,
-                        style: const TextStyle(fontSize: 16, color: Colors.white70, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                          fontSize: (14 * s).clamp(12, 16),
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
                   ),
@@ -462,6 +592,7 @@ class ModernListTileCard extends StatefulWidget {
   final List<String> items;
   final FocusNode? focusNode;
   final VoidCallback? onActivate;
+  final double sizeScale;
 
   const ModernListTileCard({
     super.key,
@@ -471,6 +602,7 @@ class ModernListTileCard extends StatefulWidget {
     required this.items,
     this.focusNode,
     this.onActivate,
+    this.sizeScale = 1.0,
   });
 
   @override
@@ -493,6 +625,8 @@ class _ModernListTileCardState extends State<ModernListTileCard>
 
   @override
   Widget build(BuildContext context) {
+    final s = widget.sizeScale;
+
     return FocusableActionDetector(
       focusNode: widget.focusNode,
       onShowFocusHighlight: (hasFocus) => setState(() => _focused = hasFocus),
@@ -516,10 +650,10 @@ class _ModernListTileCardState extends State<ModernListTileCard>
             return Transform.scale(
               scale: _scaleAnimation.value * (_focused ? 1.03 : 1.0),
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all((14 * s).clamp(10, 16)),
                 decoration: BoxDecoration(
                   gradient: widget.gradient,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular((24 * s).clamp(18, 24)),
                   border: Border.all(
                     color: _focused ? Colors.white.withOpacity(0.9) : Colors.white.withOpacity(0.08),
                     width: _focused ? 2 : 1,
@@ -539,29 +673,33 @@ class _ModernListTileCardState extends State<ModernListTileCard>
                   children: [
                     Row(
                       children: [
-                        Icon(widget.icon, size: 36, color: Colors.white),
+                        Icon(widget.icon, size: (34 * s).clamp(28, 36), color: Colors.white),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             widget.title,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: TextStyle(
+                              fontSize: (16 * s).clamp(14, 18),
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    // Prevent overflow on short tiles: scroll the list area if needed
+                    SizedBox(height: (10 * s).clamp(8, 12)),
                     Expanded(
                       child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: widget.items
                               .map((item) => Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 4),
+                                    padding: EdgeInsets.symmetric(vertical: (3.5 * s).clamp(2, 6)),
                                     child: Row(
                                       children: [
                                         Container(
-                                          width: 8, height: 8,
+                                          width: (8 * s).clamp(6, 8),
+                                          height: (8 * s).clamp(6, 8),
                                           decoration: BoxDecoration(
                                             color: Colors.white.withOpacity(0.7),
                                             borderRadius: BorderRadius.circular(4),
@@ -571,9 +709,9 @@ class _ModernListTileCardState extends State<ModernListTileCard>
                                         Expanded(
                                           child: Text(
                                             item,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               color: Colors.white70,
-                                              fontSize: 14,
+                                              fontSize: (13 * s).clamp(11, 14),
                                               fontWeight: FontWeight.w500,
                                             ),
                                           ),
@@ -603,7 +741,8 @@ class _ModernListTileCardState extends State<ModernListTileCard>
 class _BackTile extends StatefulWidget {
   final FocusNode? focusNode;
   final VoidCallback onActivate;
-  const _BackTile({required this.onActivate, this.focusNode});
+  final double sizeScale;
+  const _BackTile({required this.onActivate, this.focusNode, this.sizeScale = 1.0});
 
   @override
   State<_BackTile> createState() => _BackTileState();
@@ -621,6 +760,8 @@ class _BackTileState extends State<_BackTile> with SingleTickerProviderStateMixi
 
   @override
   Widget build(BuildContext context) {
+    final s = widget.sizeScale;
+
     return FocusableActionDetector(
       focusNode: widget.focusNode,
       onShowFocusHighlight: (hasFocus) => setState(() => _focused = hasFocus),
@@ -650,7 +791,7 @@ class _BackTileState extends State<_BackTile> with SingleTickerProviderStateMixi
                   colors: [Color(0xFFEAB308), Color(0xFFF97316)],
                   begin: Alignment.topLeft, end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular((24 * s).clamp(18, 24)),
                 border: Border.all(
                   color: _focused ? Colors.white.withOpacity(0.9) : Colors.white.withOpacity(0.1),
                   width: _focused ? 2 : 1,
@@ -665,14 +806,27 @@ class _BackTileState extends State<_BackTile> with SingleTickerProviderStateMixi
                     BoxShadow(color: Colors.white.withOpacity(0.25), blurRadius: 20, spreadRadius: 1),
                 ],
               ),
-              child: const Center(
+              child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Feather.arrow_left, size: 48, color: Colors.white),
-                    SizedBox(height: 12),
-                    Text('Back', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
-                    Text('Go Back', style: TextStyle(fontSize: 14, color: Colors.white70)),
+                    Icon(Feather.arrow_left, size: (46 * s).clamp(36, 48), color: Colors.white),
+                    SizedBox(height: (10 * s).clamp(8, 12)),
+                    Text(
+                      'Back',
+                      style: TextStyle(
+                        fontSize: (16 * s).clamp(14, 18),
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      'Go Back',
+                      style: TextStyle(
+                        fontSize: (13 * s).clamp(11, 14),
+                        color: Colors.white70,
+                      ),
+                    ),
                   ],
                 ),
               ),
