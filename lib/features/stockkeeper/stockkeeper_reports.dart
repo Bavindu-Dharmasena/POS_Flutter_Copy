@@ -577,88 +577,92 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                     ),
                   ),
 
-                  // Product Filter
-                  _buildDialogFilterRow(
-                    'Product',
-                    Icons.shopping_bag,
-                    DropdownButtonFormField<String>(
-                      value: _selectedProduct,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                  // Conditionally show Product Filter - Hide for Payment Types
+                  if (reportName != 'Payment Types')
+                    _buildDialogFilterRow(
+                      'Product',
+                      Icons.shopping_bag,
+                      DropdownButtonFormField<String>(
+                        value: _selectedProduct,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                        items:
+                            const ['All', 'Product 1', 'Product 2', 'Product 3']
+                                .map(
+                                  (item) => DropdownMenuItem<String>(
+                                    value: item,
+                                    child: Text(item),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (value) {
+                          setDialogState(() {
+                            _selectedProduct = value!;
+                          });
+                        },
                       ),
-                      items:
-                          const ['All', 'Product 1', 'Product 2', 'Product 3']
-                              .map(
-                                (item) => DropdownMenuItem<String>(
-                                  value: item,
-                                  child: Text(item),
-                                ),
-                              )
-                              .toList(),
-                      onChanged: (value) {
-                        setDialogState(() {
-                          _selectedProduct = value!;
-                        });
-                      },
                     ),
-                  ),
 
-                  // Product Group Filter
-                  _buildDialogFilterRow(
-                    'Product Group',
-                    Icons.category,
-                    DropdownButtonFormField<String>(
-                      value: _selectedProductGroup,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                  // Conditionally show Product Group Filter - Hide for Payment Types
+                  if (reportName != 'Payment Types')
+                    _buildDialogFilterRow(
+                      'Product Group',
+                      Icons.category,
+                      DropdownButtonFormField<String>(
+                        value: _selectedProductGroup,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                        items:
+                            const ['Products', 'Group 1', 'Group 2', 'Group 3']
+                                .map(
+                                  (item) => DropdownMenuItem<String>(
+                                    value: item,
+                                    child: Text(item),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (value) {
+                          setDialogState(() {
+                            _selectedProductGroup = value!;
+                          });
+                        },
                       ),
-                      items: const ['Products', 'Group 1', 'Group 2', 'Group 3']
-                          .map(
-                            (item) => DropdownMenuItem<String>(
-                              value: item,
-                              child: Text(item),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setDialogState(() {
-                          _selectedProductGroup = value!;
-                        });
-                      },
                     ),
-                  ),
 
-                  // Include Subgroups Filter
-                  _buildDialogFilterRow(
-                    'Include Subgroups',
-                    Icons.account_tree,
-                    Row(
-                      children: [
-                        Switch(
-                          value: _includeSubgroups,
-                          onChanged: (value) {
-                            setDialogState(() {
-                              _includeSubgroups = value;
-                            });
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                        Text(_includeSubgroups ? 'Enabled' : 'Disabled'),
-                      ],
+                  // Conditionally show Include Subgroups Filter - Hide for Payment Types
+                  if (reportName != 'Payment Types')
+                    _buildDialogFilterRow(
+                      'Include Subgroups',
+                      Icons.account_tree,
+                      Row(
+                        children: [
+                          Switch(
+                            value: _includeSubgroups,
+                            onChanged: (value) {
+                              setDialogState(() {
+                                _includeSubgroups = value;
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          Text(_includeSubgroups ? 'Enabled' : 'Disabled'),
+                        ],
+                      ),
                     ),
-                  ),
 
                   const SizedBox(height: 20),
 
@@ -684,11 +688,14 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                         Text('• Date Range: ${_getDateRangeText()}'),
                         Text('• User: $_selectedUser'),
                         Text('• Cash Register: $_selectedCashRegister'),
-                        Text('• Product: $_selectedProduct'),
-                        Text('• Product Group: $_selectedProductGroup'),
-                        Text(
-                          '• Include Subgroups: ${_includeSubgroups ? "Yes" : "No"}',
-                        ),
+                        // Only show product-related filters for non-Payment Types reports
+                        if (reportName != 'Payment Types') ...[
+                          Text('• Product: $_selectedProduct'),
+                          Text('• Product Group: $_selectedProductGroup'),
+                          Text(
+                            '• Include Subgroups: ${_includeSubgroups ? "Yes" : "No"}',
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -702,9 +709,12 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                 setDialogState(() {
                   _selectedUser = 'All';
                   _selectedCashRegister = 'All';
-                  _selectedProduct = 'All';
-                  _selectedProductGroup = 'Products';
-                  _includeSubgroups = true;
+                  // Only reset product filters for non-Payment Types reports
+                  if (reportName != 'Payment Types') {
+                    _selectedProduct = 'All';
+                    _selectedProductGroup = 'Products';
+                    _includeSubgroups = true;
+                  }
                   final now = DateTime.now();
                   _selectedDateRange = DateTimeRange(
                     start: DateTime(now.year, now.month, 1),
@@ -776,11 +786,14 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       Text('• Date Range: ${_getDateRangeText()}'),
                       Text('• User: $_selectedUser'),
                       Text('• Cash Register: $_selectedCashRegister'),
-                      Text('• Product: $_selectedProduct'),
-                      Text('• Product Group: $_selectedProductGroup'),
-                      Text(
-                        '• Include Subgroups: ${_includeSubgroups ? "Yes" : "No"}',
-                      ),
+                      // Only show product-related filters for non-Payment Types reports
+                      if (reportName != 'Payment Types') ...[
+                        Text('• Product: $_selectedProduct'),
+                        Text('• Product Group: $_selectedProductGroup'),
+                        Text(
+                          '• Include Subgroups: ${_includeSubgroups ? "Yes" : "No"}',
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -799,18 +812,28 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                   children: [
                     Expanded(
                       child: _buildSummaryCard(
-                        'Total Sales',
+                        reportName == 'Payment Types'
+                            ? 'Total Payments'
+                            : 'Total Sales',
                         '\$${_calculateTotalSales(reportName)}',
-                        Icons.attach_money,
+                        reportName == 'Payment Types'
+                            ? Icons.payment
+                            : Icons.attach_money,
                         Colors.green,
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildSummaryCard(
-                        'Items Sold',
-                        '${_calculateItemsSold(reportName)}',
-                        Icons.shopping_cart,
+                        reportName == 'Payment Types'
+                            ? 'Payment Methods'
+                            : 'Items Sold',
+                        reportName == 'Payment Types'
+                            ? '${_calculatePaymentMethods(reportName)}'
+                            : '${_calculateItemsSold(reportName)}',
+                        reportName == 'Payment Types'
+                            ? Icons.credit_card
+                            : Icons.shopping_cart,
                         Colors.blue,
                       ),
                     ),
@@ -850,13 +873,21 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('Date')),
-                      DataColumn(label: Text('Item')),
-                      DataColumn(label: Text('Quantity')),
-                      DataColumn(label: Text('Amount')),
-                      DataColumn(label: Text('Profit')),
-                    ],
+                    columns: reportName == 'Payment Types'
+                        ? const [
+                            DataColumn(label: Text('Date')),
+                            DataColumn(label: Text('Payment Method')),
+                            DataColumn(label: Text('Transactions')),
+                            DataColumn(label: Text('Amount')),
+                            DataColumn(label: Text('Fee')),
+                          ]
+                        : const [
+                            DataColumn(label: Text('Date')),
+                            DataColumn(label: Text('Item')),
+                            DataColumn(label: Text('Quantity')),
+                            DataColumn(label: Text('Amount')),
+                            DataColumn(label: Text('Profit')),
+                          ],
                     rows: _generateReportData(reportName),
                   ),
                 ),
@@ -930,25 +961,56 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   }
 
   List<DataRow> _generateReportData(String reportName) {
-    // Generate sample data based on filters
     List<DataRow> rows = [];
-    for (int i = 1; i <= 5; i++) {
-      rows.add(
-        DataRow(
-          cells: [
-            DataCell(
-              Text(
-                '${DateTime.now().day - i}/${DateTime.now().month}/${DateTime.now().year}',
+
+    if (reportName == 'Payment Types') {
+      // Generate Payment Types specific data
+      List<String> paymentMethods = [
+        'Cash',
+        'Credit Card',
+        'Debit Card',
+        'Digital Wallet',
+        'Bank Transfer',
+      ];
+
+      for (int i = 0; i < paymentMethods.length; i++) {
+        rows.add(
+          DataRow(
+            cells: [
+              DataCell(
+                Text(
+                  '${DateTime.now().day - i}/${DateTime.now().month}/${DateTime.now().year}',
+                ),
               ),
-            ),
-            DataCell(Text('${reportName.split(' ').first} $i')),
-            DataCell(Text('${10 + i}')),
-            DataCell(Text('\$${(100 + i * 25).toStringAsFixed(2)}')),
-            DataCell(Text('\$${(30 + i * 8).toStringAsFixed(2)}')),
-          ],
-        ),
-      );
+              DataCell(Text(paymentMethods[i])),
+              DataCell(Text('${20 + i * 5}')),
+              DataCell(Text('\$${(500 + i * 150).toStringAsFixed(2)}')),
+              DataCell(Text('\$${(5 + i * 2).toStringAsFixed(2)}')),
+            ],
+          ),
+        );
+      }
+    } else {
+      // Generate regular report data
+      for (int i = 1; i <= 5; i++) {
+        rows.add(
+          DataRow(
+            cells: [
+              DataCell(
+                Text(
+                  '${DateTime.now().day - i}/${DateTime.now().month}/${DateTime.now().year}',
+                ),
+              ),
+              DataCell(Text('${reportName.split(' ').first} $i')),
+              DataCell(Text('${10 + i}')),
+              DataCell(Text('\$${(100 + i * 25).toStringAsFixed(2)}')),
+              DataCell(Text('\$${(30 + i * 8).toStringAsFixed(2)}')),
+            ],
+          ),
+        );
+      }
     }
+
     return rows;
   }
 
@@ -978,6 +1040,13 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     return 15 +
         (reportName.length * 2) +
         (_selectedCashRegister == 'All' ? 0 : 10);
+  }
+
+  // Add new method for Payment Types specific calculation
+  int _calculatePaymentMethods(String reportName) {
+    return 5 +
+        (reportName.length %
+            3); // Cash, Credit Card, Debit Card, Digital Wallet, etc.
   }
 
   Widget _buildDialogFilterRow(String label, IconData icon, Widget control) {
