@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-// void main() {
-//   runApp(const MyApp());
-// }
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -750,7 +746,13 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   bool _isPaymentRelatedReport(String reportName) {
     return reportName == 'Payment Types' ||
         reportName == 'Payment Types by Users' ||
-        reportName == 'Payment Types by Customers';
+        reportName == 'Payment Types by Customers' ||
+        reportName == 'Daily Sales' ||
+        reportName == 'Hourly Sales' ||
+        reportName == 'Table/Order Number' ||
+        reportName == 'Unpaid Sales' ||
+        reportName == 'Starting Cash Entries' ||
+        reportName == 'Discounts Granted';
   }
 
   void _showReportWithSelectedFilters(String reportName) {
