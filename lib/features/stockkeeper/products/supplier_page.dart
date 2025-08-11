@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import '../supplier/add_supplier_page.dart';
 
@@ -117,7 +118,18 @@ class _SupplierPageState extends State<SupplierPage> with TickerProviderStateMix
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => _buildEditPopup(supplier),
+      builder: (context) => RawKeyboardListener(
+        focusNode: FocusNode(),
+        autofocus: true,
+        onKey: (RawKeyEvent event) {
+          if (event is RawKeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.escape) {
+              Navigator.pop(context);
+            }
+          }
+        },
+        child: _buildEditPopup(supplier),
+      ),
     );
   }
 
@@ -472,350 +484,361 @@ class _SupplierPageState extends State<SupplierPage> with TickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0B1623),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0F172A),
-              Color(0xFF1E3A8A),
-              Color(0xFF0F172A),
-            ],
+    return RawKeyboardListener(
+      focusNode: FocusNode(),
+      autofocus: true,
+      onKey: (RawKeyEvent event) {
+        if (event is RawKeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.escape) {
+            Navigator.pop(context);
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0B1623),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF0F172A),
+                Color(0xFF1E3A8A),
+                Color(0xFF0F172A),
+              ],
+            ),
           ),
-        ),
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              expandedHeight: 120,
-              floating: false,
-              pinned: true,
-              backgroundColor: Colors.transparent,
-              flexibleSpace: FlexibleSpaceBar(
-                title: ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
-                  ).createShader(bounds),
-                  child: const Text(
-                    'Suppliers',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 120,
+                floating: false,
+                pinned: true,
+                backgroundColor: Colors.transparent,
+                flexibleSpace: FlexibleSpaceBar(
+                  title: ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
+                    ).createShader(bounds),
+                    child: const Text(
+                      'Suppliers',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                      ),
                     ),
                   ),
+                  centerTitle: false,
+                  titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
                 ),
-                centerTitle: false,
-                titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: suppliers.length,
-                    itemBuilder: (context, index) {
-                      final supplier = suppliers[index];
-                      final gradient = supplier['gradient'] as LinearGradient;
-                      final hasImage = supplier.containsKey('image') && supplier['image'] != null;
-                      final isActive = supplier['status'] == 'Active';
+              SliverToBoxAdapter(
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: suppliers.length,
+                      itemBuilder: (context, index) {
+                        final supplier = suppliers[index];
+                        final gradient = supplier['gradient'] as LinearGradient;
+                        final hasImage = supplier.containsKey('image') && supplier['image'] != null;
+                        final isActive = supplier['status'] == 'Active';
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          gradient: gradient.colors.map((color) => color.withOpacity(0.1)).toList().length >= 2
-                              ? LinearGradient(
-                                  colors: gradient.colors.map((color) => color.withOpacity(0.1)).toList(),
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                )
-                              : null,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withOpacity(0.1)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: gradient.colors.first.withOpacity(0.2),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => _showEditPopup(supplier),
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            gradient: gradient.colors.map((color) => color.withOpacity(0.1)).toList().length >= 2
+                                ? LinearGradient(
+                                    colors: gradient.colors.map((color) => color.withOpacity(0.1)).toList(),
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  )
+                                : null,
                             borderRadius: BorderRadius.circular(20),
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Column(
-                                children: [
-                                  // Header Section
-                                  Row(
-                                    children: [
-                                      Stack(
-                                        children: [
-                                          Container(
-                                            width: 64,
-                                            height: 64,
-                                            decoration: BoxDecoration(
-                                              gradient: gradient,
-                                              borderRadius: BorderRadius.circular(16),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: gradient.colors.first.withOpacity(0.4),
-                                                  blurRadius: 16,
-                                                  offset: const Offset(0, 6),
-                                                ),
-                                              ],
-                                            ),
-                                            child: hasImage
-                                                ? ClipRRect(
-                                                    borderRadius: BorderRadius.circular(16),
-                                                    child: Image.asset(
-                                                      supplier['image'],
-                                                      width: 64,
-                                                      height: 64,
-                                                      fit: BoxFit.cover,
-                                                    ),
-                                                  )
-                                                : const Icon(
-                                                    Feather.briefcase,
-                                                    color: Colors.white,
-                                                    size: 28,
-                                                  ),
-                                          ),
-                                          if (!isActive)
-                                            Positioned(
-                                              top: -4,
-                                              right: -4,
-                                              child: Container(
-                                                padding: const EdgeInsets.all(6),
-                                                decoration: const BoxDecoration(
-                                                  gradient: LinearGradient(
-                                                    colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
-                                                  ),
-                                                  shape: BoxShape.circle,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Color(0xFFEF4444),
-                                                      blurRadius: 8,
-                                                      offset: Offset(0, 2),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: const Icon(
-                                                  Feather.pause,
-                                                  color: Colors.white,
-                                                  size: 12,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: gradient.colors.first.withOpacity(0.2),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _showEditPopup(supplier),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  children: [
+                                    // Header Section
+                                    Row(
+                                      children: [
+                                        Stack(
                                           children: [
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    supplier['name'],
-                                                    style: const TextStyle(
-                                                      fontSize: 18,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: Colors.white,
-                                                    ),
-                                                    overflow: TextOverflow.ellipsis,
+                                            Container(
+                                              width: 64,
+                                              height: 64,
+                                              decoration: BoxDecoration(
+                                                gradient: gradient,
+                                                borderRadius: BorderRadius.circular(16),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: gradient.colors.first.withOpacity(0.4),
+                                                    blurRadius: 16,
+                                                    offset: const Offset(0, 6),
                                                   ),
-                                                ),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                  decoration: BoxDecoration(
-                                                    gradient: isActive
-                                                        ? const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)])
-                                                        : const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFDC2626)]),
-                                                    borderRadius: BorderRadius.circular(12),
+                                                ],
+                                              ),
+                                              child: hasImage
+                                                  ? ClipRRect(
+                                                      borderRadius: BorderRadius.circular(16),
+                                                      child: Image.asset(
+                                                        supplier['image'],
+                                                        width: 64,
+                                                        height: 64,
+                                                        fit: BoxFit.cover,
+                                                      ),
+                                                    )
+                                                  : const Icon(
+                                                      Feather.briefcase,
+                                                      color: Colors.white,
+                                                      size: 28,
+                                                    ),
+                                            ),
+                                            if (!isActive)
+                                              Positioned(
+                                                top: -4,
+                                                right: -4,
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(6),
+                                                  decoration: const BoxDecoration(
+                                                    gradient: LinearGradient(
+                                                      colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                                                    ),
+                                                    shape: BoxShape.circle,
                                                     boxShadow: [
                                                       BoxShadow(
-                                                        color: (isActive ? const Color(0xFF10B981) : const Color(0xFFEF4444))
-                                                            .withOpacity(0.3),
+                                                        color: Color(0xFFEF4444),
                                                         blurRadius: 8,
-                                                        offset: const Offset(0, 2),
+                                                        offset: Offset(0, 2),
                                                       ),
                                                     ],
                                                   ),
-                                                  child: Text(
-                                                    supplier['status'],
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.w700,
-                                                    ),
+                                                  child: const Icon(
+                                                    Feather.pause,
+                                                    color: Colors.white,
+                                                    size: 12,
                                                   ),
                                                 ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
+                                              ),
+                                          ],
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      supplier['name'],
+                                                      style: const TextStyle(
+                                                        fontSize: 18,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: Colors.white,
+                                                      ),
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                    decoration: BoxDecoration(
+                                                      gradient: isActive
+                                                          ? const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)])
+                                                          : const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFDC2626)]),
+                                                      borderRadius: BorderRadius.circular(12),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: (isActive ? const Color(0xFF10B981) : const Color(0xFFEF4444))
+                                                              .withOpacity(0.3),
+                                                          blurRadius: 8,
+                                                          offset: const Offset(0, 2),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: Text(
+                                                      supplier['status'],
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                supplier['contactPerson'],
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.white70,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    
+                                    const SizedBox(height: 16),
+                                    
+                                    // Details Section
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _buildDetailItem(
+                                            icon: Feather.phone,
+                                            label: 'Phone',
+                                            value: supplier['phone'],
+                                            color: const Color(0xFF60A5FA),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: _buildDetailItem(
+                                            icon: Feather.mail,
+                                            label: 'Email',
+                                            value: supplier['email'],
+                                            color: const Color(0xFF10B981),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    
+                                    const SizedBox(height: 12),
+                                    
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _buildDetailItem(
+                                            icon: Feather.map_pin,
+                                            label: 'Location',
+                                            value: supplier['location'],
+                                            color: const Color(0xFFF97316),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: _buildDetailItem(
+                                            icon: Feather.map,
+                                            label: 'Address',
+                                            value: supplier['address'],
+                                            color: const Color(0xFFEC4899),
+                                            isAddress: true,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    
+                                    const SizedBox(height: 16),
+                                    
+                                    // Action Button
+                                    Container(
+                                      width: double.infinity,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        gradient: gradient,
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: gradient.colors.first.withOpacity(0.3),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: ElevatedButton(
+                                        onPressed: () => _showEditPopup(supplier),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.transparent,
+                                          shadowColor: Colors.transparent,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        ),
+                                        child: const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Feather.edit_3, color: Colors.white, size: 18),
+                                            SizedBox(width: 8),
                                             Text(
-                                              supplier['contactPerson'],
-                                              style: const TextStyle(
+                                              'Edit Supplier',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
                                                 fontSize: 14,
-                                                color: Colors.white70,
-                                                fontWeight: FontWeight.w500,
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                  
-                                  const SizedBox(height: 16),
-                                  
-                                  // Details Section
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _buildDetailItem(
-                                          icon: Feather.phone,
-                                          label: 'Phone',
-                                          value: supplier['phone'],
-                                          color: const Color(0xFF60A5FA),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: _buildDetailItem(
-                                          icon: Feather.mail,
-                                          label: 'Email',
-                                          value: supplier['email'],
-                                          color: const Color(0xFF10B981),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  
-                                  const SizedBox(height: 12),
-                                  
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: _buildDetailItem(
-                                          icon: Feather.map_pin,
-                                          label: 'Location',
-                                          value: supplier['location'],
-                                          color: const Color(0xFFF97316),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: _buildDetailItem(
-                                          icon: Feather.map,
-                                          label: 'Address',
-                                          value: supplier['address'],
-                                          color: const Color(0xFFEC4899),
-                                          isAddress: true,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  
-                                  const SizedBox(height: 16),
-                                  
-                                  // Action Button
-                                  Container(
-                                    width: double.infinity,
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      gradient: gradient,
-                                      borderRadius: BorderRadius.circular(12),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: gradient.colors.first.withOpacity(0.3),
-                                          blurRadius: 12,
-                                          offset: const Offset(0, 4),
-                                        ),
-                                      ],
                                     ),
-                                    child: ElevatedButton(
-                                      onPressed: () => _showEditPopup(supplier),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      ),
-                                      child: const Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(Feather.edit_3, color: Colors.white, size: 18),
-                                          SizedBox(width: 8),
-                                          Text(
-                                            'Edit Supplier',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            ],
           ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF60A5FA).withOpacity(0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
-        child: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AddSupplierPage(supplierData: {},)),
-            );
-          },
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          icon: const Icon(Feather.plus, color: Colors.white, size: 20),
-          label: const Text(
-            'Add Supplier',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+        floatingActionButton: Container(
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF60A5FA).withOpacity(0.4),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: FloatingActionButton.extended(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AddSupplierPage(supplierData: {},)),
+              );
+            },
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            icon: const Icon(Feather.plus, color: Colors.white, size: 20),
+            label: const Text(
+              'Add Supplier',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
           ),
         ),
