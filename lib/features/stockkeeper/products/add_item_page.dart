@@ -192,11 +192,17 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
             ],
           ),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Feather.check_circle, color: Colors.white, size: 20),
               const SizedBox(width: 12),
-              Text('✨ Product saved: ${payload['name']}', 
-                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              Flexible(
+                child: Text(
+                  '✨ Product saved: ${payload['name']}', 
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
         ),
@@ -265,290 +271,293 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
               ],
             ),
           ),
-          child: CustomScrollView(
-            controller: _scrollCtrl,
-            slivers: [
-              SliverAppBar(
-                expandedHeight: 120,
-                floating: false,
-                pinned: true,
-                backgroundColor: Colors.transparent,
-                leading: Container(
-                  margin: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFEAB308), Color(0xFFF97316)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+          child: SafeArea(
+            child: CustomScrollView(
+              controller: _scrollCtrl,
+              slivers: [
+                SliverAppBar(
+                  expandedHeight: 100,
+                  floating: false,
+                  pinned: true,
+                  backgroundColor: Colors.transparent,
+                  automaticallyImplyLeading: false,
+                  leading: Container(
+                    margin: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFEAB308), Color(0xFFF97316)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFEAB308).withOpacity(0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFEAB308).withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Feather.arrow_left, color: Colors.white, size: 20),
-                  ),
-                ),
-                flexibleSpace: FlexibleSpaceBar(
-                  title: ShaderMask(
-                    shaderCallback: (bounds) => const LinearGradient(
-                      colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
-                    ).createShader(bounds),
-                    child: const Text(
-                      'Add Product',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
+                    child: IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Feather.arrow_left, color: Colors.white, size: 20),
                     ),
                   ),
-                  centerTitle: false,
-                  titlePadding: const EdgeInsets.only(left: 72, bottom: 16),
+                  flexibleSpace: FlexibleSpaceBar(
+                    title: ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
+                      ).createShader(bounds),
+                      child: const Text(
+                        'Add Product',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                    centerTitle: false,
+                    titlePadding: const EdgeInsets.only(left: 72, bottom: 16),
+                  ),
                 ),
-              ),
-              SliverToBoxAdapter(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          // Basic Info Section
-                          _dashboardCard(
-                            icon: Feather.info,
-                            title: 'Basic Info',
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            children: [
-                              _buildRow([
-                                _dashboardTextField(
-                                  controller: _nameCtrl,
-                                  label: 'Product Name',
-                                  hint: 'Ex: Coca Cola 1L',
-                                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                                ),
-                                _dashboardBarcodeField(),
-                              ]),
-                              const SizedBox(height: 12),
-                              _buildRow([
-                                _dashboardDropdown(
-                                  label: 'Unit',
-                                  value: _selectedUnit,
-                                  items: _units,
-                                  onChanged: (v) => setState(() => _selectedUnit = v),
-                                  validator: (v) => v == null ? 'Select unit' : null,
-                                ),
-                                _dashboardCategoryField(),
-                              ]),
-                              const SizedBox(height: 12),
-                              _dashboardSwitch(
-                                label: 'Active Status',
-                                value: _active,
-                                onChanged: (v) => setState(() => _active = v),
+                SliverToBoxAdapter(
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            // Basic Info Section
+                            _dashboardCard(
+                              icon: Feather.info,
+                              title: 'Basic Info',
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Pricing Section
-                          _dashboardCard(
-                            icon: Feather.trending_up,
-                            title: 'Pricing',
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF10B981), Color(0xFF059669)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                              children: [
+                                _buildRow([
+                                  _dashboardTextField(
+                                    controller: _nameCtrl,
+                                    label: 'Product Name',
+                                    hint: 'Ex: Coca Cola 1L',
+                                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                                  ),
+                                  _dashboardBarcodeField(),
+                                ]),
+                                const SizedBox(height: 12),
+                                _buildRow([
+                                  _dashboardDropdown(
+                                    label: 'Unit',
+                                    value: _selectedUnit,
+                                    items: _units,
+                                    onChanged: (v) => setState(() => _selectedUnit = v),
+                                    validator: (v) => v == null ? 'Select unit' : null,
+                                  ),
+                                  _dashboardCategoryField(),
+                                ]),
+                                const SizedBox(height: 12),
+                                _dashboardSwitch(
+                                  label: 'Active Status',
+                                  value: _active,
+                                  onChanged: (v) => setState(() => _active = v),
+                                ),
+                              ],
                             ),
-                            children: [
-                              _buildRow([
+
+                            const SizedBox(height: 16),
+
+                            // Pricing Section
+                            _dashboardCard(
+                              icon: Feather.trending_up,
+                              title: 'Pricing',
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF10B981), Color(0xFF059669)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              children: [
+                                _buildRow([
+                                  _dashboardNumberField(
+                                    controller: _costCtrl,
+                                    label: 'Cost',
+                                    prefix: 'Rs.',
+                                    validator: _reqNum,
+                                  ),
+                                  _dashboardNumberField(
+                                    controller: _markupCtrl,
+                                    label: 'Markup',
+                                    suffix: '%',
+                                    validator: _reqNum,
+                                  ),
+                                ]),
+                                const SizedBox(height: 12),
                                 _dashboardNumberField(
-                                  controller: _costCtrl,
-                                  label: 'Cost',
+                                  controller: _saleCtrl,
+                                  label: 'Sale Price',
                                   prefix: 'Rs.',
                                   validator: _reqNum,
+                                  fullWidth: true,
                                 ),
-                                _dashboardNumberField(
-                                  controller: _markupCtrl,
-                                  label: 'Markup',
-                                  suffix: '%',
-                                  validator: _reqNum,
-                                ),
-                              ]),
-                              const SizedBox(height: 12),
-                              _dashboardNumberField(
-                                controller: _saleCtrl,
-                                label: 'Sale Price',
-                                prefix: 'Rs.',
-                                validator: _reqNum,
-                                fullWidth: true,
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Inventory Section
-                          _dashboardCard(
-                            icon: Feather.package,
-                            title: 'Inventory & Supplier',
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFF97316), Color(0xFFEAB308)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                              ],
                             ),
-                            children: [
-                              _dashboardAutocomplete(
-                                label: 'Supplier',
-                                controller: _supplierCtrl,
-                                options: _suppliers,
-                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+
+                            const SizedBox(height: 16),
+
+                            // Inventory Section
+                            _dashboardCard(
+                              icon: Feather.package,
+                              title: 'Inventory & Supplier',
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFF97316), Color(0xFFEAB308)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              const SizedBox(height: 12),
-                              _buildRow([
-                                _dashboardNumberField(
-                                  controller: _reorderCtrl,
-                                  label: 'Reorder Level',
-                                  hint: '10',
-                                  validator: _reqInt,
+                              children: [
+                                _dashboardAutocomplete(
+                                  label: 'Supplier',
+                                  controller: _supplierCtrl,
+                                  options: _suppliers,
+                                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                                 ),
-                                Container(
-                                  height: 56,
-                                  alignment: Alignment.centerLeft,
-                                  child: _dashboardSwitch(
-                                    label: 'Low Stock Alert',
-                                    value: _lowStockWarning,
-                                    onChanged: (v) => setState(() => _lowStockWarning = v),
-                                    compact: true,
+                                const SizedBox(height: 12),
+                                _buildRow([
+                                  _dashboardNumberField(
+                                    controller: _reorderCtrl,
+                                    label: 'Reorder Level',
+                                    hint: '10',
+                                    validator: _reqInt,
                                   ),
-                                ),
-                              ]),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Appearance Section
-                          _dashboardCard(
-                            icon: Feather.layers,
-                            title: 'Appearance',
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFEC4899), Color(0xFFF43F5E)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+                                  Container(
+                                    height: 56,
+                                    alignment: Alignment.centerLeft,
+                                    child: _dashboardSwitch(
+                                      label: 'Low Stock Alert',
+                                      value: _lowStockWarning,
+                                      onChanged: (v) => setState(() => _lowStockWarning = v),
+                                      compact: true,
+                                    ),
+                                  ),
+                                ]),
+                              ],
                             ),
-                            children: [
-                              _dashboardGradientPicker(),
-                              const SizedBox(height: 12),
-                              _dashboardTextField(
-                                controller: _remarkCtrl,
-                                label: 'Notes',
-                                hint: 'Optional remarks',
-                                maxLines: 2,
-                                fullWidth: true,
+
+                            const SizedBox(height: 16),
+
+                            // Appearance Section
+                            _dashboardCard(
+                              icon: Feather.layers,
+                              title: 'Appearance',
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFEC4899), Color(0xFFF43F5E)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                              const SizedBox(height: 16),
-                              _dashboardPreview(),
-                            ],
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // Action Buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        const Color(0xFF475569).withOpacity(0.8),
-                                        const Color(0xFF334155).withOpacity(0.8),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: _resetForm,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                    ),
-                                    child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Feather.refresh_cw, color: Colors.white70, size: 18),
-                                        SizedBox(width: 8),
-                                        Text('Reset', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
-                                      ],
-                                    ),
-                                  ),
+                              children: [
+                                _dashboardGradientPicker(),
+                                const SizedBox(height: 12),
+                                _dashboardTextField(
+                                  controller: _remarkCtrl,
+                                  label: 'Notes',
+                                  hint: 'Optional remarks',
+                                  maxLines: 2,
+                                  fullWidth: true,
                                 ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                flex: 2,
-                                child: Container(
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFF10B981), Color(0xFF059669)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF10B981).withOpacity(0.3),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
+                                const SizedBox(height: 16),
+                                _dashboardPreview(),
+                              ],
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Action Buttons
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          const Color(0xFF475569).withOpacity(0.8),
+                                          const Color(0xFF334155).withOpacity(0.8),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: _submitForm,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: Colors.white.withOpacity(0.1)),
                                     ),
-                                    child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Feather.check_circle, color: Colors.white, size: 20),
-                                        SizedBox(width: 8),
-                                        Text('Save Product', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                                      ],
+                                    child: ElevatedButton(
+                                      onPressed: _resetForm,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      ),
+                                      child: const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Feather.refresh_cw, color: Colors.white70, size: 18),
+                                          SizedBox(width: 8),
+                                          Text('Reset', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  flex: 2,
+                                  child: Container(
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFF10B981), Color(0xFF059669)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: const Color(0xFF10B981).withOpacity(0.3),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: ElevatedButton(
+                                      onPressed: _submitForm,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      ),
+                                      child: const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Feather.check_circle, color: Colors.white, size: 20),
+                                          SizedBox(width: 8),
+                                          Text('Save Product', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
 
-                          const SizedBox(height: 32),
-                        ],
+                            const SizedBox(height: 32),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -564,16 +573,11 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
   }) {
     return Container(
       decoration: BoxDecoration(
-        gradient: gradient.colors.map((color) => color.withOpacity(0.1)).toList().length >= 2
-            ? LinearGradient(
-                colors: gradient.colors.map((color) => color.withOpacity(0.1)).toList(),
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: gradient.colors.map((color) => color.withOpacity(0.1)).toList().length < 2
-            ? gradient.colors.first.withOpacity(0.1)
-            : null,
+        gradient: LinearGradient(
+          colors: gradient.colors.map((color) => color.withOpacity(0.1)).toList(),
+          begin: gradient.begin,
+          end: gradient.end,
+        ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: Colors.white.withOpacity(0.1)),
         boxShadow: [
@@ -608,12 +612,14 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                   child: Icon(icon, color: Colors.white, size: 24),
                 ),
                 const SizedBox(width: 16),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
+                Flexible(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
                   ),
                 ),
               ],
@@ -628,16 +634,32 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
 
   Widget _buildRow(List<Widget> children) {
     if (children.length == 1) return children.first;
-    return Row(
-      children: children
-          .map((child) => Expanded(child: child))
-          .expand((widget) sync* {
-            yield widget;
-            if (widget != children.map((child) => Expanded(child: child)).last) {
-              yield const SizedBox(width: 12);
-            }
-          })
-          .toList(),
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Use column layout on smaller screens
+        if (constraints.maxWidth < 600) {
+          return Column(
+            children: children
+                .expand((child) => [child, const SizedBox(height: 12)])
+                .take(children.length * 2 - 1)
+                .toList(),
+          );
+        }
+        
+        // Use row layout on larger screens
+        return Row(
+          children: children
+              .map((child) => Expanded(child: child))
+              .expand((widget) sync* {
+                yield widget;
+                if (widget != children.map((child) => Expanded(child: child)).last) {
+                  yield const SizedBox(width: 12);
+                }
+              })
+              .toList(),
+        );
+      },
     );
   }
 
@@ -668,6 +690,10 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
       ),
     );
   }
@@ -720,7 +746,11 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       items: items
           .map((e) => DropdownMenuItem<T>(
                 value: e,
-                child: Text(e.toString(), style: const TextStyle(color: Colors.white)),
+                child: Text(
+                  e.toString(), 
+                  style: const TextStyle(color: Colors.white),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ))
           .toList(),
       onChanged: onChanged,
@@ -729,6 +759,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       decoration: _dashboardDecoration(label),
       style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
       icon: const Icon(Feather.chevron_down, color: Colors.white70, size: 20),
+      isExpanded: true,
     );
   }
 
@@ -790,6 +821,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
           .map((e) => DropdownMenuItem<String>(
                 value: e.key,
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
                       width: 16,
@@ -800,7 +832,13 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Text(e.key, style: const TextStyle(color: Colors.white)),
+                    Flexible(
+                      child: Text(
+                        e.key, 
+                        style: const TextStyle(color: Colors.white),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ))
@@ -814,6 +852,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       decoration: _dashboardDecoration('Category'),
       style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
       icon: const Icon(Feather.chevron_down, color: Colors.white70, size: 20),
+      isExpanded: true,
     );
   }
 
@@ -833,11 +872,15 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       child: Row(
         mainAxisAlignment: compact ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
         children: [
-          if (!compact) ...[
-            Text(label, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
-            const Spacer(),
-          ] else
-            Flexible(child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500))),
+          Flexible(
+            child: Text(
+              label, 
+              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (!compact) const Spacer(),
+          if (compact) const SizedBox(width: 8),
           Container(
             decoration: BoxDecoration(
               gradient: value 
@@ -896,40 +939,44 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
           child: Material(
             elevation: 16,
             borderRadius: BorderRadius.circular(16),
-            child: Container(
-              width: 300,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 300, maxHeight: 200),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
                 ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
-              ),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(8),
-                itemCount: options.length,
-                itemBuilder: (context, index) {
-                  final opt = options.elementAt(index);
-                  return Container(
-                    margin: const EdgeInsets.symmetric(vertical: 2),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: InkWell(
-                      onTap: () => onSelected(opt),
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Text(
-                          opt, 
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(8),
+                  itemCount: options.length,
+                  shrinkWrap: true,
+                  itemBuilder: (context, index) {
+                    final opt = options.elementAt(index);
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 2),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: InkWell(
+                        onTap: () => onSelected(opt),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          child: Text(
+                            opt, 
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
           ),
@@ -978,6 +1025,8 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                 label: const Text('Reset', style: TextStyle(color: Colors.white70, fontSize: 12)),
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
               ),
             ),
@@ -1065,11 +1114,13 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${_selectedCategory ?? 'Category'} • ${_barcodeCtrl.text.isEmpty ? 'No Code' : _barcodeCtrl.text}',
                   style: const TextStyle(color: Colors.white60, fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
