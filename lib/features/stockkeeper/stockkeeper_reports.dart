@@ -29,6 +29,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   String _selectedCashRegister = 'All';
   String _selectedProduct = 'All';
   String _selectedProductGroup = 'Products';
+  String _selectedSupplier = 'All'; // Added supplier filter
   bool _includeSubgroups = true;
   final Set<String> _downloadingReports = {};
 
@@ -479,7 +480,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
           ),
           content: SizedBox(
             width: double.maxFinite,
-            height: 500,
+            height: 600, // Increased height to accommodate new filters
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -568,6 +569,47 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                     ),
                   ),
 
+                  // Supplier Filter - Added to all cards
+                  _buildDialogFilterRow(
+                    'Supplier',
+                    Icons.local_shipping,
+                    DropdownButtonFormField<String>(
+                      value: _selectedSupplier,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                      ),
+                      items:
+                          const [
+                                'All',
+                                'Alpha Suppliers Ltd',
+                                'Beta Distribution Co',
+                                'Gamma Wholesale Inc',
+                                'Delta Trading House',
+                                'Epsilon Supply Chain',
+                                'Zeta Logistics Ltd',
+                                'Theta Manufacturing',
+                              ]
+                              .map(
+                                (item) => DropdownMenuItem<String>(
+                                  value: item,
+                                  child: Text(item),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          _selectedSupplier = value!;
+                        });
+                      },
+                    ),
+                  ),
+
                   // Cash Register Filter - Hide for Purchase Product Reports (including Unpaid Purchase)
                   if (!_isPurchaseProductReport(reportName))
                     _buildDialogFilterRow(
@@ -584,14 +626,21 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                             vertical: 8,
                           ),
                         ),
-                        items: const ['All', 'Register 1', 'Register 2']
-                            .map(
-                              (item) => DropdownMenuItem<String>(
-                                value: item,
-                                child: Text(item),
-                              ),
-                            )
-                            .toList(),
+                        items:
+                            const [
+                                  'All',
+                                  'Register 1',
+                                  'Register 2',
+                                  'Register 3',
+                                  'Register 4',
+                                ]
+                                .map(
+                                  (item) => DropdownMenuItem<String>(
+                                    value: item,
+                                    child: Text(item),
+                                  ),
+                                )
+                                .toList(),
                         onChanged: (value) {
                           setDialogState(() {
                             _selectedCashRegister = value!;
@@ -617,7 +666,14 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           ),
                         ),
                         items:
-                            const ['All', 'Product 1', 'Product 2', 'Product 3']
+                            const [
+                                  'All',
+                                  'Product 1',
+                                  'Product 2',
+                                  'Product 3',
+                                  'Product 4',
+                                  'Product 5',
+                                ]
                                 .map(
                                   (item) => DropdownMenuItem<String>(
                                     value: item,
@@ -650,7 +706,14 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           ),
                         ),
                         items:
-                            const ['Products', 'Group 1', 'Group 2', 'Group 3']
+                            const [
+                                  'Products',
+                                  'Electronics',
+                                  'Clothing',
+                                  'Food & Beverages',
+                                  'Home & Garden',
+                                  'Books & Media',
+                                ]
                                 .map(
                                   (item) => DropdownMenuItem<String>(
                                     value: item,
@@ -710,6 +773,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                         const SizedBox(height: 8),
                         Text('• Date Range: ${_getDateRangeText()}'),
                         Text('• User: $_selectedUser'),
+                        Text('• Supplier: $_selectedSupplier'),
                         // Only show cash register for non-Purchase product reports
                         if (!_isPurchaseProductReport(reportName))
                           Text('• Cash Register: $_selectedCashRegister'),
@@ -733,6 +797,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
               onPressed: () {
                 setDialogState(() {
                   _selectedUser = 'All';
+                  _selectedSupplier = 'All';
                   // Only reset cash register for non-Purchase product reports
                   if (!_isPurchaseProductReport(reportName)) {
                     _selectedCashRegister = 'All';
@@ -813,6 +878,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       const SizedBox(height: 8),
                       Text('• Date Range: ${_getDateRangeText()}'),
                       Text('• User: $_selectedUser'),
+                      Text('• Supplier: $_selectedSupplier'),
                       // Only show cash register for non-Purchase product reports
                       if (!_isPurchaseProductReport(reportName))
                         Text('• Cash Register: $_selectedCashRegister'),
