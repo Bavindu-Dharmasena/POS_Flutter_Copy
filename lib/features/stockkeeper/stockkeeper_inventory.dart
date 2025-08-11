@@ -177,7 +177,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
     );
 
     return Container(
-      padding: EdgeInsets.all(isMobile ? 12 : 20),
+      padding: EdgeInsets.all(isMobile ? 8 : 20),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final crossAxisCount = isTablet ? 4 : (isMobile ? 2 : 3);
@@ -186,9 +186,9 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: isMobile ? 1.8 : 2.2,
+            crossAxisSpacing: isMobile ? 8 : 12,
+            mainAxisSpacing: isMobile ? 8 : 12,
+            childAspectRatio: isMobile ? 1.5 : 2.2,
             children: [
               _buildSummaryCard(
                 'Total Items',
@@ -196,6 +196,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
                 Feather.package,
                 Colors.blue,
                 Colors.blue.withOpacity(0.1),
+                isMobile: isMobile,
               ),
               _buildSummaryCard(
                 'Low Stock',
@@ -203,6 +204,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
                 Feather.alert_triangle,
                 Colors.orange,
                 Colors.orange.withOpacity(0.1),
+                isMobile: isMobile,
               ),
               _buildSummaryCard(
                 'Out of Stock',
@@ -210,6 +212,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
                 Feather.x_circle,
                 Colors.red,
                 Colors.red.withOpacity(0.1),
+                isMobile: isMobile,
               ),
               _buildSummaryCard(
                 'Total Value',
@@ -217,6 +220,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
                 Feather.trending_up,
                 Colors.green,
                 Colors.green.withOpacity(0.1),
+                isMobile: isMobile,
               ),
             ],
           );
@@ -230,32 +234,36 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
     String value,
     IconData icon,
     Color iconColor,
-    Color bgColor,
-  ) {
+    Color bgColor, {
+    bool isMobile = false,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
         border: Border.all(color: iconColor.withOpacity(0.2)),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isMobile ? 12 : 16),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: iconColor, size: 24),
-          const SizedBox(height: 8),
+          Icon(icon, color: iconColor, size: isMobile ? 20 : 24),
+          SizedBox(height: isMobile ? 4 : 8),
           Text(
             value,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: isMobile ? 14 : 16,
               fontWeight: FontWeight.bold,
               color: iconColor,
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: isMobile ? 2 : 4),
           Text(
             title,
-            style: const TextStyle(fontSize: 12, color: Colors.white70),
+            style: TextStyle(
+              fontSize: isMobile ? 10 : 12,
+              color: Colors.white70,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
