@@ -457,13 +457,21 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   bool _isPurchaseProductReport(String reportName) {
     return reportName.trim() == 'Purchase Products' ||
         reportName.trim() == 'Suppliers' ||
-        reportName.trim() == 'Unpaid Purchase';
+        reportName.trim() == 'Unpaid Purchase' ||
+        reportName.trim() == 'Purchase Discounts' ||
+        reportName.trim() == 'Expiration Date'; // Added this line
+  }
+
+  // Add helper method to check if report should exclude user filter
+  bool _shouldExcludeUserFilter(String reportName) {
+    return reportName.trim() == 'Expiration Date';
   }
 
   // Add helper method to check if report should exclude product-related filters
   bool _shouldExcludeProductFilters(String reportName) {
     return _isPaymentRelatedReport(reportName) ||
-        reportName.trim() == 'Unpaid Purchase';
+        reportName.trim() == 'Unpaid Purchase' ||
+        reportName.trim() == 'Purchase Discounts';
   }
 
   void _showFiltersDialog(String reportName) {
@@ -480,7 +488,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
           ),
           content: SizedBox(
             width: double.maxFinite,
-            height: 600, // Increased height to accommodate new filters
+            height: 600,
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -538,36 +546,37 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                     ),
                   ),
 
-                  // User Filter
-                  _buildDialogFilterRow(
-                    'User',
-                    Icons.person,
-                    DropdownButtonFormField<String>(
-                      value: _selectedUser,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                  // User Filter - Hide for Expiration Date
+                  if (!_shouldExcludeUserFilter(reportName))
+                    _buildDialogFilterRow(
+                      'User',
+                      Icons.person,
+                      DropdownButtonFormField<String>(
+                        value: _selectedUser,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                        items: const ['All', 'User 1', 'User 2', 'User 3']
+                            .map(
+                              (item) => DropdownMenuItem<String>(
+                                value: item,
+                                child: Text(item),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setDialogState(() {
+                            _selectedUser = value!;
+                          });
+                        },
                       ),
-                      items: const ['All', 'User 1', 'User 2', 'User 3']
-                          .map(
-                            (item) => DropdownMenuItem<String>(
-                              value: item,
-                              child: Text(item),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setDialogState(() {
-                          _selectedUser = value!;
-                        });
-                      },
                     ),
-                  ),
 
                   // Supplier Filter - Added to all cards
                   _buildDialogFilterRow(
@@ -610,7 +619,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                     ),
                   ),
 
-                  // Cash Register Filter - Hide for Purchase Product Reports (including Unpaid Purchase)
+                  // Cash Register Filter - Hide for Purchase Product Reports (including Unpaid Purchase and Expiration Date)
                   if (!_isPurchaseProductReport(reportName))
                     _buildDialogFilterRow(
                       'Cash Register',
@@ -752,7 +761,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
 
                   const SizedBox(height: 20),
 
-                  // Filter Summary
+                  // Filter Summary - Updated to conditionally show User and Cash Register
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -772,9 +781,11 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                         ),
                         const SizedBox(height: 8),
                         Text('• Date Range: ${_getDateRangeText()}'),
-                        Text('• User: $_selectedUser'),
+                        // Only show user for reports that allow it
+                        if (!_shouldExcludeUserFilter(reportName))
+                          Text('• User: $_selectedUser'),
                         Text('• Supplier: $_selectedSupplier'),
-                        // Only show cash register for non-Purchase product reports
+                        // Only show cash register for non-Purchase product reports (excludes Expiration Date)
                         if (!_isPurchaseProductReport(reportName))
                           Text('• Cash Register: $_selectedCashRegister'),
                         // Only show product-related filters for reports that allow them
@@ -796,9 +807,12 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
             TextButton(
               onPressed: () {
                 setDialogState(() {
-                  _selectedUser = 'All';
+                  // Only reset user for reports that allow it
+                  if (!_shouldExcludeUserFilter(reportName)) {
+                    _selectedUser = 'All';
+                  }
                   _selectedSupplier = 'All';
-                  // Only reset cash register for non-Purchase product reports
+                  // Only reset cash register for non-Purchase product reports (excludes Expiration Date)
                   if (!_isPurchaseProductReport(reportName)) {
                     _selectedCashRegister = 'All';
                   }
@@ -857,7 +871,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Applied Filters Section
+                // Applied Filters Section - Updated to conditionally show User and Cash Register
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -877,9 +891,11 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       ),
                       const SizedBox(height: 8),
                       Text('• Date Range: ${_getDateRangeText()}'),
-                      Text('• User: $_selectedUser'),
+                      // Only show user for reports that allow it
+                      if (!_shouldExcludeUserFilter(reportName))
+                        Text('• User: $_selectedUser'),
                       Text('• Supplier: $_selectedSupplier'),
-                      // Only show cash register for non-Purchase product reports
+                      // Only show cash register for non-Purchase product reports (excludes Expiration Date)
                       if (!_isPurchaseProductReport(reportName))
                         Text('• Cash Register: $_selectedCashRegister'),
                       // Only show product-related filters for reports that allow them
