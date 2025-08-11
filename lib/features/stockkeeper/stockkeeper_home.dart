@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pos_system/features/cashier/cashier_view_page.dart';
 
 import '../stockkeeper/stockkeeper_dashboard.dart';
 import '../stockkeeper/stockkeeper_products.dart';
@@ -88,7 +89,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
           colors: [Color(0xFF8B5CF6), Color(0xFF4F46E5)],
           begin: Alignment.topLeft, end: Alignment.bottomRight,
         ),
-        pageBuilder: () => const StockKeeperCashier(),
+        pageBuilder: () => const CashierViewPage(),
       ),
       _TileSpec(
         id: 'settings',
