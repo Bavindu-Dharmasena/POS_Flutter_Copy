@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../stockkeeper/stockkeeper_dashboard.dart';
 import '../stockkeeper/stockkeeper_products.dart';
 import '../stockkeeper/stockkeeper_inventory.dart';
@@ -8,15 +9,9 @@ import '../stockkeeper/stockkeeper_cashier.dart';
 import '../stockkeeper/stockkeeper_more.dart';
 
 /// Custom intents for extra keyboard actions
-class JumpToFirstIntent extends Intent {
-  const JumpToFirstIntent();
-}
-class JumpToLastIntent extends Intent {
-  const JumpToLastIntent();
-}
-class BackIntent extends Intent {
-  const BackIntent();
-}
+class JumpToFirstIntent extends Intent { const JumpToFirstIntent(); }
+class JumpToLastIntent extends Intent { const JumpToLastIntent(); }
+class BackIntent extends Intent { const BackIntent(); }
 
 class StockKeeperHome extends StatefulWidget {
   const StockKeeperHome({super.key});
@@ -26,27 +21,117 @@ class StockKeeperHome extends StatefulWidget {
 }
 
 class _StockKeeperHomeState extends State<StockKeeperHome> {
-  // Focus management
+  // Tiles the user can reorder
+  late List<_TileSpec> _tiles;
+
+  // Focus management (mirrors tile order)
   final List<FocusNode> _tileNodes = [];
   int _focusedIndex = 0;
 
-  // Ensure we have exactly [count] focus nodes
-  void _ensureNodes(int count) {
-    if (_tileNodes.length == count) return;
+  // While dragging, store the source index to style the item
+  int? _draggingIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _tiles = [
+      _TileSpec(
+        id: 'dashboard',
+        title: 'Dashboard',
+        subtitle: 'Overview & Analytics',
+        icon: Icons.dashboard_outlined,
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEF4444), Color(0xFFEC4899)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+        ),
+        pageBuilder: () => const StockKeeperDashboard(),
+      ),
+      _TileSpec(
+        id: 'products',
+        title: 'Products',
+        subtitle: 'Manage Items',
+        icon: Icons.category_outlined,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF10B981), Color(0xFF059669)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+        ),
+        pageBuilder: () => const StockKeeperProducts(),
+      ),
+      _TileSpec(
+        id: 'inventory',
+        title: 'Inventory',
+        subtitle: 'Stock Management',
+        icon: Icons.inventory_2_outlined,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF3B82F6), Color(0xFF0891B2)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+        ),
+        pageBuilder: () => const StockKeeperInventory(),
+      ),
+      _TileSpec(
+        id: 'reports',
+        title: 'Reports',
+        subtitle: 'Charts & Analytics',
+        icon: Icons.bar_chart_outlined,
+        gradient: const LinearGradient(
+          colors: [Color.fromARGB(255, 188, 32, 151), Color.fromARGB(255, 154, 121, 156)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+        ),
+        pageBuilder: () => const StockKeeperReports(),
+      ),
+      _TileSpec(
+        id: 'cashier',
+        title: 'Cashier',
+        subtitle: 'Billing & Payments',
+        icon: Icons.receipt_long_outlined,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF8B5CF6), Color(0xFF4F46E5)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+        ),
+        pageBuilder: () => const StockKeeperCashier(),
+      ),
+      _TileSpec(
+        id: 'settings',
+        title: 'Settings',
+        subtitle: 'More Options',
+        icon: Icons.settings_outlined,
+        gradient: const LinearGradient(
+          colors: [Color.fromARGB(255, 21, 4, 13), Color.fromARGB(255, 111, 107, 107)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+        ),
+        pageBuilder: () => const StockKeeperMore(),
+      ),
+      _TileSpec(
+        id: 'back',
+        title: 'Back',
+        subtitle: 'Go Back',
+        icon: Icons.arrow_back_outlined,
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEAB308), Color(0xFFF97316)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+        ),
+        onTap: () => Navigator.of(context).maybePop(),
+      ),
+    ];
+    _ensureNodes(_tiles.length, requestFirstFocus: true);
+  }
+
+  // Ensure we have exactly [count] focus nodes; optionally focus first
+  void _ensureNodes(int count, {bool requestFirstFocus = false}) {
     while (_tileNodes.length > count) {
       _tileNodes.removeLast().dispose();
     }
     while (_tileNodes.length < count) {
       _tileNodes.add(FocusNode(debugLabel: 'tile_${_tileNodes.length}'));
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_tileNodes.isNotEmpty) {
+    if (requestFirstFocus && _tileNodes.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         _focusedIndex = _focusedIndex.clamp(0, _tileNodes.length - 1);
         if (!_tileNodes[_focusedIndex].hasFocus) {
           _tileNodes[_focusedIndex].requestFocus();
         }
-      }
-    });
+      });
+    }
   }
 
   void _focusAt(int i) {
@@ -63,13 +148,8 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
     required LogicalKeyboardKey key,
   }) {
     if (count == 0) return 0;
-
-    if (key == LogicalKeyboardKey.arrowRight) {
-      return (current + 1) % count;
-    }
-    if (key == LogicalKeyboardKey.arrowLeft) {
-      return (current - 1 + count) % count;
-    }
+    if (key == LogicalKeyboardKey.arrowRight) return (current + 1) % count;
+    if (key == LogicalKeyboardKey.arrowLeft)  return (current - 1 + count) % count;
     if (key == LogicalKeyboardKey.arrowDown) {
       final j = current + cols;
       if (j < count) return j;
@@ -83,7 +163,58 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
       final lastRow = ((count - 1 - col) ~/ cols);
       return lastRow * cols + col; // wrap to last row, same column
     }
-    return (current + 1) % count;
+    return current;
+  }
+
+  void _navigateTo(BuildContext context, Widget page) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, a, __) => page,
+        transitionsBuilder: (_, a, __, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.ease));
+          return SlideTransition(position: a.drive(tween), child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+  }
+
+  // Fixed reorder method with proper bounds checking
+  void _reorder(int from, int to) {
+    if (from == to || from < 0 || to < 0 || from >= _tiles.length || to >= _tiles.length) {
+      return;
+    }
+
+    final FocusNode? focusedNode = (_tileNodes.isNotEmpty && _focusedIndex < _tileNodes.length) 
+        ? _tileNodes[_focusedIndex] : null;
+
+    setState(() {
+      // Reorder tiles
+      final item = _tiles.removeAt(from);
+      _tiles.insert(to, item);
+
+      // Reorder focus nodes
+      final node = _tileNodes.removeAt(from);
+      _tileNodes.insert(to, node);
+
+      // Update focused index
+      if (focusedNode != null) {
+        final idx = _tileNodes.indexOf(focusedNode);
+        if (idx != -1) {
+          _focusedIndex = idx;
+        }
+      }
+    });
+
+    // Request focus after the next frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_tileNodes.isNotEmpty && _focusedIndex < _tileNodes.length) {
+        _tileNodes[_focusedIndex].requestFocus();
+      }
+    });
   }
 
   @override
@@ -153,206 +284,103 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
               ),
             ),
 
-            // Main content
+            // Main content with ReorderableGridView
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: LayoutBuilder(
                 builder: (context, constraints) {
-                  final availableHeight = MediaQuery.of(context).size.height -
-                      kToolbarHeight - MediaQuery.of(context).padding.top - 48;
-
-                  final interactiveTiles = <_TileSpec>[
-                    _TileSpec(
-                      title: 'Dashboard',
-                      subtitle: 'Overview & Analytics',
-                      icon: Icons.dashboard_outlined,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFEF4444), Color(0xFFEC4899)],
-                        begin: Alignment.topLeft, end: Alignment.bottomRight,
-                      ),
-                      pageBuilder: () => const StockKeeperDashboard(),
-                    ),
-                    _TileSpec(
-                      title: 'Products',
-                      subtitle: 'Manage Items',
-                      icon: Icons.category_outlined,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF10B981), Color(0xFF059669)],
-                        begin: Alignment.topLeft, end: Alignment.bottomRight,
-                      ),
-                      pageBuilder: () => const StockKeeperProducts(),
-                    ),
-                    _TileSpec(
-                      title: 'Inventory',
-                      subtitle: 'Stock Management',
-                      icon: Icons.inventory_2_outlined,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF3B82F6), Color(0xFF0891B2)],
-                        begin: Alignment.topLeft, end: Alignment.bottomRight,
-                      ),
-                      pageBuilder: () => const StockKeeperInventory(),
-                    ),
-                    _TileSpec(
-                      title: 'Reports',
-                      subtitle: 'Charts & Analytics',
-                      icon: Icons.bar_chart_outlined,
-                      gradient: const LinearGradient(
-                        colors: [Color.fromARGB(255, 188, 32, 151), Color.fromARGB(255, 154, 121, 156)],
-                        begin: Alignment.topLeft, end: Alignment.bottomRight,
-                      ),
-                      pageBuilder: () => const StockKeeperReports(),
-                    ),
-                    _TileSpec(
-                      title: 'Cashier',
-                      subtitle: 'Billing & Payments',
-                      icon: Icons.receipt_long_outlined,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF8B5CF6), Color(0xFF4F46E5)],
-                        begin: Alignment.topLeft, end: Alignment.bottomRight,
-                      ),
-                      pageBuilder: () => const StockKeeperCashier(),
-                    ),
-                    _TileSpec(
-                      title: 'Settings',
-                      subtitle: 'More Options',
-                      icon: Icons.settings_outlined,
-                      gradient: const LinearGradient(
-                        colors: [Color.fromARGB(255, 21, 4, 13), Color.fromARGB(255, 111, 107, 107)],
-                        begin: Alignment.topLeft, end: Alignment.bottomRight,
-                      ),
-                      pageBuilder: () => const StockKeeperMore(),
-                    ),
-                    _TileSpec(
-                      title: 'Back',
-                      subtitle: 'Go Back',
-                      icon: Icons.arrow_back_outlined,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFEAB308), Color(0xFFF97316)],
-                        begin: Alignment.topLeft, end: Alignment.bottomRight,
-                      ),
-                      onTap: () => Navigator.pop(context),
-                    ),
-                  ];
-
-                  _ensureNodes(interactiveTiles.length);
-
                   final isWide = constraints.maxWidth > 800;
                   final crossAxisCount = isWide ? 4 : 2;
 
-                  // Keyboard wrappers around the grid, including Home/End/Esc
                   return Focus(
                     autofocus: true,
                     child: Shortcuts(
                       shortcuts: const <ShortcutActivator, Intent>{
-                        // Arrow navigation (handled via custom action below)
-                        SingleActivator(LogicalKeyboardKey.arrowLeft): DirectionalFocusIntent(TraversalDirection.left),
+                        SingleActivator(LogicalKeyboardKey.arrowLeft):  DirectionalFocusIntent(TraversalDirection.left),
                         SingleActivator(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(TraversalDirection.right),
-                        SingleActivator(LogicalKeyboardKey.arrowUp): DirectionalFocusIntent(TraversalDirection.up),
-                        SingleActivator(LogicalKeyboardKey.arrowDown): DirectionalFocusIntent(TraversalDirection.down),
-                        // New: Home/End jump, Esc back
-                        SingleActivator(LogicalKeyboardKey.home): JumpToFirstIntent(),
-                        SingleActivator(LogicalKeyboardKey.end): JumpToLastIntent(),
-                        SingleActivator(LogicalKeyboardKey.escape): BackIntent(),
+                        SingleActivator(LogicalKeyboardKey.arrowUp):    DirectionalFocusIntent(TraversalDirection.up),
+                        SingleActivator(LogicalKeyboardKey.arrowDown):  DirectionalFocusIntent(TraversalDirection.down),
+                        SingleActivator(LogicalKeyboardKey.home):       JumpToFirstIntent(),
+                        SingleActivator(LogicalKeyboardKey.end):        JumpToLastIntent(),
+                        SingleActivator(LogicalKeyboardKey.escape):     BackIntent(),
                       },
                       child: Actions(
                         actions: <Type, Action<Intent>>{
-                          // Override directional traversal with our wrap-around logic
                           DirectionalFocusIntent: CallbackAction<DirectionalFocusIntent>(
                             onInvoke: (intent) {
-                              final key = switch (intent.direction) {
-                                TraversalDirection.left => LogicalKeyboardKey.arrowLeft,
-                                TraversalDirection.right => LogicalKeyboardKey.arrowRight,
-                                TraversalDirection.up => LogicalKeyboardKey.arrowUp,
-                                TraversalDirection.down => LogicalKeyboardKey.arrowDown,
-                                _ => LogicalKeyboardKey.arrowRight,
-                              };
+                              LogicalKeyboardKey key;
+                              switch (intent.direction) {
+                                case TraversalDirection.left:  key = LogicalKeyboardKey.arrowLeft;  break;
+                                case TraversalDirection.right: key = LogicalKeyboardKey.arrowRight; break;
+                                case TraversalDirection.up:    key = LogicalKeyboardKey.arrowUp;    break;
+                                case TraversalDirection.down:  key = LogicalKeyboardKey.arrowDown;  break;
+                              }
                               final next = _nextIndex(
                                 current: _focusedIndex,
                                 cols: crossAxisCount,
-                                count: interactiveTiles.length,
+                                count: _tiles.length,
                                 key: key,
                               );
                               _focusAt(next);
                               return null;
                             },
                           ),
-                          // New: jump to first/last
                           JumpToFirstIntent: CallbackAction<JumpToFirstIntent>(
-                            onInvoke: (_) {
-                              _focusAt(0);
-                              return null;
-                            },
+                            onInvoke: (_) { _focusAt(0); return null; },
                           ),
                           JumpToLastIntent: CallbackAction<JumpToLastIntent>(
-                            onInvoke: (_) {
-                              _focusAt(interactiveTiles.length - 1);
-                              return null;
-                            },
+                            onInvoke: (_) { _focusAt(_tiles.length - 1); return null; },
                           ),
-                          // New: back navigation
                           BackIntent: CallbackAction<BackIntent>(
-                            onInvoke: (_) {
-                              Navigator.maybePop(context);
-                              return null;
-                            },
+                            onInvoke: (_) { Navigator.maybePop(context); return null; },
                           ),
                         },
                         child: FocusTraversalGroup(
                           policy: ReadingOrderTraversalPolicy(),
-                          child: isWide
-                              ? SizedBox(
-                                  height: availableHeight,
-                                  child: GridView.count(
-                                    physics: const NeverScrollableScrollPhysics(),
-                                    crossAxisCount: crossAxisCount,
-                                    crossAxisSpacing: 24,
-                                    mainAxisSpacing: 24,
-                                    childAspectRatio: 1.2,
-                                    children: [
-                                      for (int i = 0; i < interactiveTiles.length; i++)
-                                        ModernDashboardTile(
-                                          title: interactiveTiles[i].title,
-                                          subtitle: interactiveTiles[i].subtitle,
-                                          icon: interactiveTiles[i].icon,
-                                          gradient: interactiveTiles[i].gradient,
-                                          onTap: () {
-                                            final onTap = interactiveTiles[i].onTap;
-                                            if (onTap != null) {
-                                              onTap();
-                                            } else {
-                                              _navigateTo(context, interactiveTiles[i].pageBuilder!());
-                                            }
-                                          },
-                                          focusNode: _tileNodes[i],
-                                        ),
-                                      _comingSoonBox(), // non-focusable
-                                    ],
-                                  ),
-                                )
-                              : GridView.count(
-                                  crossAxisCount: crossAxisCount,
-                                  crossAxisSpacing: 20,
-                                  mainAxisSpacing: 20,
-                                  childAspectRatio: 1,
-                                  children: [
-                                    for (int i = 0; i < interactiveTiles.length; i++)
-                                      ModernDashboardTile(
-                                        title: interactiveTiles[i].title,
-                                        subtitle: interactiveTiles[i].subtitle,
-                                        icon: interactiveTiles[i].icon,
-                                        gradient: interactiveTiles[i].gradient,
-                                        onTap: () {
-                                          final onTap = interactiveTiles[i].onTap;
-                                          if (onTap != null) {
-                                            onTap();
-                                          } else {
-                                            _navigateTo(context, interactiveTiles[i].pageBuilder!());
-                                          }
-                                        },
-                                        focusNode: _tileNodes[i],
-                                      ),
-                                  ],
+                          child: CustomScrollView(
+                            slivers: [
+                              SliverGrid(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    if (index >= _tiles.length) return null;
+                                    return _DraggableGridTile(
+                                      key: ValueKey(_tiles[index].id),
+                                      index: index,
+                                      isDragging: _draggingIndex == index,
+                                      focusNode: _tileNodes.length > index ? _tileNodes[index] : null,
+                                      tile: _tiles[index],
+                                      onActivate: () {
+                                        final t = _tiles[index];
+                                        if (t.onTap != null) t.onTap!();
+                                        else if (t.pageBuilder != null) _navigateTo(context, t.pageBuilder!());
+                                      },
+                                      onDragStarted: () => setState(() => _draggingIndex = index),
+                                      onDragEnded: () => setState(() => _draggingIndex = null),
+                                      onAccept: (from) => _reorder(from, index),
+                                    );
+                                  },
+                                  childCount: _tiles.length,
                                 ),
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: crossAxisCount,
+                                  crossAxisSpacing: isWide ? 24 : 20,
+                                  mainAxisSpacing: isWide ? 24 : 20,
+                                  childAspectRatio: isWide ? 1.2 : 1.0,
+                                ),
+                              ),
+                              // Add coming soon box for wide screens
+                              if (isWide)
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 24),
+                                    child: SizedBox(
+                                      height: 200,
+                                      child: _comingSoonBox(),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -377,44 +405,25 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
         border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), offset: const Offset(0, 8), blurRadius: 16)],
       ),
-      child: Center(
+      child: const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(24)),
-              child: const Icon(Icons.add_outlined, color: Colors.white54, size: 24),
-            ),
-            const SizedBox(height: 12),
-            const Text('Coming Soon', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white54)),
-            Text('New Features', style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.4))),
+            Icon(Icons.add_outlined, color: Colors.white54, size: 24),
+            SizedBox(height: 12),
+            Text('Coming Soon', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white54)),
+            SizedBox(height: 4),
+            Text('New Features', style: TextStyle(fontSize: 13, color: Colors.white38)),
           ],
         ),
       ),
     );
   }
-
-  void _navigateTo(BuildContext context, Widget page) {
-    Navigator.push(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => page,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(1.0, 0.0);
-          const end = Offset.zero;
-          const curve = Curves.ease;
-          final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-          return SlideTransition(position: animation.drive(tween), child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 300),
-      ),
-    );
-  }
 }
 
+/* -------------------- Data model -------------------- */
 class _TileSpec {
+  final String id; // stable key for reordering
   final String title;
   final String subtitle;
   final IconData icon;
@@ -423,6 +432,7 @@ class _TileSpec {
   final VoidCallback? onTap;
 
   _TileSpec({
+    required this.id,
     required this.title,
     required this.subtitle,
     required this.icon,
@@ -432,30 +442,135 @@ class _TileSpec {
   });
 }
 
-class ModernDashboardTile extends StatefulWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final LinearGradient gradient;
-  final VoidCallback onTap;
+/* -------------------- Enhanced DragTarget + Draggable wrapper -------------------- */
+class _DraggableGridTile extends StatefulWidget {
+  final int index;
+  final bool isDragging;
+  final _TileSpec tile;
   final FocusNode? focusNode;
+  final VoidCallback onActivate;
+  final VoidCallback onDragStarted;
+  final VoidCallback onDragEnded;
+  final ValueChanged<int> onAccept;
 
-  const ModernDashboardTile({
+  const _DraggableGridTile({
     super.key,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.gradient,
-    required this.onTap,
+    required this.index,
+    required this.isDragging,
+    required this.tile,
+    required this.onActivate,
+    required this.onDragStarted,
+    required this.onDragEnded,
+    required this.onAccept,
     this.focusNode,
   });
 
   @override
-  State<ModernDashboardTile> createState() => _ModernDashboardTileState();
+  State<_DraggableGridTile> createState() => _DraggableGridTileState();
 }
 
-class _ModernDashboardTileState extends State<ModernDashboardTile>
-    with SingleTickerProviderStateMixin {
+class _DraggableGridTileState extends State<_DraggableGridTile> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // Enhanced DragTarget with better visual feedback
+    return DragTarget<int>(
+      onWillAccept: (from) => from != null && from != widget.index,
+      onAccept: (from) {
+        setState(() => _isHovering = false);
+        widget.onAccept(from);
+      },
+      onMove: (details) => setState(() => _isHovering = true),
+      onLeave: (data) => setState(() => _isHovering = false),
+      builder: (context, candidateData, rejected) {
+        final isReceiving = candidateData.isNotEmpty || _isHovering;
+        
+        // Enhanced Draggable with better feedback
+        return Draggable<int>(
+          data: widget.index,
+          onDragStarted: widget.onDragStarted,
+          onDragEnd: (details) {
+            widget.onDragEnded();
+            setState(() => _isHovering = false);
+          },
+          // Improved feedback widget
+          feedback: Material(
+            color: Colors.transparent,
+            child: Transform.scale(
+              scale: 0.8, // Slightly smaller feedback
+              child: Container(
+                width: 150, // Fixed width for feedback
+                height: 150, // Fixed height for feedback
+                child: _TileBody(
+                  tile: widget.tile,
+                  focusNode: null,
+                  elevate: true,
+                  receiving: false,
+                  isDragging: true,
+                ),
+              ),
+            ),
+          ),
+          // More transparent when dragging
+          childWhenDragging: Opacity(
+            opacity: 0.3,
+            child: _TileBody(
+              tile: widget.tile,
+              focusNode: widget.focusNode,
+              elevate: false,
+              receiving: false,
+            ),
+          ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(26),
+              boxShadow: isReceiving ? [
+                BoxShadow(
+                  color: Colors.white.withOpacity(0.4),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ] : null,
+            ),
+            child: _TileBody(
+              tile: widget.tile,
+              focusNode: widget.focusNode,
+              elevate: !widget.isDragging,
+              receiving: isReceiving,
+              onActivate: widget.onActivate,
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/* -------------------- Enhanced visual tile -------------------- */
+class _TileBody extends StatefulWidget {
+  final _TileSpec tile;
+  final FocusNode? focusNode;
+  final bool elevate;
+  final bool receiving;
+  final bool isDragging;
+  final VoidCallback? onActivate;
+
+  const _TileBody({
+    required this.tile,
+    this.focusNode,
+    this.elevate = true,
+    this.receiving = false,
+    this.isDragging = false,
+    this.onActivate,
+  });
+
+  @override
+  State<_TileBody> createState() => _TileBodyState();
+}
+
+class _TileBodyState extends State<_TileBody> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _rotationAnimation;
@@ -473,18 +588,19 @@ class _ModernDashboardTileState extends State<ModernDashboardTile>
 
   @override
   Widget build(BuildContext context) {
-    return FocusableActionDetector
-    (
+    final tile = widget.tile;
+
+    return FocusableActionDetector(
       focusNode: widget.focusNode,
       onShowFocusHighlight: (hasFocus) => setState(() => _focused = hasFocus),
       mouseCursor: SystemMouseCursors.click,
-      shortcuts: const <ShortcutActivator, Intent>{
+      shortcuts: const {
         SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
         SingleActivator(LogicalKeyboardKey.space): ActivateIntent(),
       },
-      actions: <Type, Action<Intent>>{
+      actions: {
         ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-          widget.onTap();
+          widget.onActivate?.call();
           return null;
         }),
       },
@@ -493,39 +609,43 @@ class _ModernDashboardTileState extends State<ModernDashboardTile>
         onExit: (_) => _controller.reverse(),
         child: GestureDetector(
           onTapDown: (_) => _controller.forward(),
-          onTapUp: (_) {
-            _controller.reverse();
-            widget.onTap();
+          onTapUp: (_) { 
+            _controller.reverse(); 
+            widget.onActivate?.call(); 
           },
           onTapCancel: () => _controller.reverse(),
           child: AnimatedBuilder(
             animation: _controller,
             builder: (context, child) {
+              final double scaleBump = _focused ? 1.03 : 1.0;
               return Transform.scale(
-                scale: _scaleAnimation.value * (_focused ? 1.03 : 1.0),
+                scale: _scaleAnimation.value * scaleBump,
                 child: Transform.rotate(
                   angle: _rotationAnimation.value,
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: widget.gradient,
+                      gradient: tile.gradient,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
-                        BoxShadow(
-                          color: widget.gradient.colors.first.withOpacity(0.4),
-                          offset: const Offset(0, 8),
-                          blurRadius: 16,
-                          spreadRadius: _controller.value * 2,
-                        ),
-                        if (_focused)
+                        if (widget.elevate)
                           BoxShadow(
-                            color: Colors.white.withOpacity(0.25),
-                            blurRadius: 20,
-                            spreadRadius: 1,
+                            color: tile.gradient.colors.first.withOpacity(0.4),
+                            offset: const Offset(0, 8),
+                            blurRadius: 16,
+                            spreadRadius: _controller.value * 2,
+                          ),
+                        if (_focused || widget.receiving)
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.25), 
+                            blurRadius: 20, 
+                            spreadRadius: 1
                           ),
                       ],
                       border: Border.all(
-                        color: _focused ? Colors.white.withOpacity(0.9) : Colors.white.withOpacity(0.1),
-                        width: _focused ? 2 : 1,
+                        color: (_focused || widget.receiving)
+                            ? Colors.white.withOpacity(0.9)
+                            : Colors.white.withOpacity(0.1),
+                        width: (_focused || widget.receiving) ? 2 : 1,
                       ),
                     ),
                     child: Container(
@@ -533,43 +653,78 @@ class _ModernDashboardTileState extends State<ModernDashboardTile>
                         borderRadius: BorderRadius.circular(24),
                         gradient: LinearGradient(
                           colors: [Colors.white.withOpacity(0.12), Colors.white.withOpacity(0.0)],
-                          begin: Alignment.topLeft, end: Alignment.bottomRight,
+                          begin: Alignment.topLeft, 
+                          end: Alignment.bottomRight,
                         ),
                       ),
-                      child: Center(
-                        child: Semantics(
-                          button: true,
-                          label: widget.title,
-                          hint: 'Press Enter to open ${widget.title}',
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: _focused
-                                      ? Border.all(color: Colors.white.withOpacity(0.7), width: 1)
-                                      : null,
+                      child: Stack(
+                        children: [
+                          // Enhanced drag hint with better visibility
+                          if (!widget.isDragging) // Hide drag hint when dragging
+                            Positioned(
+                              right: 10,
+                              top: 10,
+                              child: Opacity(
+                                opacity: 0.8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.drag_indicator, 
+                                    size: 18, 
+                                    color: Colors.white70
+                                  ),
                                 ),
-                                child: Icon(widget.icon, size: 32, color: Colors.white),
                               ),
-                              const SizedBox(height: 16),
-                              Text(
-                                widget.title,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                                textAlign: TextAlign.center,
+                            ),
+                          // Content
+                          Center(
+                            child: Semantics(
+                              button: true,
+                              label: tile.title,
+                              hint: 'Long-press to drag. Press Enter to open ${tile.title}',
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: _focused
+                                          ? Border.all(color: Colors.white.withOpacity(0.7), width: 1)
+                                          : null,
+                                    ),
+                                    child: Icon(tile.icon, size: 32, color: Colors.white),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    tile.title,
+                                    style: const TextStyle(
+                                      fontSize: 18, 
+                                      fontWeight: FontWeight.bold, 
+                                      color: Colors.white
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    tile.subtitle,
+                                    style: const TextStyle(
+                                      fontSize: 13, 
+                                      color: Colors.white70, 
+                                      fontWeight: FontWeight.w500
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                widget.subtitle,
-                                style: const TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w500),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
@@ -583,8 +738,8 @@ class _ModernDashboardTileState extends State<ModernDashboardTile>
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void dispose() { 
+    _controller.dispose(); 
+    super.dispose(); 
   }
 }
