@@ -7,6 +7,7 @@ class User {
   User(this.username, this.role);
 }
 
+
 class AuthService with ChangeNotifier {
   User? _currentUser;
 
