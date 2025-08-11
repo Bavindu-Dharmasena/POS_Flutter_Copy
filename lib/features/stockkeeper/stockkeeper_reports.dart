@@ -29,8 +29,21 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   String _selectedCashRegister = 'All';
   String _selectedProduct = 'All';
   String _selectedProductGroup = 'Products';
+  String _selectedSupplier = 'All';
   bool _includeSubgroups = true;
   final Set<String> _downloadingReports = {};
+
+  // Add category filter
+  String _selectedCategory = 'All';
+  final List<String> _categories = [
+    'All',
+    'Sales Reports',
+    'Purchase Reports',
+    'Stock Return',
+    'Loss and Damage',
+    'Finance',
+    'Stock Control',
+  ];
 
   @override
   void initState() {
@@ -45,298 +58,551 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Reports'),
-        centerTitle: true,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.print),
-            onPressed: () => _showSnackBar('Printing report...'),
+      backgroundColor: Colors.white, // Changed to pure white background
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(140),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white, // Changed to white background
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1), // Light shadow
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.picture_as_pdf),
-            onPressed: () => _showSnackBar('Exporting to PDF...'),
+          child: AppBar(
+            backgroundColor: Colors.white, // White AppBar
+            elevation: 0,
+            centerTitle: true,
+            title: Column(
+              children: [
+                Text(
+                  'Reports Dashboard',
+                  style: TextStyle(
+                    color: Colors.grey[800], // Dark text for contrast
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Comprehensive Business Analytics',
+                  style: TextStyle(
+                    color: Colors.grey[600], // Medium gray text
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back, color: Colors.grey[800]),
+              onPressed: () => Navigator.pop(context),
+            ),
+            actions: [
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100], // Light gray background
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[300]!), // Light border
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.print, color: Colors.grey[700]),
+                      onPressed: () => _showSnackBar('Printing report...'),
+                      tooltip: 'Print Report',
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.picture_as_pdf, color: Colors.grey[700]),
+                      onPressed: () => _showSnackBar('Exporting to PDF...'),
+                      tooltip: 'Export to PDF',
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.grid_on, color: Colors.grey[700]),
+                      onPressed: () => _showSnackBar('Exporting to Excel...'),
+                      tooltip: 'Export to Excel',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(60),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    top: BorderSide(color: Colors.grey[200]!, width: 1),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: _categories.map((category) {
+                      final isSelected = _selectedCategory == category;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = category;
+                          });
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? Colors
+                                      .blue[50] // Light blue background for selected
+                                : Colors.grey[100], // Light gray for unselected
+                            borderRadius: BorderRadius.circular(25),
+                            border: Border.all(
+                              color: isSelected
+                                  ? Colors
+                                        .blue[300]! // Blue border for selected
+                                  : Colors
+                                        .grey[300]!, // Gray border for unselected
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getCategoryIcon(category),
+                                color: isSelected
+                                    ? Colors.blue[700] // Blue icon for selected
+                                    : Colors
+                                          .grey[600], // Gray icon for unselected
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                category,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors
+                                            .blue[700] // Blue text for selected
+                                      : Colors
+                                            .grey[600], // Gray text for unselected
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.w500,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.grid_on),
-            onPressed: () => _showSnackBar('Exporting to Excel...'),
-          ),
-        ],
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Sales Reports Section
-            _buildSectionHeader('Sales Reports'),
-            const SizedBox(height: 10),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.5,
-              children: [
-                _buildReportCard(
-                  title: 'Products',
-                  icon: Icons.shopping_bag,
-                  colors: [Colors.blue, Colors.lightBlue],
-                ),
-                _buildReportCard(
-                  title: 'Product Groups',
-                  icon: Icons.category,
-                  colors: [Colors.purple, Colors.deepPurple],
-                ),
-                _buildReportCard(
-                  title: 'Customers',
-                  icon: Icons.people,
-                  colors: [Colors.green, Colors.teal],
-                ),
-                _buildReportCard(
-                  title: 'Tax Rates',
-                  icon: Icons.receipt,
-                  colors: [Colors.orange, Colors.deepOrange],
-                ),
-                _buildReportCard(
-                  title: 'Users',
-                  icon: Icons.person,
-                  colors: [Colors.pink, Colors.pinkAccent],
-                ),
-                _buildReportCard(
-                  title: 'Item List',
-                  icon: Icons.list,
-                  colors: [Colors.indigo, Colors.indigoAccent],
-                ),
-                _buildReportCard(
-                  title: 'Payment Types',
-                  icon: Icons.payment,
-                  colors: [Colors.cyan, Colors.cyanAccent],
-                ),
-                _buildReportCard(
-                  title: 'Payment Types by Users',
-                  icon: Icons.account_balance_wallet,
-                  colors: [Colors.amber, Colors.orange],
-                ),
-                _buildReportCard(
-                  title: 'Payment Types by Customers',
-                  icon: Icons.credit_card,
-                  colors: [Colors.lightGreen, Colors.green],
-                ),
-                _buildReportCard(
-                  title: 'Refunds',
-                  icon: Icons.assignment_return,
-                  colors: [Colors.red, Colors.redAccent],
-                ),
-                _buildReportCard(
-                  title: 'Invoice List',
-                  icon: Icons.description,
-                  colors: [Colors.blueGrey, Colors.grey],
-                ),
-                _buildReportCard(
-                  title: 'Daily Sales',
-                  icon: Icons.calendar_today,
-                  colors: [Colors.teal, Colors.tealAccent],
-                ),
-                _buildReportCard(
-                  title: 'Hourly Sales',
-                  icon: Icons.access_time,
-                  colors: [Colors.deepPurple, Colors.purpleAccent],
-                ),
-                _buildReportCard(
-                  title: 'Hourly Sales by Product Groups',
-                  icon: Icons.timeline,
-                  colors: [Colors.lightBlue, Colors.blue],
-                ),
-                _buildReportCard(
-                  title: 'Table/Order Number',
-                  icon: Icons.table_chart,
-                  colors: [Colors.orange, Colors.deepOrange],
-                ),
-                _buildReportCard(
-                  title: 'Profit & Margin',
-                  icon: Icons.attach_money,
-                  colors: [Colors.green, Colors.lightGreen],
-                ),
-                _buildReportCard(
-                  title: 'Unpaid Sales',
-                  icon: Icons.money_off,
-                  colors: [Colors.red, Colors.pink],
-                ),
-                _buildReportCard(
-                  title: 'Starting Cash Entries',
-                  icon: Icons.point_of_sale,
-                  colors: [Colors.blue, Colors.indigo],
-                ),
-                _buildReportCard(
-                  title: 'Validated Items',
-                  icon: Icons.verified,
-                  colors: [Colors.green, Colors.teal],
-                ),
-                _buildReportCard(
-                  title: 'Discounts Granted',
-                  icon: Icons.discount,
-                  colors: [Colors.purple, Colors.deepPurpleAccent],
-                ),
-                _buildReportCard(
-                  title: 'Items Discounts',
-                  icon: Icons.percent,
-                  colors: [Colors.amber, Colors.orange],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Purchase Reports Section
-            _buildSectionHeader('Purchase Reports'),
-            const SizedBox(height: 10),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.5,
-              children: [
-                _buildReportCard(
-                  title: ' Purchase Products',
-                  icon: Icons.shopping_cart,
-                  colors: [Colors.blue, Colors.lightBlue],
-                ),
-                _buildReportCard(
-                  title: 'Suppliers',
-                  icon: Icons.local_shipping,
-                  colors: [Colors.green, Colors.teal],
-                ),
-                _buildReportCard(
-                  title: 'Unpaid Purchase',
-                  icon: Icons.money_off,
-                  colors: [Colors.red, Colors.pink],
-                ),
-                _buildReportCard(
-                  title: 'Purchase Discounts',
-                  icon: Icons.discount,
-                  colors: [Colors.purple, Colors.deepPurple],
-                ),
-                _buildReportCard(
-                  title: 'Purchased Items Discounts',
-                  icon: Icons.percent,
-                  colors: [Colors.amber, Colors.orange],
-                ),
-                _buildReportCard(
-                  title: 'Purchase Invoice List',
-                  icon: Icons.description,
-                  colors: [Colors.blueGrey, Colors.grey],
-                ),
-                _buildReportCard(
-                  title: 'Tax Rates',
-                  icon: Icons.receipt,
-                  colors: [Colors.orange, Colors.deepOrange],
-                ),
-                _buildReportCard(
-                  title: 'Expiration Date',
-                  icon: Icons.calendar_today,
-                  colors: [Colors.teal, Colors.tealAccent],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Other Reports Sections
-            _buildSectionHeader('Stock Return'),
-            const SizedBox(height: 10),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.5,
-              children: [
-                _buildReportCard(
-                  title: 'Products',
-                  icon: Icons.assignment_return,
-                  colors: [Colors.red, Colors.pink],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            _buildSectionHeader('Loss and Damage'),
-            const SizedBox(height: 10),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.5,
-              children: [
-                _buildReportCard(
-                  title: 'Products',
-                  icon: Icons.warning,
-                  colors: [Colors.orange, Colors.deepOrange],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            _buildSectionHeader('Finance'),
-            const SizedBox(height: 10),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.5,
-              children: [
-                _buildReportCard(
-                  title: 'Transaction History',
-                  icon: Icons.history,
-                  colors: [Colors.blueGrey, Colors.grey],
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            _buildSectionHeader('Stock Control'),
-            const SizedBox(height: 10),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.5,
-              children: [
-                _buildReportCard(
-                  title: 'Reorder Product List',
-                  icon: Icons.repeat,
-                  colors: [Colors.green, Colors.teal],
-                ),
-                _buildReportCard(
-                  title: 'Low Stock Warning',
-                  icon: Icons.notifications_active,
-                  colors: [Colors.red, Colors.pink],
-                ),
-              ],
-            ),
-          ],
+      body: Container(
+        color: Colors.grey[50], // Very light gray background for body
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _buildFilteredContent(),
+          ),
         ),
       ),
     );
   }
 
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'All':
+        return Icons.dashboard;
+      case 'Sales Reports':
+        return Icons.trending_up;
+      case 'Purchase Reports':
+        return Icons.shopping_cart;
+      case 'Stock Return':
+        return Icons.assignment_return;
+      case 'Loss and Damage':
+        return Icons.warning;
+      case 'Finance':
+        return Icons.account_balance;
+      case 'Stock Control':
+        return Icons.inventory;
+      default:
+        return Icons.folder;
+    }
+  }
+
+  List<Widget> _buildFilteredContent() {
+    List<Widget> content = [];
+
+    if (_selectedCategory == 'All' || _selectedCategory == 'Sales Reports') {
+      content.addAll([
+        _buildSectionHeader('Sales Reports'),
+        const SizedBox(height: 10),
+        _buildSalesReportsGrid(),
+        const SizedBox(height: 20),
+      ]);
+    }
+
+    if (_selectedCategory == 'All' || _selectedCategory == 'Purchase Reports') {
+      content.addAll([
+        _buildSectionHeader('Purchase Reports'),
+        const SizedBox(height: 10),
+        _buildPurchaseReportsGrid(),
+        const SizedBox(height: 20),
+      ]);
+    }
+
+    if (_selectedCategory == 'All' || _selectedCategory == 'Stock Return') {
+      content.addAll([
+        _buildSectionHeader('Stock Return'),
+        const SizedBox(height: 10),
+        _buildStockReturnGrid(),
+        const SizedBox(height: 20),
+      ]);
+    }
+
+    if (_selectedCategory == 'All' || _selectedCategory == 'Loss and Damage') {
+      content.addAll([
+        _buildSectionHeader('Loss and Damage'),
+        const SizedBox(height: 10),
+        _buildLossAndDamageGrid(),
+        const SizedBox(height: 20),
+      ]);
+    }
+
+    if (_selectedCategory == 'All' || _selectedCategory == 'Finance') {
+      content.addAll([
+        _buildSectionHeader('Finance'),
+        const SizedBox(height: 10),
+        _buildFinanceGrid(),
+        const SizedBox(height: 20),
+      ]);
+    }
+
+    if (_selectedCategory == 'All' || _selectedCategory == 'Stock Control') {
+      content.addAll([
+        _buildSectionHeader('Stock Control'),
+        const SizedBox(height: 10),
+        _buildStockControlGrid(),
+      ]);
+    }
+
+    return content;
+  }
+
+  Widget _buildSalesReportsGrid() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 1.5,
+      children: [
+        _buildReportCard(
+          title: 'Products',
+          icon: Icons.shopping_bag,
+          colors: [Colors.blue, Colors.lightBlue],
+        ),
+        _buildReportCard(
+          title: 'Product Groups',
+          icon: Icons.category,
+          colors: [Colors.purple, Colors.deepPurple],
+        ),
+        _buildReportCard(
+          title: 'Customers',
+          icon: Icons.people,
+          colors: [Colors.green, Colors.teal],
+        ),
+        _buildReportCard(
+          title: 'Tax Rates',
+          icon: Icons.receipt,
+          colors: [Colors.orange, Colors.deepOrange],
+        ),
+        _buildReportCard(
+          title: 'Users',
+          icon: Icons.person,
+          colors: [Colors.pink, Colors.pinkAccent],
+        ),
+        _buildReportCard(
+          title: 'Item List',
+          icon: Icons.list,
+          colors: [Colors.indigo, Colors.indigoAccent],
+        ),
+        _buildReportCard(
+          title: 'Payment Types',
+          icon: Icons.payment,
+          colors: [Colors.cyan, Colors.cyanAccent],
+        ),
+        _buildReportCard(
+          title: 'Payment Types by Users',
+          icon: Icons.account_balance_wallet,
+          colors: [Colors.amber, Colors.orange],
+        ),
+        _buildReportCard(
+          title: 'Payment Types by Customers',
+          icon: Icons.credit_card,
+          colors: [Colors.lightGreen, Colors.green],
+        ),
+        _buildReportCard(
+          title: 'Refunds',
+          icon: Icons.assignment_return,
+          colors: [Colors.red, Colors.redAccent],
+        ),
+        _buildReportCard(
+          title: 'Invoice List',
+          icon: Icons.description,
+          colors: [Colors.blueGrey, Colors.grey],
+        ),
+        _buildReportCard(
+          title: 'Daily Sales',
+          icon: Icons.calendar_today,
+          colors: [Colors.teal, Colors.tealAccent],
+        ),
+        _buildReportCard(
+          title: 'Hourly Sales',
+          icon: Icons.access_time,
+          colors: [Colors.deepPurple, Colors.purpleAccent],
+        ),
+        _buildReportCard(
+          title: 'Hourly Sales by Product Groups',
+          icon: Icons.timeline,
+          colors: [Colors.lightBlue, Colors.blue],
+        ),
+        _buildReportCard(
+          title: 'Table/Order Number',
+          icon: Icons.table_chart,
+          colors: [Colors.orange, Colors.deepOrange],
+        ),
+        _buildReportCard(
+          title: 'Profit & Margin',
+          icon: Icons.attach_money,
+          colors: [Colors.green, Colors.lightGreen],
+        ),
+        _buildReportCard(
+          title: 'Unpaid Sales',
+          icon: Icons.money_off,
+          colors: [Colors.red, Colors.pink],
+        ),
+        _buildReportCard(
+          title: 'Starting Cash Entries',
+          icon: Icons.point_of_sale,
+          colors: [Colors.blue, Colors.indigo],
+        ),
+        _buildReportCard(
+          title: 'Voided Items',
+          icon: Icons.verified,
+          colors: [Colors.green, Colors.teal],
+        ),
+        _buildReportCard(
+          title: 'Discounts Granted',
+          icon: Icons.discount,
+          colors: [Colors.purple, Colors.deepPurpleAccent],
+        ),
+        _buildReportCard(
+          title: 'Items Discounts',
+          icon: Icons.percent,
+          colors: [Colors.amber, Colors.orange],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPurchaseReportsGrid() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 1.5,
+      children: [
+        _buildReportCard(
+          title: ' Purchase Products',
+          icon: Icons.shopping_cart,
+          colors: [Colors.blue, Colors.lightBlue],
+        ),
+        _buildReportCard(
+          title: 'Suppliers',
+          icon: Icons.local_shipping,
+          colors: [Colors.green, Colors.teal],
+        ),
+        _buildReportCard(
+          title: 'Unpaid Purchase',
+          icon: Icons.money_off,
+          colors: [Colors.red, Colors.pink],
+        ),
+        _buildReportCard(
+          title: 'Purchase Discounts',
+          icon: Icons.discount,
+          colors: [Colors.purple, Colors.deepPurple],
+        ),
+        _buildReportCard(
+          title: 'Purchased Items Discounts',
+          icon: Icons.percent,
+          colors: [Colors.amber, Colors.orange],
+        ),
+        _buildReportCard(
+          title: 'Purchase Invoice List',
+          icon: Icons.description,
+          colors: [Colors.blueGrey, Colors.grey],
+        ),
+        _buildReportCard(
+          title: 'Tax Rates',
+          icon: Icons.receipt,
+          colors: [Colors.orange, Colors.deepOrange],
+        ),
+        _buildReportCard(
+          title: 'Expiration Date',
+          icon: Icons.calendar_today,
+          colors: [Colors.teal, Colors.tealAccent],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStockReturnGrid() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 1.5,
+      children: [
+        _buildReportCard(
+          title: 'Stock Return Products',
+          icon: Icons.assignment_return,
+          colors: [Colors.red, Colors.pink],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLossAndDamageGrid() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 1.5,
+      children: [
+        _buildReportCard(
+          title: 'Loss and Damage Products',
+          icon: Icons.warning,
+          colors: [Colors.orange, Colors.deepOrange],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFinanceGrid() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 1.5,
+      children: [
+        _buildReportCard(
+          title: 'Transaction History',
+          icon: Icons.history,
+          colors: [Colors.blueGrey, Colors.grey],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStockControlGrid() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 1.5,
+      children: [
+        _buildReportCard(
+          title: 'Reorder Product List',
+          icon: Icons.repeat,
+          colors: [Colors.green, Colors.teal],
+        ),
+        _buildReportCard(
+          title: 'Low Stock Warning',
+          icon: Icons.notifications_active,
+          colors: [Colors.red, Colors.pink],
+        ),
+      ],
+    );
+  }
+
   Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: Colors.blue,
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white, // White background
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!), // Light gray border
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.08), // Very subtle shadow
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(
+            _getCategoryIcon(title),
+            color: Colors.blue[600], // Blue icon
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[800], // Dark gray text
+            ),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.blue[600], // Blue background for count
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _getReportCount(title).toString(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -349,19 +615,20 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     bool isDownloading = _downloadingReports.contains(title);
 
     return Card(
-      elevation: 2,
+      elevation: 3, // Slightly more elevation for better definition
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: Colors.white, // White card background
+      shadowColor: Colors.grey.withOpacity(0.2), // Light shadow
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () => _showFiltersDialog(title),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            gradient: LinearGradient(
-              colors: colors,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            border: Border.all(
+              color: Colors.grey[200]!,
+              width: 1,
+            ), // Light border
           ),
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -369,13 +636,26 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
             children: [
               Row(
                 children: [
-                  Icon(icon, color: Colors.white),
-                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: colors
+                            .map((color) => color.withOpacity(0.1))
+                            .toList(),
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(icon, color: colors.first, size: 24),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       title,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: Colors.grey[800], // Dark text
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -392,10 +672,13 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       icon: const Icon(Icons.filter_list, size: 16),
                       label: const Text('Set Filters'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                        foregroundColor: Colors.white,
+                        backgroundColor:
+                            Colors.blue[50], // Light blue background
+                        foregroundColor: Colors.blue[700], // Blue text
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: Colors.blue[200]!),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 8),
                       ),
@@ -408,23 +691,26 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           ? null
                           : () => _handleDownloadReport(title),
                       icon: isDownloading
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 16,
                               height: 16,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
+                                  Colors.green[600]!,
                                 ),
                               ),
                             )
                           : const Icon(Icons.download, size: 16),
                       label: Text(isDownloading ? 'Downloading' : 'Download'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                        foregroundColor: Colors.white,
+                        backgroundColor:
+                            Colors.green[50], // Light green background
+                        foregroundColor: Colors.green[700], // Green text
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(color: Colors.green[200]!),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 8),
                       ),
@@ -438,6 +724,9 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
       ),
     );
   }
+
+  // Keep all other existing methods unchanged...
+  // (All the filter methods, dialog methods, etc. remain the same)
 
   // Add helper method to check if report is payment-related
   bool _isPaymentRelatedReport(String reportName) {
@@ -455,9 +744,38 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   // Add helper method to check if report is purchase-related and should exclude cash register filter
   bool _isPurchaseProductReport(String reportName) {
     return reportName.trim() == 'Purchase Products' ||
-        reportName.trim() == 'Suppliers';
+        reportName.trim() == 'Suppliers' ||
+        reportName.trim() == 'Unpaid Purchase' ||
+        reportName.trim() == 'Purchase Discounts' ||
+        reportName.trim() == 'Expiration Date' ||
+        reportName.trim() == 'Stock Return Products' ||
+        reportName.trim() == 'Loss and Damage Products' ||
+        reportName.trim() == 'Transaction History' ||
+        reportName.trim() == 'Reorder Product List' ||
+        reportName.trim() == 'Low Stock Warning';
+  }
 
-    ///Unpaid Purchase
+  // Add helper method to check if report should exclude user filter
+  bool _shouldExcludeUserFilter(String reportName) {
+    return reportName.trim() == 'Expiration Date' ||
+        reportName.trim() == 'Transaction History' ||
+        reportName.trim() == 'Reorder Product List' ||
+        reportName.trim() == 'Low Stock Warning';
+  }
+
+  // Add helper method to check if report should exclude product-related filters
+  bool _shouldExcludeProductFilters(String reportName) {
+    return _isPaymentRelatedReport(reportName) ||
+        reportName.trim() == 'Unpaid Purchase' ||
+        reportName.trim() == 'Purchase Discounts' ||
+        reportName.trim() == 'Transaction History';
+  }
+
+  // Add helper method to check if report should exclude supplier filter
+  bool _shouldExcludeSupplierFilter(String reportName) {
+    return reportName.trim() == 'Loss and Damage Products' ||
+        reportName.trim() == 'Starting Cash Entries' ||
+        reportName.trim() == 'Voided Items';
   }
 
   void _showFiltersDialog(String reportName) {
@@ -474,7 +792,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
           ),
           content: SizedBox(
             width: double.maxFinite,
-            height: 500,
+            height: 600,
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -532,38 +850,81 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                     ),
                   ),
 
-                  // User Filter
-                  _buildDialogFilterRow(
-                    'User',
-                    Icons.person,
-                    DropdownButtonFormField<String>(
-                      value: _selectedUser,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                  // User Filter - Hide for Expiration Date
+                  if (!_shouldExcludeUserFilter(reportName))
+                    _buildDialogFilterRow(
+                      'User',
+                      Icons.person,
+                      DropdownButtonFormField<String>(
+                        value: _selectedUser,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                        items: const ['All', 'User 1', 'User 2', 'User 3']
+                            .map(
+                              (item) => DropdownMenuItem<String>(
+                                value: item,
+                                child: Text(item),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setDialogState(() {
+                            _selectedUser = value!;
+                          });
+                        },
                       ),
-                      items: const ['All', 'User 1', 'User 2', 'User 3']
-                          .map(
-                            (item) => DropdownMenuItem<String>(
-                              value: item,
-                              child: Text(item),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setDialogState(() {
-                          _selectedUser = value!;
-                        });
-                      },
                     ),
-                  ),
 
-                  // Cash Register Filter - Hide for Purchase Product Reports
+                  // Supplier Filter - Hide for Loss and Damage Products
+                  if (!_shouldExcludeSupplierFilter(reportName))
+                    _buildDialogFilterRow(
+                      'Supplier',
+                      Icons.local_shipping,
+                      DropdownButtonFormField<String>(
+                        value: _selectedSupplier,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        items:
+                            const [
+                                  'All',
+                                  'Alpha Suppliers Ltd',
+                                  'Beta Distribution Co',
+                                  'Gamma Wholesale Inc',
+                                  'Delta Trading House',
+                                  'Epsilon Supply Chain',
+                                  'Zeta Logistics Ltd',
+                                  'Theta Manufacturing',
+                                ]
+                                .map(
+                                  (item) => DropdownMenuItem<String>(
+                                    value: item,
+                                    child: Text(item),
+                                  ),
+                                )
+                                .toList(),
+                        onChanged: (value) {
+                          setDialogState(() {
+                            _selectedSupplier = value!;
+                          });
+                        },
+                      ),
+                    ),
+
+                  // Cash Register Filter - Hide for Purchase Product Reports (including Loss and Damage Products)
                   if (!_isPurchaseProductReport(reportName))
                     _buildDialogFilterRow(
                       'Cash Register',
@@ -579,14 +940,21 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                             vertical: 8,
                           ),
                         ),
-                        items: const ['All', 'Register 1', 'Register 2']
-                            .map(
-                              (item) => DropdownMenuItem<String>(
-                                value: item,
-                                child: Text(item),
-                              ),
-                            )
-                            .toList(),
+                        items:
+                            const [
+                                  'All',
+                                  'Register 1',
+                                  'Register 2',
+                                  'Register 3',
+                                  'Register 4',
+                                ]
+                                .map(
+                                  (item) => DropdownMenuItem<String>(
+                                    value: item,
+                                    child: Text(item),
+                                  ),
+                                )
+                                .toList(),
                         onChanged: (value) {
                           setDialogState(() {
                             _selectedCashRegister = value!;
@@ -595,8 +963,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       ),
                     ),
 
-                  // Conditionally show Product Filter - Hide for Payment-related reports
-                  if (!_isPaymentRelatedReport(reportName))
+                  // Conditionally show Product Filter - Hide for Payment-related reports and Unpaid Purchase
+                  if (!_shouldExcludeProductFilters(reportName))
                     _buildDialogFilterRow(
                       'Product',
                       Icons.shopping_bag,
@@ -612,7 +980,14 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           ),
                         ),
                         items:
-                            const ['All', 'Product 1', 'Product 2', 'Product 3']
+                            const [
+                                  'All',
+                                  'Product 1',
+                                  'Product 2',
+                                  'Product 3',
+                                  'Product 4',
+                                  'Product 5',
+                                ]
                                 .map(
                                   (item) => DropdownMenuItem<String>(
                                     value: item,
@@ -628,8 +1003,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       ),
                     ),
 
-                  // Conditionally show Product Group Filter - Hide for Payment-related reports
-                  if (!_isPaymentRelatedReport(reportName))
+                  // Conditionally show Product Group Filter - Hide for Payment-related reports and Unpaid Purchase
+                  if (!_shouldExcludeProductFilters(reportName))
                     _buildDialogFilterRow(
                       'Product Group',
                       Icons.category,
@@ -645,7 +1020,14 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           ),
                         ),
                         items:
-                            const ['Products', 'Group 1', 'Group 2', 'Group 3']
+                            const [
+                                  'Products',
+                                  'Electronics',
+                                  'Clothing',
+                                  'Food & Beverages',
+                                  'Home & Garden',
+                                  'Books & Media',
+                                ]
                                 .map(
                                   (item) => DropdownMenuItem<String>(
                                     value: item,
@@ -661,8 +1043,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       ),
                     ),
 
-                  // Conditionally show Include Subgroups Filter - Hide for Payment-related reports
-                  if (!_isPaymentRelatedReport(reportName))
+                  // Conditionally show Include Subgroups Filter - Hide for Payment-related reports and Unpaid Purchase
+                  if (!_shouldExcludeProductFilters(reportName))
                     _buildDialogFilterRow(
                       'Include Subgroups',
                       Icons.account_tree,
@@ -684,7 +1066,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
 
                   const SizedBox(height: 20),
 
-                  // Filter Summary
+                  // Filter Summary - Updated to conditionally show Supplier and Cash Register
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -704,12 +1086,17 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                         ),
                         const SizedBox(height: 8),
                         Text('• Date Range: ${_getDateRangeText()}'),
-                        Text('• User: $_selectedUser'),
+                        // Only show user for reports that allow it
+                        if (!_shouldExcludeUserFilter(reportName))
+                          Text('• User: $_selectedUser'),
+                        // Only show supplier for reports that allow it
+                        if (!_shouldExcludeSupplierFilter(reportName))
+                          Text('• Supplier: $_selectedSupplier'),
                         // Only show cash register for non-Purchase product reports
                         if (!_isPurchaseProductReport(reportName))
                           Text('• Cash Register: $_selectedCashRegister'),
-                        // Only show product-related filters for non-Payment reports
-                        if (!_isPaymentRelatedReport(reportName)) ...[
+                        // Only show product-related filters for reports that allow them
+                        if (!_shouldExcludeProductFilters(reportName)) ...[
                           Text('• Product: $_selectedProduct'),
                           Text('• Product Group: $_selectedProductGroup'),
                           Text(
@@ -727,13 +1114,20 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
             TextButton(
               onPressed: () {
                 setDialogState(() {
-                  _selectedUser = 'All';
+                  // Only reset user for reports that allow it
+                  if (!_shouldExcludeUserFilter(reportName)) {
+                    _selectedUser = 'All';
+                  }
+                  // Only reset supplier for reports that allow it
+                  if (!_shouldExcludeSupplierFilter(reportName)) {
+                    _selectedSupplier = 'All';
+                  }
                   // Only reset cash register for non-Purchase product reports
                   if (!_isPurchaseProductReport(reportName)) {
                     _selectedCashRegister = 'All';
                   }
-                  // Only reset product filters for non-Payment reports
-                  if (!_isPaymentRelatedReport(reportName)) {
+                  // Only reset product filters for reports that allow them
+                  if (!_shouldExcludeProductFilters(reportName)) {
                     _selectedProduct = 'All';
                     _selectedProductGroup = 'Products';
                     _includeSubgroups = true;
@@ -787,7 +1181,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Applied Filters Section
+                // Applied Filters Section - Updated to conditionally show Supplier and Cash Register
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -807,12 +1201,17 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       ),
                       const SizedBox(height: 8),
                       Text('• Date Range: ${_getDateRangeText()}'),
-                      Text('• User: $_selectedUser'),
+                      // Only show user for reports that allow it
+                      if (!_shouldExcludeUserFilter(reportName))
+                        Text('• User: $_selectedUser'),
+                      // Only show supplier for reports that allow it
+                      if (!_shouldExcludeSupplierFilter(reportName))
+                        Text('• Supplier: $_selectedSupplier'),
                       // Only show cash register for non-Purchase product reports
                       if (!_isPurchaseProductReport(reportName))
                         Text('• Cash Register: $_selectedCashRegister'),
-                      // Only show product-related filters for non-Payment reports
-                      if (!_isPaymentRelatedReport(reportName)) ...[
+                      // Only show product-related filters for reports that allow them
+                      if (!_shouldExcludeProductFilters(reportName)) ...[
                         Text('• Product: $_selectedProduct'),
                         Text('• Product Group: $_selectedProductGroup'),
                         Text(
@@ -1259,7 +1658,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     );
   }
 
-  // Add the missing _buildSummaryCard method
+  // Add the missing _buildSummaryCard method with light theme
   Widget _buildSummaryCard(
     String title,
     String value,
@@ -1269,17 +1668,22 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: Colors.white, // White background
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: color.withOpacity(0.1),
+          border: Border.all(color: color.withOpacity(0.2)),
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              backgroundColor: color,
-              child: Icon(icon, color: Colors.white),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1), // Light colored background
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -1289,17 +1693,18 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                   Text(
                     title,
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: color,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey[600], // Gray text
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Text(
                     value,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                      fontSize: 20,
+                      color: Colors.grey[800], // Dark text
                     ),
                   ),
                 ],
@@ -1309,5 +1714,25 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         ),
       ),
     );
+  }
+
+  // Add the missing _getReportCount method
+  int _getReportCount(String sectionTitle) {
+    switch (sectionTitle) {
+      case 'Sales Reports':
+        return 21;
+      case 'Purchase Reports':
+        return 8;
+      case 'Stock Return':
+        return 1;
+      case 'Loss and Damage':
+        return 1;
+      case 'Finance':
+        return 1;
+      case 'Stock Control':
+        return 2;
+      default:
+        return 0;
+    }
   }
 }
