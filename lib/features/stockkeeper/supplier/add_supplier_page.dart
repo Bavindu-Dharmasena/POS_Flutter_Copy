@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AddSupplierPage extends StatelessWidget {
-  const AddSupplierPage({Key? key}) : super(key: key);  // Constructor
+  const AddSupplierPage({Key? key, required Map<String, dynamic> supplierData}) : super(key: key);  // Constructor
 
   @override
   Widget build(BuildContext context) {
