@@ -75,7 +75,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
       barcode: '321654987',
       image: 'assets/images/sunquick.webp',
       supplier: 'Lanka Beverages',
-    ),  
+    ),
   ];
 
   List<String> get categories {
@@ -188,12 +188,12 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: isMobile ? 8 : 12,
             mainAxisSpacing: isMobile ? 8 : 12,
-            childAspectRatio: isMobile ? 1.5 : 2.2,
+            childAspectRatio: isMobile ? 1.8 : 2.2, // Increased from 1.5 to 1.8
             children: [
               _buildSummaryCard(
                 'Total Items',
                 totalItems.toString(),
-                Feather.package,
+                Icons.inventory,
                 Colors.blue,
                 Colors.blue.withOpacity(0.1),
                 isMobile: isMobile,
@@ -201,7 +201,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
               _buildSummaryCard(
                 'Low Stock',
                 lowStockItems.toString(),
-                Feather.alert_triangle,
+                Icons.warning,
                 Colors.orange,
                 Colors.orange.withOpacity(0.1),
                 isMobile: isMobile,
@@ -209,7 +209,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
               _buildSummaryCard(
                 'Out of Stock',
                 outOfStockItems.toString(),
-                Feather.x_circle,
+                Icons.cancel,
                 Colors.red,
                 Colors.red.withOpacity(0.1),
                 isMobile: isMobile,
@@ -217,7 +217,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
               _buildSummaryCard(
                 'Total Value',
                 'Rs. ${totalValue.toStringAsFixed(0)}',
-                Feather.trending_up,
+                Icons.trending_up,
                 Colors.green,
                 Colors.green.withOpacity(0.1),
                 isMobile: isMobile,
@@ -243,28 +243,44 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
         borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
         border: Border.all(color: iconColor.withOpacity(0.2)),
       ),
-      padding: EdgeInsets.all(isMobile ? 12 : 16),
+      padding: EdgeInsets.all(isMobile ? 8 : 16), // Reduced padding for mobile
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min, // Important: minimize the column size
         children: [
-          Icon(icon, color: iconColor, size: isMobile ? 20 : 24),
-          SizedBox(height: isMobile ? 4 : 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: isMobile ? 14 : 16,
-              fontWeight: FontWeight.bold,
-              color: iconColor,
+          Icon(
+            icon,
+            color: iconColor,
+            size: isMobile ? 18 : 24,
+          ), // Reduced icon size
+          SizedBox(height: isMobile ? 2 : 6), // Reduced spacing
+          Flexible(
+            // Wrap in Flexible to prevent overflow
+            child: Text(
+              value,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: isMobile ? 14 : 18, // Reduced font size
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          SizedBox(height: isMobile ? 2 : 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: isMobile ? 10 : 12,
-              color: Colors.white70,
+          SizedBox(height: isMobile ? 1 : 2), // Reduced spacing
+          Flexible(
+            // Wrap in Flexible to prevent overflow
+            child: Text(
+              title,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.7),
+                fontSize: isMobile ? 10 : 12, // Reduced font size
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -944,71 +960,84 @@ class ProductActionsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: BoxConstraints(
+        maxHeight:
+            MediaQuery.of(context).size.height *
+            0.7, // Limit height to 70% of screen
+      ),
       padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(2),
+      child: SingleChildScrollView(
+        // Make it scrollable
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            product.name,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            const SizedBox(height: 16), // Reduced from 20
+            Text(
+              product.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          const SizedBox(height: 20),
-          _buildActionTile(
-            icon: Feather.eye,
-            title: 'View Details',
-            onTap: () {
-              Navigator.pop(context);
-              // Show details
-            },
-          ),
-          _buildActionTile(
-            icon: Feather.edit_2,
-            title: 'Edit Product',
-            onTap: () {
-              Navigator.pop(context);
-              // Edit product
-            },
-          ),
-          _buildActionTile(
-            icon: Feather.trending_up,
-            title: 'Adjust Stock',
-            onTap: () {
-              Navigator.pop(context);
-              // Adjust stock
-            },
-          ),
-          _buildActionTile(
-            icon: Feather.copy,
-            title: 'Duplicate',
-            onTap: () {
-              Navigator.pop(context);
-              // Duplicate product
-            },
-          ),
-          _buildActionTile(
-            icon: Feather.trash_2,
-            title: 'Delete',
-            color: Colors.red,
-            onTap: () {
-              Navigator.pop(context);
-              // Delete product with confirmation
-            },
-          ),
-          const SizedBox(height: 20),
-        ],
+            const SizedBox(height: 16), // Reduced from 20
+            _buildActionTile(
+              icon: Feather.eye,
+              title: 'View Details',
+              onTap: () {
+                Navigator.pop(context);
+                // Show details
+              },
+            ),
+            _buildActionTile(
+              icon: Feather.edit_2,
+              title: 'Edit Product',
+              onTap: () {
+                Navigator.pop(context);
+                // Edit product
+              },
+            ),
+            _buildActionTile(
+              icon: Feather.trending_up,
+              title: 'Adjust Stock',
+              onTap: () {
+                Navigator.pop(context);
+                // Adjust stock
+              },
+            ),
+            _buildActionTile(
+              icon: Feather.copy,
+              title: 'Duplicate',
+              onTap: () {
+                Navigator.pop(context);
+                // Duplicate product
+              },
+            ),
+            _buildActionTile(
+              icon: Feather.trash_2,
+              title: 'Delete',
+              color: Colors.red,
+              onTap: () {
+                Navigator.pop(context);
+                // Delete product with confirmation
+              },
+            ),
+            SizedBox(
+              height: MediaQuery.of(context).viewInsets.bottom + 10,
+            ), // Account for keyboard
+          ],
+        ),
       ),
     );
   }
@@ -1022,10 +1051,20 @@ class ProductActionsSheet extends StatelessWidget {
     final actionColor = color ?? Colors.white;
 
     return ListTile(
-      leading: Icon(icon, color: actionColor),
-      title: Text(title, style: TextStyle(color: actionColor)),
+      leading: Icon(icon, color: actionColor, size: 20), // Reduced icon size
+      title: Text(
+        title,
+        style: TextStyle(
+          color: actionColor,
+          fontSize: 14, // Reduced font size
+        ),
+      ),
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 0),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 0,
+        vertical: 2,
+      ), // Reduced vertical padding
+      dense: true, // Make tiles more compact
     );
   }
 }
