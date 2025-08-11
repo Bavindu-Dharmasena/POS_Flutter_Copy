@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+// void main() {
+//   runApp(const MyApp());
+// }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -577,8 +577,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                     ),
                   ),
 
-                  // Conditionally show Product Filter - Hide for Payment Types
-                  if (reportName != 'Payment Types')
+                  // Conditionally show Product Filter - Hide for Payment-related reports
+                  if (!_isPaymentRelatedReport(reportName))
                     _buildDialogFilterRow(
                       'Product',
                       Icons.shopping_bag,
@@ -610,8 +610,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       ),
                     ),
 
-                  // Conditionally show Product Group Filter - Hide for Payment Types
-                  if (reportName != 'Payment Types')
+                  // Conditionally show Product Group Filter - Hide for Payment-related reports
+                  if (!_isPaymentRelatedReport(reportName))
                     _buildDialogFilterRow(
                       'Product Group',
                       Icons.category,
@@ -643,8 +643,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       ),
                     ),
 
-                  // Conditionally show Include Subgroups Filter - Hide for Payment Types
-                  if (reportName != 'Payment Types')
+                  // Conditionally show Include Subgroups Filter - Hide for Payment-related reports
+                  if (!_isPaymentRelatedReport(reportName))
                     _buildDialogFilterRow(
                       'Include Subgroups',
                       Icons.account_tree,
@@ -688,8 +688,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                         Text('• Date Range: ${_getDateRangeText()}'),
                         Text('• User: $_selectedUser'),
                         Text('• Cash Register: $_selectedCashRegister'),
-                        // Only show product-related filters for non-Payment Types reports
-                        if (reportName != 'Payment Types') ...[
+                        // Only show product-related filters for non-Payment reports
+                        if (!_isPaymentRelatedReport(reportName)) ...[
                           Text('• Product: $_selectedProduct'),
                           Text('• Product Group: $_selectedProductGroup'),
                           Text(
@@ -709,8 +709,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                 setDialogState(() {
                   _selectedUser = 'All';
                   _selectedCashRegister = 'All';
-                  // Only reset product filters for non-Payment Types reports
-                  if (reportName != 'Payment Types') {
+                  // Only reset product filters for non-Payment reports
+                  if (!_isPaymentRelatedReport(reportName)) {
                     _selectedProduct = 'All';
                     _selectedProductGroup = 'Products';
                     _includeSubgroups = true;
@@ -744,6 +744,13 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         ),
       ),
     );
+  }
+
+  // Add helper method to check if report is payment-related
+  bool _isPaymentRelatedReport(String reportName) {
+    return reportName == 'Payment Types' ||
+        reportName == 'Payment Types by Users' ||
+        reportName == 'Payment Types by Customers';
   }
 
   void _showReportWithSelectedFilters(String reportName) {
@@ -786,8 +793,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       Text('• Date Range: ${_getDateRangeText()}'),
                       Text('• User: $_selectedUser'),
                       Text('• Cash Register: $_selectedCashRegister'),
-                      // Only show product-related filters for non-Payment Types reports
-                      if (reportName != 'Payment Types') ...[
+                      // Only show product-related filters for non-Payment reports
+                      if (!_isPaymentRelatedReport(reportName)) ...[
                         Text('• Product: $_selectedProduct'),
                         Text('• Product Group: $_selectedProductGroup'),
                         Text(
@@ -812,11 +819,11 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                   children: [
                     Expanded(
                       child: _buildSummaryCard(
-                        reportName == 'Payment Types'
+                        _isPaymentRelatedReport(reportName)
                             ? 'Total Payments'
                             : 'Total Sales',
                         '\$${_calculateTotalSales(reportName)}',
-                        reportName == 'Payment Types'
+                        _isPaymentRelatedReport(reportName)
                             ? Icons.payment
                             : Icons.attach_money,
                         Colors.green,
@@ -825,13 +832,13 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildSummaryCard(
-                        reportName == 'Payment Types'
+                        _isPaymentRelatedReport(reportName)
                             ? 'Payment Methods'
                             : 'Items Sold',
-                        reportName == 'Payment Types'
+                        _isPaymentRelatedReport(reportName)
                             ? '${_calculatePaymentMethods(reportName)}'
                             : '${_calculateItemsSold(reportName)}',
-                        reportName == 'Payment Types'
+                        _isPaymentRelatedReport(reportName)
                             ? Icons.credit_card
                             : Icons.shopping_cart,
                         Colors.blue,
@@ -873,14 +880,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
-                    columns: reportName == 'Payment Types'
-                        ? const [
-                            DataColumn(label: Text('Date')),
-                            DataColumn(label: Text('Payment Method')),
-                            DataColumn(label: Text('Transactions')),
-                            DataColumn(label: Text('Amount')),
-                            DataColumn(label: Text('Fee')),
-                          ]
+                    columns: _isPaymentRelatedReport(reportName)
+                        ? _getPaymentReportColumns(reportName)
                         : const [
                             DataColumn(label: Text('Date')),
                             DataColumn(label: Text('Item')),
@@ -921,74 +922,134 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     );
   }
 
-  Widget _buildSummaryCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
+  // Add method to get appropriate columns for payment reports
+  List<DataColumn> _getPaymentReportColumns(String reportName) {
+    if (reportName == 'Payment Types by Users') {
+      return const [
+        DataColumn(label: Text('Date')),
+        DataColumn(label: Text('User')),
+        DataColumn(label: Text('Payment Method')),
+        DataColumn(label: Text('Transactions')),
+        DataColumn(label: Text('Amount')),
+      ];
+    } else if (reportName == 'Payment Types by Customers') {
+      return const [
+        DataColumn(label: Text('Date')),
+        DataColumn(label: Text('Customer')),
+        DataColumn(label: Text('Payment Method')),
+        DataColumn(label: Text('Transactions')),
+        DataColumn(label: Text('Amount')),
+      ];
+    } else {
+      return const [
+        DataColumn(label: Text('Date')),
+        DataColumn(label: Text('Payment Method')),
+        DataColumn(label: Text('Transactions')),
+        DataColumn(label: Text('Amount')),
+        DataColumn(label: Text('Fee')),
+      ];
+    }
   }
 
+  // Update the _generateReportData method to handle all payment reports
   List<DataRow> _generateReportData(String reportName) {
     List<DataRow> rows = [];
 
-    if (reportName == 'Payment Types') {
-      // Generate Payment Types specific data
-      List<String> paymentMethods = [
-        'Cash',
-        'Credit Card',
-        'Debit Card',
-        'Digital Wallet',
-        'Bank Transfer',
-      ];
+    if (_isPaymentRelatedReport(reportName)) {
+      // Generate Payment-related report data
+      if (reportName == 'Payment Types by Users') {
+        List<String> users = [
+          'John Doe',
+          'Jane Smith',
+          'Mike Johnson',
+          'Sarah Wilson',
+          'Tom Brown',
+        ];
+        List<String> paymentMethods = [
+          'Cash',
+          'Credit Card',
+          'Debit Card',
+          'Digital Wallet',
+          'Bank Transfer',
+        ];
 
-      for (int i = 0; i < paymentMethods.length; i++) {
-        rows.add(
-          DataRow(
-            cells: [
-              DataCell(
-                Text(
-                  '${DateTime.now().day - i}/${DateTime.now().month}/${DateTime.now().year}',
+        for (int i = 0; i < users.length; i++) {
+          rows.add(
+            DataRow(
+              cells: [
+                DataCell(
+                  Text(
+                    '${DateTime.now().day - i}/${DateTime.now().month}/${DateTime.now().year}',
+                  ),
                 ),
-              ),
-              DataCell(Text(paymentMethods[i])),
-              DataCell(Text('${20 + i * 5}')),
-              DataCell(Text('\$${(500 + i * 150).toStringAsFixed(2)}')),
-              DataCell(Text('\$${(5 + i * 2).toStringAsFixed(2)}')),
-            ],
-          ),
-        );
+                DataCell(Text(users[i])),
+                DataCell(Text(paymentMethods[i])),
+                DataCell(Text('${15 + i * 3}')),
+                DataCell(Text('\$${(300 + i * 120).toStringAsFixed(2)}')),
+              ],
+            ),
+          );
+        }
+      } else if (reportName == 'Payment Types by Customers') {
+        List<String> customers = [
+          'ABC Corp',
+          'XYZ Ltd',
+          'Tech Solutions',
+          'Global Inc',
+          'Local Store',
+        ];
+        List<String> paymentMethods = [
+          'Credit Card',
+          'Bank Transfer',
+          'Cash',
+          'Digital Wallet',
+          'Cheque',
+        ];
+
+        for (int i = 0; i < customers.length; i++) {
+          rows.add(
+            DataRow(
+              cells: [
+                DataCell(
+                  Text(
+                    '${DateTime.now().day - i}/${DateTime.now().month}/${DateTime.now().year}',
+                  ),
+                ),
+                DataCell(Text(customers[i])),
+                DataCell(Text(paymentMethods[i])),
+                DataCell(Text('${25 + i * 4}')),
+                DataCell(Text('\$${(800 + i * 200).toStringAsFixed(2)}')),
+              ],
+            ),
+          );
+        }
+      } else {
+        // Regular Payment Types report
+        List<String> paymentMethods = [
+          'Cash',
+          'Credit Card',
+          'Debit Card',
+          'Digital Wallet',
+          'Bank Transfer',
+        ];
+
+        for (int i = 0; i < paymentMethods.length; i++) {
+          rows.add(
+            DataRow(
+              cells: [
+                DataCell(
+                  Text(
+                    '${DateTime.now().day - i}/${DateTime.now().month}/${DateTime.now().year}',
+                  ),
+                ),
+                DataCell(Text(paymentMethods[i])),
+                DataCell(Text('${20 + i * 5}')),
+                DataCell(Text('\$${(500 + i * 150).toStringAsFixed(2)}')),
+                DataCell(Text('\$${(5 + i * 2).toStringAsFixed(2)}')),
+              ],
+            ),
+          );
+        }
       }
     } else {
       // Generate regular report data
@@ -1177,6 +1238,58 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+    );
+  }
+
+  // Add the missing _buildSummaryCard method
+  Widget _buildSummaryCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: color.withOpacity(0.1),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: color,
+              child: Icon(icon, color: Colors.white),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
