@@ -555,58 +555,6 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white, // White background
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!), // Light gray border
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.08), // Very subtle shadow
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Icon(
-            _getCategoryIcon(title),
-            color: Colors.blue[600], // Blue icon
-            size: 24,
-          ),
-          const SizedBox(width: 12),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800], // Dark gray text
-            ),
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.blue[600], // Blue background for count
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              _getReportCount(title).toString(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildReportCard({
     required String title,
     required IconData icon,
@@ -615,112 +563,467 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     bool isDownloading = _downloadingReports.contains(title);
 
     return Card(
-      elevation: 3, // Slightly more elevation for better definition
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.white, // White card background
-      shadowColor: Colors.grey.withOpacity(0.2), // Light shadow
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _showFiltersDialog(title),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.grey[200]!,
-              width: 1,
-            ), // Light border
-          ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: colors
-                            .map((color) => color.withOpacity(0.1))
-                            .toList(),
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(icon, color: colors.first, size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        color: Colors.grey[800], // Dark text
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _showFiltersDialog(title),
-                      icon: const Icon(Icons.filter_list, size: 16),
-                      label: const Text('Set Filters'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            Colors.blue[50], // Light blue background
-                        foregroundColor: Colors.blue[700], // Blue text
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(color: Colors.blue[200]!),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: isDownloading
-                          ? null
-                          : () => _handleDownloadReport(title),
-                      icon: isDownloading
-                          ? SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.green[600]!,
-                                ),
-                              ),
-                            )
-                          : const Icon(Icons.download, size: 16),
-                      label: Text(isDownloading ? 'Downloading' : 'Download'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            Colors.green[50], // Light green background
-                        foregroundColor: Colors.green[700], // Green text
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(color: Colors.green[200]!),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: [
+              Colors.white,
+              const Color(0xFFF8FAFC), // Very light blue-gray
+              const Color(0xFFF1F5F9), // Slightly darker blue-gray
             ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: colors.first.withOpacity(0.15), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: colors.first.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+              spreadRadius: 0,
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            hoverColor: colors.first.withOpacity(0.04),
+            splashColor: colors.first.withOpacity(0.12),
+            onTap: () => _showFiltersDialog(title),
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(0.9),
+                    const Color(0xFFFAFBFC).withOpacity(0.8),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header with icon and title
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              colors.first.withOpacity(0.12),
+                              colors.last.withOpacity(0.18),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: colors.first.withOpacity(0.25),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: colors.first.withOpacity(0.15),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Icon(icon, color: colors.first, size: 26),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                color: Color(0xFF1E293B), // Modern slate dark
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                                height: 1.3,
+                                letterSpacing: -0.2,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Generate detailed analytics',
+                              style: TextStyle(
+                                color: const Color(
+                                  0xFF64748B,
+                                ), // Modern slate gray
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const Spacer(),
+
+                  // Action buttons with modern styling
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 40,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFFF8FAFC),
+                                const Color(0xFFE2E8F0),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFCBD5E1),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: () => _showFiltersDialog(title),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.tune_rounded,
+                                    size: 18,
+                                    color: const Color(0xFF475569),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Filters',
+                                    style: TextStyle(
+                                      color: const Color(0xFF475569),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
+                          height: 40,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [colors.first, colors.last],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: colors.first.withOpacity(0.35),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                                spreadRadius: 0,
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(12),
+                              onTap: isDownloading
+                                  ? null
+                                  : () => _handleDownloadReport(title),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (isDownloading)
+                                    SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        valueColor:
+                                            const AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                      ),
+                                    )
+                                  else
+                                    const Icon(
+                                      Icons.download_rounded,
+                                      size: 18,
+                                      color: Colors.white,
+                                    ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    isDownloading ? 'Getting...' : 'Export',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.white,
+            const Color(0xFFF8FAFC),
+            const Color(0xFFF1F5F9),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFF3B82F6).withOpacity(0.15),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF3B82F6).withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF3B82F6).withOpacity(0.15),
+                  const Color(0xFF1D4ED8).withOpacity(0.25),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF3B82F6).withOpacity(0.3),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF3B82F6).withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Icon(
+              _getCategoryIcon(title),
+              color: const Color(0xFF3B82F6),
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF1E293B),
+                    height: 1.2,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Business intelligence reports',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: const Color(0xFF64748B),
+                    fontWeight: FontWeight.w500,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF3B82F6).withOpacity(0.35),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Text(
+              _getReportCount(title).toString(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Add this method to fix the error
+  int _getReportCount(String title) {
+    switch (title) {
+      case 'Sales Reports':
+        return 21;
+      case 'Purchase Reports':
+        return 8;
+      case 'Stock Return':
+        return 1;
+      case 'Loss and Damage':
+        return 1;
+      case 'Finance':
+        return 1;
+      case 'Stock Control':
+        return 2;
+      default:
+        return 0;
+    }
+  }
+
+  Widget _buildSummaryCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.12), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [color.withOpacity(0.1), color.withOpacity(0.15)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: color.withOpacity(0.2), width: 1),
+            ),
+            child: Icon(icon, color: color, size: 26),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                    color: Color(0xFF6B7280),
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 22,
+                    color: Color(0xFF1A1D29),
+                    height: 1.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1656,83 +1959,5 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
-  }
-
-  // Add the missing _buildSummaryCard method with light theme
-  Widget _buildSummaryCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.white, // White background
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1), // Light colored background
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                      color: Colors.grey[600], // Gray text
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                      color: Colors.grey[800], // Dark text
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Add the missing _getReportCount method
-  int _getReportCount(String sectionTitle) {
-    switch (sectionTitle) {
-      case 'Sales Reports':
-        return 21;
-      case 'Purchase Reports':
-        return 8;
-      case 'Stock Return':
-        return 1;
-      case 'Loss and Damage':
-        return 1;
-      case 'Finance':
-        return 1;
-      case 'Stock Control':
-        return 2;
-      default:
-        return 0;
-    }
   }
 }
