@@ -201,7 +201,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
               childAspectRatio: 1.5,
               children: [
                 _buildReportCard(
-                  title: 'Products',
+                  title: ' Purchase Products',
                   icon: Icons.shopping_cart,
                   colors: [Colors.blue, Colors.lightBlue],
                 ),
@@ -439,6 +439,27 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     );
   }
 
+  // Add helper method to check if report is payment-related
+  bool _isPaymentRelatedReport(String reportName) {
+    return reportName == 'Payment Types' ||
+        reportName == 'Payment Types by Users' ||
+        reportName == 'Payment Types by Customers' ||
+        reportName == 'Daily Sales' ||
+        reportName == 'Hourly Sales' ||
+        reportName == 'Table/Order Number' ||
+        reportName == 'Unpaid Sales' ||
+        reportName == 'Starting Cash Entries' ||
+        reportName == 'Discounts Granted';
+  }
+
+  // Add helper method to check if report is purchase-related and should exclude cash register filter
+  bool _isPurchaseProductReport(String reportName) {
+    return reportName.trim() == 'Purchase Products' ||
+        reportName.trim() == 'Suppliers';
+
+    ///Unpaid Purchase
+  }
+
   void _showFiltersDialog(String reportName) {
     showDialog(
       context: context,
@@ -542,36 +563,37 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                     ),
                   ),
 
-                  // Cash Register Filter
-                  _buildDialogFilterRow(
-                    'Cash Register',
-                    Icons.point_of_sale,
-                    DropdownButtonFormField<String>(
-                      value: _selectedCashRegister,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                  // Cash Register Filter - Hide for Purchase Product Reports
+                  if (!_isPurchaseProductReport(reportName))
+                    _buildDialogFilterRow(
+                      'Cash Register',
+                      Icons.point_of_sale,
+                      DropdownButtonFormField<String>(
+                        value: _selectedCashRegister,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                        items: const ['All', 'Register 1', 'Register 2']
+                            .map(
+                              (item) => DropdownMenuItem<String>(
+                                value: item,
+                                child: Text(item),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setDialogState(() {
+                            _selectedCashRegister = value!;
+                          });
+                        },
                       ),
-                      items: const ['All', 'Register 1', 'Register 2']
-                          .map(
-                            (item) => DropdownMenuItem<String>(
-                              value: item,
-                              child: Text(item),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setDialogState(() {
-                          _selectedCashRegister = value!;
-                        });
-                      },
                     ),
-                  ),
 
                   // Conditionally show Product Filter - Hide for Payment-related reports
                   if (!_isPaymentRelatedReport(reportName))
@@ -683,7 +705,9 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                         const SizedBox(height: 8),
                         Text('• Date Range: ${_getDateRangeText()}'),
                         Text('• User: $_selectedUser'),
-                        Text('• Cash Register: $_selectedCashRegister'),
+                        // Only show cash register for non-Purchase product reports
+                        if (!_isPurchaseProductReport(reportName))
+                          Text('• Cash Register: $_selectedCashRegister'),
                         // Only show product-related filters for non-Payment reports
                         if (!_isPaymentRelatedReport(reportName)) ...[
                           Text('• Product: $_selectedProduct'),
@@ -704,7 +728,10 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
               onPressed: () {
                 setDialogState(() {
                   _selectedUser = 'All';
-                  _selectedCashRegister = 'All';
+                  // Only reset cash register for non-Purchase product reports
+                  if (!_isPurchaseProductReport(reportName)) {
+                    _selectedCashRegister = 'All';
+                  }
                   // Only reset product filters for non-Payment reports
                   if (!_isPaymentRelatedReport(reportName)) {
                     _selectedProduct = 'All';
@@ -740,19 +767,6 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         ),
       ),
     );
-  }
-
-  // Add helper method to check if report is payment-related
-  bool _isPaymentRelatedReport(String reportName) {
-    return reportName == 'Payment Types' ||
-        reportName == 'Payment Types by Users' ||
-        reportName == 'Payment Types by Customers' ||
-        reportName == 'Daily Sales' ||
-        reportName == 'Hourly Sales' ||
-        reportName == 'Table/Order Number' ||
-        reportName == 'Unpaid Sales' ||
-        reportName == 'Starting Cash Entries' ||
-        reportName == 'Discounts Granted';
   }
 
   void _showReportWithSelectedFilters(String reportName) {
@@ -794,7 +808,9 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       const SizedBox(height: 8),
                       Text('• Date Range: ${_getDateRangeText()}'),
                       Text('• User: $_selectedUser'),
-                      Text('• Cash Register: $_selectedCashRegister'),
+                      // Only show cash register for non-Purchase product reports
+                      if (!_isPurchaseProductReport(reportName))
+                        Text('• Cash Register: $_selectedCashRegister'),
                       // Only show product-related filters for non-Payment reports
                       if (!_isPaymentRelatedReport(reportName)) ...[
                         Text('• Product: $_selectedProduct'),
