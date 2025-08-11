@@ -455,9 +455,14 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   // Add helper method to check if report is purchase-related and should exclude cash register filter
   bool _isPurchaseProductReport(String reportName) {
     return reportName.trim() == 'Purchase Products' ||
-        reportName.trim() == 'Suppliers';
+        reportName.trim() == 'Suppliers' ||
+        reportName.trim() == 'Unpaid Purchase';
+  }
 
-    ///Unpaid Purchase
+  // Add helper method to check if report should exclude product-related filters
+  bool _shouldExcludeProductFilters(String reportName) {
+    return _isPaymentRelatedReport(reportName) ||
+        reportName.trim() == 'Unpaid Purchase';
   }
 
   void _showFiltersDialog(String reportName) {
@@ -563,7 +568,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                     ),
                   ),
 
-                  // Cash Register Filter - Hide for Purchase Product Reports
+                  // Cash Register Filter - Hide for Purchase Product Reports (including Unpaid Purchase)
                   if (!_isPurchaseProductReport(reportName))
                     _buildDialogFilterRow(
                       'Cash Register',
@@ -595,8 +600,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       ),
                     ),
 
-                  // Conditionally show Product Filter - Hide for Payment-related reports
-                  if (!_isPaymentRelatedReport(reportName))
+                  // Conditionally show Product Filter - Hide for Payment-related reports and Unpaid Purchase
+                  if (!_shouldExcludeProductFilters(reportName))
                     _buildDialogFilterRow(
                       'Product',
                       Icons.shopping_bag,
@@ -628,8 +633,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       ),
                     ),
 
-                  // Conditionally show Product Group Filter - Hide for Payment-related reports
-                  if (!_isPaymentRelatedReport(reportName))
+                  // Conditionally show Product Group Filter - Hide for Payment-related reports and Unpaid Purchase
+                  if (!_shouldExcludeProductFilters(reportName))
                     _buildDialogFilterRow(
                       'Product Group',
                       Icons.category,
@@ -661,8 +666,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       ),
                     ),
 
-                  // Conditionally show Include Subgroups Filter - Hide for Payment-related reports
-                  if (!_isPaymentRelatedReport(reportName))
+                  // Conditionally show Include Subgroups Filter - Hide for Payment-related reports and Unpaid Purchase
+                  if (!_shouldExcludeProductFilters(reportName))
                     _buildDialogFilterRow(
                       'Include Subgroups',
                       Icons.account_tree,
@@ -708,8 +713,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                         // Only show cash register for non-Purchase product reports
                         if (!_isPurchaseProductReport(reportName))
                           Text('• Cash Register: $_selectedCashRegister'),
-                        // Only show product-related filters for non-Payment reports
-                        if (!_isPaymentRelatedReport(reportName)) ...[
+                        // Only show product-related filters for reports that allow them
+                        if (!_shouldExcludeProductFilters(reportName)) ...[
                           Text('• Product: $_selectedProduct'),
                           Text('• Product Group: $_selectedProductGroup'),
                           Text(
@@ -732,8 +737,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                   if (!_isPurchaseProductReport(reportName)) {
                     _selectedCashRegister = 'All';
                   }
-                  // Only reset product filters for non-Payment reports
-                  if (!_isPaymentRelatedReport(reportName)) {
+                  // Only reset product filters for reports that allow them
+                  if (!_shouldExcludeProductFilters(reportName)) {
                     _selectedProduct = 'All';
                     _selectedProductGroup = 'Products';
                     _includeSubgroups = true;
@@ -811,8 +816,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       // Only show cash register for non-Purchase product reports
                       if (!_isPurchaseProductReport(reportName))
                         Text('• Cash Register: $_selectedCashRegister'),
-                      // Only show product-related filters for non-Payment reports
-                      if (!_isPaymentRelatedReport(reportName)) ...[
+                      // Only show product-related filters for reports that allow them
+                      if (!_shouldExcludeProductFilters(reportName)) ...[
                         Text('• Product: $_selectedProduct'),
                         Text('• Product Group: $_selectedProductGroup'),
                         Text(
