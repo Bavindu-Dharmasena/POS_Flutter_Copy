@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
 import 'dart:async';
 import './home/pos_home.dart';
-import './cashier/billingview.dart';
+// import './cashier/billingview.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
