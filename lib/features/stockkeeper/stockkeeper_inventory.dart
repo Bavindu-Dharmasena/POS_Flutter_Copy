@@ -49,7 +49,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
       maxStock: 120,
       price: 150.00,
       barcode: '456789123',
-      image: null,
+      image: 'assets/images/coca_cola.webp',
       supplier: 'Coca Cola Lanka',
     ),
     Product(
@@ -61,7 +61,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
       maxStock: 50,
       price: 850.00,
       barcode: '789123456',
-      image: null,
+      image: 'assets/images/anchor.webp',
       supplier: 'Fonterra Lanka',
     ),
     Product(
@@ -73,9 +73,9 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
       maxStock: 60,
       price: 420.00,
       barcode: '321654987',
-      image: null,
+      image: 'assets/images/sunquick.webp',
       supplier: 'Lanka Beverages',
-    ),
+    ),  
   ];
 
   List<String> get categories {
@@ -412,8 +412,8 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
           return GridView.builder(
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
+              crossAxisSpacing: 15,
+              mainAxisSpacing: 15,
               childAspectRatio: isMobile ? 3.5 : 1.2,
             ),
             itemCount: filteredProducts.length,
@@ -464,8 +464,8 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
       children: [
         // Product Image
         Container(
-          width: 60,
-          height: 60,
+          width: 50,
+          height: 50,
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
@@ -480,6 +480,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
                       return Icon(
                         Feather.package,
                         color: Colors.white.withOpacity(0.5),
+                        size: 20,
                       );
                     },
                   ),
@@ -487,11 +488,11 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
               : Icon(
                   Feather.package,
                   color: Colors.white.withOpacity(0.5),
-                  size: 24,
+                  size: 20,
                 ),
         ),
 
-        const SizedBox(width: 16),
+        const SizedBox(width: 10),
 
         // Product Info
         Expanded(
@@ -504,20 +505,20 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
+                  fontSize: 14,
                 ),
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
                 product.category,
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.7),
-                  fontSize: 12,
+                  fontSize: 11,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Row(
                 children: [
                   _buildStockBadge(product),
@@ -527,7 +528,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
                     style: const TextStyle(
                       color: Colors.green,
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 12,
                     ),
                   ),
                 ],
