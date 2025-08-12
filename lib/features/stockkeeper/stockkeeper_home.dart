@@ -123,7 +123,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
       _tileNodes.removeLast().dispose();
     }
     while (_tileNodes.length < count) {
-      _tileNodes.add(FocusNode(debugLabel: 'tile_${_tileNodes.length}'));
+      tileNodes.add(FocusNode(debugLabel: 'tile${_tileNodes.length}'));
     }
     if (requestFirstFocus && _tileNodes.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
