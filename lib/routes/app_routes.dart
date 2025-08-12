@@ -7,7 +7,9 @@ import '../features/stockkeeper/stockkeeper_home.dart';
 import '../features/cashier/cashier_dashboard.dart';
 // import '../features/admin/admin_dashboard.dart';
 import '../features/splashscreen.dart';
-import '../features/cashier/billingview.dart';
+// import '../features/cashier/billingview.dart';
+import '../features/cashier/cashier_view_page.dart';
+
 
 
 

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'dart:async';
-// import './home/pos_home.dart';
+import './home/pos_home.dart';
 // import './cashier/billingview.dart';
-import './cashier/cashier_view_page.dart';
+// import './cashier/cashier_view_page.dart';
 
 
 class SplashScreen extends StatefulWidget {
@@ -21,7 +21,7 @@ class _SplashScreenState extends State<SplashScreen> {
     // Delay for 3 seconds before navigating to POSHomePage
     Timer(const Duration(seconds: 1), () {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const CashierViewPage()),
+        MaterialPageRoute(builder: (context) => const POSHomePage()),
       );
     });
   }
