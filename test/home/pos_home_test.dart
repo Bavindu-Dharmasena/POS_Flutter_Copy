@@ -4,13 +4,10 @@ import 'package:mocktail/mocktail.dart';
 import 'package:pos_system/features/auth/login_page.dart';
 import 'package:pos_system/features/home/pos_home.dart';
 
-// Import your widgets
-
 class MockNavigatorObserver extends Mock implements NavigatorObserver {}
 
 void main() {
   setUpAll(() {
-    // Register fallback for Route<dynamic> used by mocktail verification
     registerFallbackValue(FakeRoute());
   });
 
@@ -39,7 +36,6 @@ void main() {
       expect(find.text('Manager'), findsOneWidget);
       expect(find.text('Oversee Sales'), findsOneWidget);
 
-      // Optional: ensure we have exactly 4 RoleCard widgets
       expect(find.byType(RoleCard), findsNWidgets(4));
     });
 
@@ -58,10 +54,8 @@ void main() {
         await tester.tap(find.widgetWithText(RoleCard, 'StockKeeper'));
         await tester.pumpAndSettle();
 
-        // Verify navigation occurred (observer)
         verify(() => observer.didPush(any(), any())).called(greaterThan(0));
 
-        // Verify the new page is LoginPage and has the right role
         final loginPageFinder = find.byType(LoginPage);
         expect(loginPageFinder, findsOneWidget);
 
@@ -75,17 +69,13 @@ void main() {
     ) async {
       await tester.pumpWidget(const MaterialApp(home: POSHomePage()));
 
-      // Check Scaffold exists
       expect(find.byType(Scaffold), findsOneWidget);
 
-      // Check a Card exists (sanity for layout)
       expect(find.byType(Card), findsNWidgets(4));
 
-      // Check one of the icons is present
       expect(find.byIcon(Icons.inventory_2), findsOneWidget);
     });
   });
 }
 
-// A tiny fake Route for mocktail fallback
 class FakeRoute extends Fake implements Route<dynamic> {}
