@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pos_system/features/stockkeeper/stockkeeper_setting.dart';
 import '../stockkeeper/stockkeeper_dashboard.dart';
 import '../stockkeeper/stockkeeper_products.dart';
 import '../stockkeeper/stockkeeper_inventory.dart';
 import '../stockkeeper/stockkeeper_reports.dart';
 import '../stockkeeper/stockkeeper_cashier.dart';
-import '../stockkeeper/stockkeeper_more.dart';
+
 
 /// Custom intents for extra keyboard actions
 class JumpToFirstIntent extends Intent {
@@ -220,7 +221,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
                         colors: [Color.fromARGB(255, 21, 4, 13), Color.fromARGB(255, 111, 107, 107)],
                         begin: Alignment.topLeft, end: Alignment.bottomRight,
                       ),
-                      pageBuilder: () => const StockKeeperMore(),
+                      pageBuilder: () => const StockKeeperSetting(),
                     ),
                     _TileSpec(
                       title: 'Back',
