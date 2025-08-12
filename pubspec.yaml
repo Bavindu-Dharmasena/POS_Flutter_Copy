@@ -19,6 +19,7 @@ dependencies:
   google_fonts: ^6.2.1
   flutter_vector_icons: ^2.0.0 # Add this line for vector icons (including Feather icons)
   mobile_scanner: ^3.5.5
+  mocktail: ^1.0.4
 
 
 dev_dependencies:
