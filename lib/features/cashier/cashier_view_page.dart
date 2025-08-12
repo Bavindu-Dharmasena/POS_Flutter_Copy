@@ -9,6 +9,13 @@ import '../../widget/primary_actions_row.dart';
 import 'category_items_page.dart';
 import 'cashier_insights_page.dart';
 
+// ---- Keyboard Intents ----
+class ActivateSearchIntent extends Intent { const ActivateSearchIntent(); }
+class QuickSaleIntent extends Intent { const QuickSaleIntent(); }
+class PauseBillIntent extends Intent { const PauseBillIntent(); }
+class ResumeBillIntent extends Intent { const ResumeBillIntent(); }
+class PayIntent extends Intent { const PayIntent(); } // open payment dialog
+
 class CashierViewPage extends StatefulWidget {
   const CashierViewPage({super.key});
 
@@ -172,17 +179,17 @@ class _CashierViewPageState extends State<CashierViewPage> {
   }
 
   // Auto resume (no button)
-  void _autoResumeNextPausedBill() {
-    if (pausedBills.isEmpty) return;
-    final next = pausedBills.removeAt(0);
-    setState(() {
-      cartItems.clear();
-      cartItems.addAll(next);
-    });
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Resumed paused bill")));
-  }
+  // void _autoResumeNextPausedBill() {
+  //   if (pausedBills.isEmpty) return;
+  //   final next = pausedBills.removeAt(0);
+  //   setState(() {
+  //     cartItems.clear();
+  //     cartItems.addAll(next);
+  //   });
+  //   ScaffoldMessenger.of(
+  //     context,
+  //   ).showSnackBar(const SnackBar(content: Text("Resumed paused bill")));
+  // }
 
   void _showPaymentMethodDialog() {
     showDialog(
@@ -746,35 +753,33 @@ class _CashierViewPageState extends State<CashierViewPage> {
   }) {
     return Padding(
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 20),
-      child: Center(
-        child: ElevatedButton.icon(
-          onPressed: onPause,
-          icon: const Icon(Icons.pause_circle_filled),
-          label: const Text('Pause Bill'),
-          style: ElevatedButton.styleFrom(
-            disabledForegroundColor: Colors.white54,
-            disabledBackgroundColor: Colors.white12,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          ),
+      child: ElevatedButton.icon(
+        onPressed: onPause,
+        icon: Icon(
+          Icons.attach_money, // Corrected icon name
+          size: 30, // Adjust the icon size here
+        ),
+        label: Text(
+          'New Sale',
+          style: TextStyle(fontSize: 30), // Adjust the font size here
+        ),
+        style: ElevatedButton.styleFrom(
+          disabledForegroundColor: Colors.white54,
+          disabledBackgroundColor: Colors.white12,
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         ),
       ),
     );
   }
 
-  // ===================== QUICK SALE: NEW CODE =====================
-
-  /// Entry point for Quick Sale. If there is an active bill, pause it first.
   void _handleQuickSale() async {
     // Pause current bill if needed
-    if (cartItems.isNotEmpty) {
-      _pauseCurrentBill();
-    }
     // Collect quick sale details
     final item = await _showQuickSaleInputDialog();
     if (item == null) return; // user cancelled
 
-    // Separate payment flow for quick sale
-    _showQuickSalePaymentMethodDialog(item);
+    // Add the item to the cart
+    _addToCart(item, quantity: item['quantity']);
   }
 
   /// Dialog to collect: Name, Quantity, Unit Cost, Price.
@@ -885,131 +890,6 @@ class _CashierViewPageState extends State<CashierViewPage> {
   }
 
   /// Separate payment chooser for quick sale.
-  void _showQuickSalePaymentMethodDialog(Map<String, dynamic> quickItem) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Select Payment Method'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('Card'),
-              onTap: () {
-                Navigator.pop(context);
-                _printQuickSaleBill(item: quickItem, paymentMethod: 'Card');
-              },
-            ),
-            ListTile(
-              title: const Text('Cash'),
-              onTap: () {
-                Navigator.pop(context);
-                _showQuickSaleCashDialog(quickItem);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Cash flow for quick sale only.
-  void _showQuickSaleCashDialog(Map<String, dynamic> quickItem) {
-    final total =
-        (quickItem['price'] as double) * (quickItem['quantity'] as int);
-
-    final cashCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Enter Cash Amount'),
-        content: TextField(
-          autofocus: true,
-          controller: cashCtrl,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(hintText: 'Enter cash amount'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              final cash = double.tryParse(cashCtrl.text.trim()) ?? 0;
-              if (cash < total) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Cash amount is less than total'),
-                  ),
-                );
-                return;
-              }
-              Navigator.pop(context);
-              _printQuickSaleBill(
-                item: quickItem,
-                paymentMethod: 'Cash',
-                cashGiven: cash,
-                balance: cash - total,
-              );
-            },
-            child: const Text('Pay'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Prints a bill specifically for a single quick-sale item.
-  void _printQuickSaleBill({
-    required Map<String, dynamic> item,
-    required String paymentMethod,
-    double cashGiven = 0,
-    double balance = 0,
-  }) {
-    final now = DateTime.now();
-    final formattedDateTime = DateFormat('yyyy-MM-dd – hh:mm a').format(now);
-
-    final name = item['name'] as String;
-    final qty = item['quantity'] as int;
-    final unitCost = (item['unitCost'] as num).toDouble();
-    final price = (item['price'] as num).toDouble();
-    final total = price * qty;
-
-    final bill = StringBuffer();
-    bill.writeln('------- AASA POS QUICK SALE -------\n');
-    bill.writeln('Date: $formattedDateTime');
-    bill.writeln('------------------------------');
-    bill.writeln('Item: $name');
-    bill.writeln('Qty: $qty');
-    bill.writeln('Unit Cost: Rs. ${unitCost.toStringAsFixed(2)}');
-    bill.writeln('Price (per unit): Rs. ${price.toStringAsFixed(2)}');
-    bill.writeln('------------------------------');
-    bill.writeln('Total: Rs. ${total.toStringAsFixed(2)}');
-    bill.writeln('Payment Method: $paymentMethod');
-    if (paymentMethod == 'Cash') {
-      bill.writeln('Cash Given: Rs. ${cashGiven.toStringAsFixed(2)}');
-      bill.writeln('Balance: Rs. ${balance.toStringAsFixed(2)}');
-    }
-    bill.writeln('\nThank you for your purchase!');
-    bill.writeln('------------------------------');
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Quick Sale Bill Printed'),
-        content: SingleChildScrollView(child: Text(bill.toString())),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // After quick sale, if there are paused bills, offer to resume
-              if (pausedBills.isNotEmpty) {
-                _promptSelectPausedBill();
-              }
-            },
-            child: const Text('Done'),
-          ),
-        ],
-      ),
-    );
-  }
 
   // Reusable Quick Sale button (for both layouts)
   Widget _buildQuickSaleButton({
@@ -1046,6 +926,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
     );
   }
 
+  
   // =================== UI / LAYOUT ===================
 
   @override

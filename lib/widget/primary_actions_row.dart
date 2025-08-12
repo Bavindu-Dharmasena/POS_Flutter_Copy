@@ -16,25 +16,40 @@ class PrimaryActionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get screen size
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Scale button width and height
+    final buttonWidth = screenWidth * 0.2; // 20% of screen width
+    final buttonHeight = screenWidth * 0.01; // 6% of screen height
+
+    // Scale font size
+    final fontSize = screenWidth * 0.03; // Adjust this ratio as needed
+
     return Padding(
-      padding:
-          EdgeInsets.only(bottom: 10, left: horizontalPadding, right: horizontalPadding),
+      padding: EdgeInsets.only(
+        bottom: 10,
+        left: horizontalPadding,
+        right: horizontalPadding,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           ElevatedButton.icon(
             onPressed: onAddItem,
-            icon: const Icon(Icons.add),
-            label: const Text('Item'),
+            icon: Icon(Icons.add, size: fontSize + 4),
+            label: Text('Item', style: TextStyle(fontSize: fontSize)),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blueAccent,
-              minimumSize: const Size(130, 40),
+              minimumSize: Size(buttonWidth, buttonHeight),
             ),
           ),
           ElevatedButton(
             onPressed: payEnabled ? onPay : null,
-            child: const Text('Pay'),
-            style: ElevatedButton.styleFrom(minimumSize: const Size(130, 40)),
+            child: Text('Pay', style: TextStyle(fontSize: fontSize)),
+            style: ElevatedButton.styleFrom(
+              minimumSize: Size(buttonWidth, buttonHeight),
+            ),
           ),
         ],
       ),
