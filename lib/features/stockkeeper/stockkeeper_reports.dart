@@ -57,23 +57,28 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
 
   @override
   Widget build(BuildContext context) {
+    // Get screen dimensions for responsive design
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > 600;
+    final isMobile = screenWidth <= 600;
+
     return Scaffold(
-      backgroundColor: Colors.white, // Changed to pure white background
+      backgroundColor: Colors.white,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(140),
+        preferredSize: Size.fromHeight(isMobile ? 120 : 140),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white, // Changed to white background
+            color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1), // Light shadow
+                color: Colors.grey.withOpacity(0.1),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
           child: AppBar(
-            backgroundColor: Colors.white, // White AppBar
+            backgroundColor: Colors.white,
             elevation: 0,
             centerTitle: true,
             title: Column(
@@ -81,20 +86,12 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                 Text(
                   'Reports Dashboard',
                   style: TextStyle(
-                    color: Colors.grey[800], // Dark text for contrast
-                    fontSize: 24,
+                    color: Colors.grey[800],
+                    fontSize: isMobile ? 20 : 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Comprehensive Business Analytics',
-                  style: TextStyle(
-                    color: Colors.grey[600], // Medium gray text
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
+               
               ],
             ),
             leading: IconButton(
@@ -105,37 +102,78 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
               Container(
                 margin: const EdgeInsets.only(right: 8),
                 decoration: BoxDecoration(
-                  color: Colors.grey[100], // Light gray background
+                  color: Colors.grey[100],
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[300]!), // Light border
+                  border: Border.all(color: Colors.grey[300]!),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: Icon(Icons.print, color: Colors.grey[700]),
+                      icon: Icon(
+                        Icons.print,
+                        color: Colors.grey[700],
+                        size: isMobile ? 20 : 24,
+                      ),
                       onPressed: () => _showSnackBar('Printing report...'),
                       tooltip: 'Print Report',
                     ),
-                    IconButton(
-                      icon: Icon(Icons.picture_as_pdf, color: Colors.grey[700]),
-                      onPressed: () => _showSnackBar('Exporting to PDF...'),
-                      tooltip: 'Export to PDF',
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.grid_on, color: Colors.grey[700]),
-                      onPressed: () => _showSnackBar('Exporting to Excel...'),
-                      tooltip: 'Export to Excel',
-                    ),
+                    if (!isMobile) ...[
+                      IconButton(
+                        icon: Icon(
+                          Icons.picture_as_pdf,
+                          color: Colors.grey[700],
+                        ),
+                        onPressed: () => _showSnackBar('Exporting to PDF...'),
+                        tooltip: 'Export to PDF',
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.grid_on, color: Colors.grey[700]),
+                        onPressed: () => _showSnackBar('Exporting to Excel...'),
+                        tooltip: 'Export to Excel',
+                      ),
+                    ] else
+                      PopupMenuButton<String>(
+                        icon: Icon(Icons.more_vert, color: Colors.grey[700]),
+                        onSelected: (value) {
+                          if (value == 'pdf') {
+                            _showSnackBar('Exporting to PDF...');
+                          } else if (value == 'excel') {
+                            _showSnackBar('Exporting to Excel...');
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          const PopupMenuItem(
+                            value: 'pdf',
+                            child: Row(
+                              children: [
+                                Icon(Icons.picture_as_pdf),
+                                SizedBox(width: 8),
+                                Text('Export PDF'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'excel',
+                            child: Row(
+                              children: [
+                                Icon(Icons.grid_on),
+                                SizedBox(width: 8),
+                                Text('Export Excel'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),
             ],
             bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(60),
+              preferredSize: Size.fromHeight(isMobile ? 50 : 60),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 8 : 16,
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
@@ -156,23 +194,20 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           });
                         },
                         child: Container(
-                          margin: const EdgeInsets.only(right: 12),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
+                          margin: EdgeInsets.only(right: isMobile ? 8 : 12),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 12 : 20,
+                            vertical: isMobile ? 8 : 10,
                           ),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? Colors
-                                      .blue[50] // Light blue background for selected
-                                : Colors.grey[100], // Light gray for unselected
+                                ? Colors.blue[50]
+                                : Colors.grey[100],
                             borderRadius: BorderRadius.circular(25),
                             border: Border.all(
                               color: isSelected
-                                  ? Colors
-                                        .blue[300]! // Blue border for selected
-                                  : Colors
-                                        .grey[300]!, // Gray border for unselected
+                                  ? Colors.blue[300]!
+                                  : Colors.grey[300]!,
                               width: 1.5,
                             ),
                           ),
@@ -182,24 +217,21 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                               Icon(
                                 _getCategoryIcon(category),
                                 color: isSelected
-                                    ? Colors.blue[700] // Blue icon for selected
-                                    : Colors
-                                          .grey[600], // Gray icon for unselected
-                                size: 18,
+                                    ? Colors.blue[700]
+                                    : Colors.grey[600],
+                                size: isMobile ? 16 : 18,
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: isMobile ? 6 : 8),
                               Text(
                                 category,
                                 style: TextStyle(
                                   color: isSelected
-                                      ? Colors
-                                            .blue[700] // Blue text for selected
-                                      : Colors
-                                            .grey[600], // Gray text for unselected
+                                      ? Colors.blue[700]
+                                      : Colors.grey[600],
                                   fontWeight: isSelected
                                       ? FontWeight.bold
                                       : FontWeight.w500,
-                                  fontSize: 14,
+                                  fontSize: isMobile ? 12 : 14,
                                 ),
                               ),
                             ],
@@ -215,9 +247,9 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         ),
       ),
       body: Container(
-        color: Colors.grey[50], // Very light gray background for body
+        color: Colors.grey[50],
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(isMobile ? 12.0 : 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: _buildFilteredContent(),
@@ -308,13 +340,31 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   }
 
   Widget _buildSalesReportsGrid() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 600;
+    final isTablet = screenWidth > 600 && screenWidth <= 1024;
+
+    int crossAxisCount;
+    double childAspectRatio;
+
+    if (isMobile) {
+      crossAxisCount = 1; // Single column on mobile
+      childAspectRatio = 1.2; // Adjusted ratio for mobile
+    } else if (isTablet) {
+      crossAxisCount = 2;
+      childAspectRatio = 1.3;
+    } else {
+      crossAxisCount = 3;
+      childAspectRatio = 1.5;
+    }
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
+      crossAxisCount: crossAxisCount,
+      crossAxisSpacing: isMobile ? 8 : 16,
+      mainAxisSpacing: isMobile ? 8 : 16,
+      childAspectRatio: childAspectRatio,
       children: [
         _buildReportCard(
           title: 'Products',
@@ -426,13 +476,31 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   }
 
   Widget _buildPurchaseReportsGrid() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 600;
+    final isTablet = screenWidth > 600 && screenWidth <= 1024;
+
+    int crossAxisCount;
+    double childAspectRatio;
+
+    if (isMobile) {
+      crossAxisCount = 1;
+      childAspectRatio = 1.2;
+    } else if (isTablet) {
+      crossAxisCount = 2;
+      childAspectRatio = 1.3;
+    } else {
+      crossAxisCount = 3;
+      childAspectRatio = 1.5;
+    }
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
+      crossAxisCount: crossAxisCount,
+      crossAxisSpacing: isMobile ? 8 : 16,
+      mainAxisSpacing: isMobile ? 8 : 16,
+      childAspectRatio: childAspectRatio,
       children: [
         _buildReportCard(
           title: ' Purchase Products',
@@ -479,13 +547,16 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   }
 
   Widget _buildStockReturnGrid() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 600;
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
+      crossAxisCount: isMobile ? 1 : (screenWidth > 800 ? 3 : 2),
+      crossAxisSpacing: isMobile ? 8 : 16,
+      mainAxisSpacing: isMobile ? 8 : 16,
+      childAspectRatio: isMobile ? 1.2 : 1.5,
       children: [
         _buildReportCard(
           title: 'Stock Return Products',
@@ -497,13 +568,16 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   }
 
   Widget _buildLossAndDamageGrid() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 600;
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
+      crossAxisCount: isMobile ? 1 : (screenWidth > 800 ? 3 : 2),
+      crossAxisSpacing: isMobile ? 8 : 16,
+      mainAxisSpacing: isMobile ? 8 : 16,
+      childAspectRatio: isMobile ? 1.2 : 1.5,
       children: [
         _buildReportCard(
           title: 'Loss and Damage Products',
@@ -515,13 +589,16 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   }
 
   Widget _buildFinanceGrid() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 600;
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
+      crossAxisCount: isMobile ? 1 : (screenWidth > 800 ? 3 : 2),
+      crossAxisSpacing: isMobile ? 8 : 16,
+      mainAxisSpacing: isMobile ? 8 : 16,
+      childAspectRatio: isMobile ? 1.2 : 1.5,
       children: [
         _buildReportCard(
           title: 'Transaction History',
@@ -533,13 +610,16 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   }
 
   Widget _buildStockControlGrid() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 600;
+
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: MediaQuery.of(context).size.width > 800 ? 3 : 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
+      crossAxisCount: isMobile ? 1 : (screenWidth > 800 ? 3 : 2),
+      crossAxisSpacing: isMobile ? 8 : 16,
+      mainAxisSpacing: isMobile ? 8 : 16,
+      childAspectRatio: isMobile ? 1.2 : 1.5,
       children: [
         _buildReportCard(
           title: 'Reorder Product List',
@@ -561,19 +641,23 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     required List<Color> colors,
   }) {
     bool isDownloading = _downloadingReports.contains(title);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 600;
 
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+      ),
       color: Colors.transparent,
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
           gradient: LinearGradient(
             colors: [
               Colors.white,
-              const Color(0xFFF8FAFC), // Very light blue-gray
-              const Color(0xFFF1F5F9), // Slightly darker blue-gray
+              const Color(0xFFF8FAFC),
+              const Color(0xFFF1F5F9),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -596,14 +680,14 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
             hoverColor: colors.first.withOpacity(0.04),
             splashColor: colors.first.withOpacity(0.12),
             onTap: () => _showFiltersDialog(title),
             child: Container(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(isMobile ? 16 : 24),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
                 gradient: LinearGradient(
                   colors: [
                     Colors.white.withOpacity(0.9),
@@ -617,198 +701,358 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Header with icon and title
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              colors.first.withOpacity(0.12),
-                              colors.last.withOpacity(0.18),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: colors.first.withOpacity(0.25),
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: colors.first.withOpacity(0.15),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Icon(icon, color: colors.first, size: 26),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              title,
-                              style: const TextStyle(
-                                color: Color(0xFF1E293B), // Modern slate dark
-                                fontWeight: FontWeight.w700,
-                                fontSize: 16,
-                                height: 1.3,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Generate detailed analytics',
-                              style: TextStyle(
-                                color: const Color(
-                                  0xFF64748B,
-                                ), // Modern slate gray
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const Spacer(),
-
-                  // Action buttons with modern styling
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          height: 40,
+                  if (isMobile)
+                    // Mobile layout - stacked vertically
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                const Color(0xFFF8FAFC),
-                                const Color(0xFFE2E8F0),
+                                colors.first.withOpacity(0.12),
+                                colors.last.withOpacity(0.18),
                               ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFFCBD5E1),
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: () => _showFiltersDialog(title),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.tune_rounded,
-                                    size: 18,
-                                    color: const Color(0xFF475569),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Filters',
-                                    style: TextStyle(
-                                      color: const Color(0xFF475569),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.2,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Container(
-                          height: 40,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [colors.first, colors.last],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: colors.first.withOpacity(0.25),
+                              width: 1,
+                            ),
+                          ),
+                          child: Icon(icon, color: colors.first, size: 24),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Color(0xFF1E293B),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            height: 1.3,
+                            letterSpacing: -0.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Generate detailed analytics',
+                          style: TextStyle(
+                            color: const Color(0xFF64748B),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    // Desktop/Tablet layout - side by side
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                colors.first.withOpacity(0.12),
+                                colors.last.withOpacity(0.18),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: colors.first.withOpacity(0.25),
+                              width: 1,
+                            ),
                             boxShadow: [
                               BoxShadow(
-                                color: colors.first.withOpacity(0.35),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                                spreadRadius: 0,
-                              ),
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
+                                color: colors.first.withOpacity(0.15),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
                               ),
                             ],
                           ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(12),
-                              onTap: isDownloading
-                                  ? null
-                                  : () => _handleDownloadReport(title),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  if (isDownloading)
-                                    SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        valueColor:
-                                            const AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
-                                            ),
-                                      ),
-                                    )
-                                  else
-                                    const Icon(
-                                      Icons.download_rounded,
-                                      size: 18,
-                                      color: Colors.white,
-                                    ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    isDownloading ? 'Getting...' : 'Export',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
+                          child: Icon(icon, color: colors.first, size: 26),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                title,
+                                style: const TextStyle(
+                                  color: Color(0xFF1E293B),
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                  height: 1.3,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Generate detailed analytics',
+                                style: TextStyle(
+                                  color: const Color(0xFF64748B),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                  const Spacer(),
+
+                  // Action buttons with responsive layout
+                  if (isMobile)
+                    // Mobile - stacked buttons
+                    Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          height: 36,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFFF8FAFC),
+                                  const Color(0xFFE2E8F0),
                                 ],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: const Color(0xFFCBD5E1),
+                                width: 1,
+                              ),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(10),
+                                onTap: () => _showFiltersDialog(title),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.tune_rounded,
+                                      size: 16,
+                                      color: const Color(0xFF475569),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Filters',
+                                      style: TextStyle(
+                                        color: const Color(0xFF475569),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 36,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [colors.first, colors.last],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(10),
+                                onTap: isDownloading
+                                    ? null
+                                    : () => _handleDownloadReport(title),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    if (isDownloading)
+                                      const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      )
+                                    else
+                                      const Icon(
+                                        Icons.download_rounded,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      isDownloading ? 'Getting...' : 'Export',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    // Desktop/Tablet - side by side buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFFF8FAFC),
+                                  const Color(0xFFE2E8F0),
+                                ],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFFCBD5E1),
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () => _showFiltersDialog(title),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.tune_rounded,
+                                      size: 18,
+                                      color: const Color(0xFF475569),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Filters',
+                                      style: TextStyle(
+                                        color: const Color(0xFF475569),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [colors.first, colors.last],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colors.first.withOpacity(0.35),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                  spreadRadius: 0,
+                                ),
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: isDownloading
+                                    ? null
+                                    : () => _handleDownloadReport(title),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    if (isDownloading)
+                                      SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          valueColor:
+                                              const AlwaysStoppedAnimation<
+                                                Color
+                                              >(Colors.white),
+                                        ),
+                                      )
+                                    else
+                                      const Icon(
+                                        Icons.download_rounded,
+                                        size: 18,
+                                        color: Colors.white,
+                                      ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      isDownloading ? 'Getting...' : 'Export',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -819,8 +1063,11 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   }
 
   Widget _buildSectionHeader(String title) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 600;
+
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -831,7 +1078,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
         border: Border.all(
           color: const Color(0xFF3B82F6).withOpacity(0.15),
           width: 1.5,
@@ -849,95 +1096,182 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  const Color(0xFF3B82F6).withOpacity(0.15),
-                  const Color(0xFF1D4ED8).withOpacity(0.25),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFF3B82F6).withOpacity(0.3),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF3B82F6).withOpacity(0.2),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Icon(
-              _getCategoryIcon(title),
-              color: const Color(0xFF3B82F6),
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
+      child: isMobile
+          ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1E293B),
-                    height: 1.2,
-                    letterSpacing: -0.3,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            const Color(0xFF3B82F6).withOpacity(0.15),
+                            const Color(0xFF1D4ED8).withOpacity(0.25),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFF3B82F6).withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        _getCategoryIcon(title),
+                        color: const Color(0xFF3B82F6),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF1E293B),
+                              height: 1.2,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Business intelligence reports',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: const Color(0xFF64748B),
+                              fontWeight: FontWeight.w500,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${_getReportCount(title)} reports',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Business intelligence reports',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: const Color(0xFF64748B),
-                    fontWeight: FontWeight.w500,
-                    height: 1.3,
+              ],
+            )
+          : Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF3B82F6).withOpacity(0.15),
+                        const Color(0xFF1D4ED8).withOpacity(0.25),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFF3B82F6).withOpacity(0.3),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    _getCategoryIcon(title),
+                    color: const Color(0xFF3B82F6),
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1E293B),
+                          height: 1.2,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Business intelligence reports',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: const Color(0xFF64748B),
+                          fontWeight: FontWeight.w500,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withOpacity(0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    _getReportCount(title).toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      letterSpacing: 0.2,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF3B82F6).withOpacity(0.35),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Text(
-              _getReportCount(title).toString(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: 16,
-                letterSpacing: 0.2,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1082,386 +1416,681 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   }
 
   void _showFiltersDialog(String reportName) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 600;
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.filter_list, color: Colors.blue),
-              const SizedBox(width: 8),
-              Text('$reportName - Filters'),
-            ],
+        builder: (context, setDialogState) => Dialog(
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: isMobile ? 16 : 40,
+            vertical: isMobile ? 24 : 40,
           ),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 600,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Configure Report Filters',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Date Range Filter
-                  _buildDialogFilterRow(
-                    'Date Range',
-                    Icons.date_range,
-                    InkWell(
-                      onTap: () async {
-                        final picked = await showDateRangePicker(
-                          context: context,
-                          initialDateRange: _selectedDateRange,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime.now(),
-                        );
-                        if (picked != null) {
-                          setDialogState(() {
-                            _selectedDateRange = picked;
-                          });
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                _selectedDateRange != null
-                                    ? '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month}/${_selectedDateRange!.start.year} - '
-                                          '${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}/${_selectedDateRange!.end.year}'
-                                    : 'Select Date Range',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const Icon(Icons.calendar_today, size: 18),
-                          ],
-                        ),
-                      ),
+          child: Container(
+            width: isMobile ? double.infinity : 500,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+              maxWidth: isMobile ? double.infinity : 500,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: EdgeInsets.all(isMobile ? 16 : 20),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
                     ),
                   ),
-
-                  // User Filter - Hide for Expiration Date
-                  if (!_shouldExcludeUserFilter(reportName))
-                    _buildDialogFilterRow(
-                      'User',
-                      Icons.person,
-                      DropdownButtonFormField<String>(
-                        value: _selectedUser,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.filter_list,
+                        color: Colors.blue,
+                        size: isMobile ? 20 : 24,
+                      ),
+                      SizedBox(width: isMobile ? 8 : 12),
+                      Expanded(
+                        child: Text(
+                          '$reportName - Filters',
+                          style: TextStyle(
+                            fontSize: isMobile ? 16 : 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue[800],
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        items: const ['All', 'User 1', 'User 2', 'User 3']
-                            .map(
-                              (item) => DropdownMenuItem<String>(
-                                value: item,
-                                child: Text(item),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          setDialogState(() {
-                            _selectedUser = value!;
-                          });
-                        },
                       ),
-                    ),
-
-                  // Supplier Filter - Hide for Loss and Damage Products
-                  if (!_shouldExcludeSupplierFilter(reportName))
-                    _buildDialogFilterRow(
-                      'Supplier',
-                      Icons.local_shipping,
-                      DropdownButtonFormField<String>(
-                        value: _selectedSupplier,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        items:
-                            const [
-                                  'All',
-                                  'Alpha Suppliers Ltd',
-                                  'Beta Distribution Co',
-                                  'Gamma Wholesale Inc',
-                                  'Delta Trading House',
-                                  'Epsilon Supply Chain',
-                                  'Zeta Logistics Ltd',
-                                  'Theta Manufacturing',
-                                ]
-                                .map(
-                                  (item) => DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(item),
-                                  ),
-                                )
-                                .toList(),
-                        onChanged: (value) {
-                          setDialogState(() {
-                            _selectedSupplier = value!;
-                          });
-                        },
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.close, size: isMobile ? 20 : 24),
+                        splashRadius: 20,
                       ),
-                    ),
+                    ],
+                  ),
+                ),
 
-                  // Cash Register Filter - Hide for Purchase Product Reports (including Loss and Damage Products)
-                  if (!_isPurchaseProductReport(reportName))
-                    _buildDialogFilterRow(
-                      'Cash Register',
-                      Icons.point_of_sale,
-                      DropdownButtonFormField<String>(
-                        value: _selectedCashRegister,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        items:
-                            const [
-                                  'All',
-                                  'Register 1',
-                                  'Register 2',
-                                  'Register 3',
-                                  'Register 4',
-                                ]
-                                .map(
-                                  (item) => DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(item),
-                                  ),
-                                )
-                                .toList(),
-                        onChanged: (value) {
-                          setDialogState(() {
-                            _selectedCashRegister = value!;
-                          });
-                        },
-                      ),
-                    ),
-
-                  // Conditionally show Product Filter - Hide for Payment-related reports and Unpaid Purchase
-                  if (!_shouldExcludeProductFilters(reportName))
-                    _buildDialogFilterRow(
-                      'Product',
-                      Icons.shopping_bag,
-                      DropdownButtonFormField<String>(
-                        value: _selectedProduct,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        items:
-                            const [
-                                  'All',
-                                  'Product 1',
-                                  'Product 2',
-                                  'Product 3',
-                                  'Product 4',
-                                  'Product 5',
-                                ]
-                                .map(
-                                  (item) => DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(item),
-                                  ),
-                                )
-                                .toList(),
-                        onChanged: (value) {
-                          setDialogState(() {
-                            _selectedProduct = value!;
-                          });
-                        },
-                      ),
-                    ),
-
-                  // Conditionally show Product Group Filter - Hide for Payment-related reports and Unpaid Purchase
-                  if (!_shouldExcludeProductFilters(reportName))
-                    _buildDialogFilterRow(
-                      'Product Group',
-                      Icons.category,
-                      DropdownButtonFormField<String>(
-                        value: _selectedProductGroup,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        items:
-                            const [
-                                  'Products',
-                                  'Electronics',
-                                  'Clothing',
-                                  'Food & Beverages',
-                                  'Home & Garden',
-                                  'Books & Media',
-                                ]
-                                .map(
-                                  (item) => DropdownMenuItem<String>(
-                                    value: item,
-                                    child: Text(item),
-                                  ),
-                                )
-                                .toList(),
-                        onChanged: (value) {
-                          setDialogState(() {
-                            _selectedProductGroup = value!;
-                          });
-                        },
-                      ),
-                    ),
-
-                  // Conditionally show Include Subgroups Filter - Hide for Payment-related reports and Unpaid Purchase
-                  if (!_shouldExcludeProductFilters(reportName))
-                    _buildDialogFilterRow(
-                      'Include Subgroups',
-                      Icons.account_tree,
-                      Row(
-                        children: [
-                          Switch(
-                            value: _includeSubgroups,
-                            onChanged: (value) {
-                              setDialogState(() {
-                                _includeSubgroups = value;
-                              });
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          Text(_includeSubgroups ? 'Enabled' : 'Disabled'),
-                        ],
-                      ),
-                    ),
-
-                  const SizedBox(height: 20),
-
-                  // Filter Summary - Updated to conditionally show Supplier and Cash Register
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue.shade200),
-                    ),
+                // Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(isMobile ? 16 : 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Filter Summary:',
+                        Text(
+                          'Configure Report Filters',
                           style: TextStyle(
+                            fontSize: isMobile ? 16 : 18,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text('• Date Range: ${_getDateRangeText()}'),
-                        // Only show user for reports that allow it
-                        if (!_shouldExcludeUserFilter(reportName))
-                          Text('• User: $_selectedUser'),
-                        // Only show supplier for reports that allow it
-                        if (!_shouldExcludeSupplierFilter(reportName))
-                          Text('• Supplier: $_selectedSupplier'),
-                        // Only show cash register for non-Purchase product reports
-                        if (!_isPurchaseProductReport(reportName))
-                          Text('• Cash Register: $_selectedCashRegister'),
-                        // Only show product-related filters for reports that allow them
-                        if (!_shouldExcludeProductFilters(reportName)) ...[
-                          Text('• Product: $_selectedProduct'),
-                          Text('• Product Group: $_selectedProductGroup'),
-                          Text(
-                            '• Include Subgroups: ${_includeSubgroups ? "Yes" : "No"}',
+                        SizedBox(height: isMobile ? 16 : 20),
+
+                        // Date Range Filter
+                        _buildMobileDialogFilterRow(
+                          'Date Range',
+                          Icons.date_range,
+                          InkWell(
+                            onTap: () async {
+                              final picked = await showDateRangePicker(
+                                context: context,
+                                initialDateRange: _selectedDateRange,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime.now(),
+                              );
+                              if (picked != null) {
+                                setDialogState(() {
+                                  _selectedDateRange = picked;
+                                });
+                              }
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isMobile ? 12 : 16,
+                                vertical: isMobile ? 12 : 14,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey[300]!),
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.white,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _selectedDateRange != null
+                                          ? '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month}/${_selectedDateRange!.start.year} - '
+                                                '${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}/${_selectedDateRange!.end.year}'
+                                          : 'Select Date Range',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: isMobile ? 14 : 16,
+                                        color: _selectedDateRange != null
+                                            ? Colors.black87
+                                            : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: isMobile ? 18 : 20,
+                                    color: Colors.grey[600],
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ],
+                          isMobile,
+                        ),
+
+                        // User Filter - Hide for reports that exclude it
+                        if (!_shouldExcludeUserFilter(reportName))
+                          _buildMobileDialogFilterRow(
+                            'User',
+                            Icons.person,
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isMobile ? 8 : 12,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey[300]!),
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.white,
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedUser,
+                                  isExpanded: true,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 14 : 16,
+                                    color: Colors.black87,
+                                  ),
+                                  items:
+                                      const [
+                                            'All',
+                                            'User 1',
+                                            'User 2',
+                                            'User 3',
+                                          ]
+                                          .map(
+                                            (item) => DropdownMenuItem<String>(
+                                              value: item,
+                                              child: Text(item),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged: (value) {
+                                    setDialogState(() {
+                                      _selectedUser = value!;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                            isMobile,
+                          ),
+
+                        // Supplier Filter - Hide for reports that exclude it
+                        if (!_shouldExcludeSupplierFilter(reportName))
+                          _buildMobileDialogFilterRow(
+                            'Supplier',
+                            Icons.local_shipping,
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isMobile ? 8 : 12,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey[300]!),
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.white,
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedSupplier,
+                                  isExpanded: true,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 14 : 16,
+                                    color: Colors.black87,
+                                  ),
+                                  items:
+                                      const [
+                                            'All',
+                                            'Alpha Suppliers Ltd',
+                                            'Beta Distribution Co',
+                                            'Gamma Wholesale Inc',
+                                            'Delta Trading House',
+                                            'Epsilon Supply Chain',
+                                            'Zeta Logistics Ltd',
+                                            'Theta Manufacturing',
+                                          ]
+                                          .map(
+                                            (item) => DropdownMenuItem<String>(
+                                              value: item,
+                                              child: Text(
+                                                item,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged: (value) {
+                                    setDialogState(() {
+                                      _selectedSupplier = value!;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                            isMobile,
+                          ),
+
+                        // Cash Register Filter - Hide for Purchase product reports
+                        if (!_isPurchaseProductReport(reportName))
+                          _buildMobileDialogFilterRow(
+                            'Cash Register',
+                            Icons.point_of_sale,
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isMobile ? 8 : 12,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey[300]!),
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.white,
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedCashRegister,
+                                  isExpanded: true,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 14 : 16,
+                                    color: Colors.black87,
+                                  ),
+                                  items:
+                                      const [
+                                            'All',
+                                            'Register 1',
+                                            'Register 2',
+                                            'Register 3',
+                                            'Register 4',
+                                          ]
+                                          .map(
+                                            (item) => DropdownMenuItem<String>(
+                                              value: item,
+                                              child: Text(item),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged: (value) {
+                                    setDialogState(() {
+                                      _selectedCashRegister = value!;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                            isMobile,
+                          ),
+
+                        // Product Filter - Hide for payment-related reports
+                        if (!_shouldExcludeProductFilters(reportName))
+                          _buildMobileDialogFilterRow(
+                            'Product',
+                            Icons.shopping_bag,
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isMobile ? 8 : 12,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey[300]!),
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.white,
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedProduct,
+                                  isExpanded: true,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 14 : 16,
+                                    color: Colors.black87,
+                                  ),
+                                  items:
+                                      const [
+                                            'All',
+                                            'Product 1',
+                                            'Product 2',
+                                            'Product 3',
+                                            'Product 4',
+                                            'Product 5',
+                                          ]
+                                          .map(
+                                            (item) => DropdownMenuItem<String>(
+                                              value: item,
+                                              child: Text(item),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged: (value) {
+                                    setDialogState(() {
+                                      _selectedProduct = value!;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                            isMobile,
+                          ),
+
+                        // Product Group Filter - Hide for payment-related reports
+                        if (!_shouldExcludeProductFilters(reportName))
+                          _buildMobileDialogFilterRow(
+                            'Product Group',
+                            Icons.category,
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isMobile ? 8 : 12,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey[300]!),
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.white,
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedProductGroup,
+                                  isExpanded: true,
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 14 : 16,
+                                    color: Colors.black87,
+                                  ),
+                                  items:
+                                      const [
+                                            'Products',
+                                            'Electronics',
+                                            'Clothing',
+                                            'Food & Beverages',
+                                            'Home & Garden',
+                                            'Books & Media',
+                                          ]
+                                          .map(
+                                            (item) => DropdownMenuItem<String>(
+                                              value: item,
+                                              child: Text(item),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged: (value) {
+                                    setDialogState(() {
+                                      _selectedProductGroup = value!;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                            isMobile,
+                          ),
+
+                        // Include Subgroups Filter - Hide for payment-related reports
+                        if (!_shouldExcludeProductFilters(reportName))
+                          _buildMobileDialogFilterRow(
+                            'Include Subgroups',
+                            Icons.account_tree,
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isMobile ? 12 : 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey[300]!),
+                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.white,
+                              ),
+                              child: Row(
+                                children: [
+                                  Switch(
+                                    value: _includeSubgroups,
+                                    onChanged: (value) {
+                                      setDialogState(() {
+                                        _includeSubgroups = value;
+                                      });
+                                    },
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _includeSubgroups ? 'Enabled' : 'Disabled',
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 14 : 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            isMobile,
+                          ),
+
+                        SizedBox(height: isMobile ? 16 : 20),
+
+                        // Filter Summary
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(isMobile ? 12 : 16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Filter Summary:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: isMobile ? 14 : 16,
+                                ),
+                              ),
+                              SizedBox(height: isMobile ? 6 : 8),
+                              Text(
+                                '• Date Range: ${_getDateRangeText()}',
+                                style: TextStyle(fontSize: isMobile ? 12 : 14),
+                              ),
+                              if (!_shouldExcludeUserFilter(reportName))
+                                Text(
+                                  '• User: $_selectedUser',
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 12 : 14,
+                                  ),
+                                ),
+                              if (!_shouldExcludeSupplierFilter(reportName))
+                                Text(
+                                  '• Supplier: $_selectedSupplier',
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 12 : 14,
+                                  ),
+                                ),
+                              if (!_isPurchaseProductReport(reportName))
+                                Text(
+                                  '• Cash Register: $_selectedCashRegister',
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 12 : 14,
+                                  ),
+                                ),
+                              if (!_shouldExcludeProductFilters(
+                                reportName,
+                              )) ...[
+                                Text(
+                                  '• Product: $_selectedProduct',
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 12 : 14,
+                                  ),
+                                ),
+                                Text(
+                                  '• Product Group: $_selectedProductGroup',
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 12 : 14,
+                                  ),
+                                ),
+                                Text(
+                                  '• Include Subgroups: ${_includeSubgroups ? "Yes" : "No"}',
+                                  style: TextStyle(
+                                    fontSize: isMobile ? 12 : 14,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ],
-              ),
+                ),
+
+                // Action Buttons
+                Container(
+                  padding: EdgeInsets.all(isMobile ? 16 : 20),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                  ),
+                  child: isMobile
+                      ? Column(
+                          children: [
+                            SizedBox(
+                              width: double.infinity,
+                              child: TextButton(
+                                onPressed: () {
+                                  setDialogState(() {
+                                    if (!_shouldExcludeUserFilter(reportName)) {
+                                      _selectedUser = 'All';
+                                    }
+                                    if (!_shouldExcludeSupplierFilter(
+                                      reportName,
+                                    )) {
+                                      _selectedSupplier = 'All';
+                                    }
+                                    if (!_isPurchaseProductReport(reportName)) {
+                                      _selectedCashRegister = 'All';
+                                    }
+                                    if (!_shouldExcludeProductFilters(
+                                      reportName,
+                                    )) {
+                                      _selectedProduct = 'All';
+                                      _selectedProductGroup = 'Products';
+                                      _includeSubgroups = true;
+                                    }
+                                    final now = DateTime.now();
+                                    _selectedDateRange = DateTimeRange(
+                                      start: DateTime(now.year, now.month, 1),
+                                      end: now,
+                                    );
+                                  });
+                                },
+                                child: const Text('Reset'),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Cancel'),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 2,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      _showReportWithSelectedFilters(
+                                        reportName,
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.visibility,
+                                      size: 18,
+                                    ),
+                                    label: const Text('Show Report'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                setDialogState(() {
+                                  if (!_shouldExcludeUserFilter(reportName)) {
+                                    _selectedUser = 'All';
+                                  }
+                                  if (!_shouldExcludeSupplierFilter(
+                                    reportName,
+                                  )) {
+                                    _selectedSupplier = 'All';
+                                  }
+                                  if (!_isPurchaseProductReport(reportName)) {
+                                    _selectedCashRegister = 'All';
+                                  }
+                                  if (!_shouldExcludeProductFilters(
+                                    reportName,
+                                  )) {
+                                    _selectedProduct = 'All';
+                                    _selectedProductGroup = 'Products';
+                                    _includeSubgroups = true;
+                                  }
+                                  final now = DateTime.now();
+                                  _selectedDateRange = DateTimeRange(
+                                    start: DateTime(now.year, now.month, 1),
+                                    end: now,
+                                  );
+                                });
+                              },
+                              child: const Text('Reset'),
+                            ),
+                            const SizedBox(width: 8),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancel'),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showReportWithSelectedFilters(reportName);
+                              },
+                              icon: const Icon(Icons.visibility),
+                              label: const Text('Show Report'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setDialogState(() {
-                  // Only reset user for reports that allow it
-                  if (!_shouldExcludeUserFilter(reportName)) {
-                    _selectedUser = 'All';
-                  }
-                  // Only reset supplier for reports that allow it
-                  if (!_shouldExcludeSupplierFilter(reportName)) {
-                    _selectedSupplier = 'All';
-                  }
-                  // Only reset cash register for non-Purchase product reports
-                  if (!_isPurchaseProductReport(reportName)) {
-                    _selectedCashRegister = 'All';
-                  }
-                  // Only reset product filters for reports that allow them
-                  if (!_shouldExcludeProductFilters(reportName)) {
-                    _selectedProduct = 'All';
-                    _selectedProductGroup = 'Products';
-                    _includeSubgroups = true;
-                  }
-                  final now = DateTime.now();
-                  _selectedDateRange = DateTimeRange(
-                    start: DateTime(now.year, now.month, 1),
-                    end: now,
-                  );
-                });
-              },
-              child: const Text('Reset'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                _showReportWithSelectedFilters(reportName);
-              },
-              icon: const Icon(Icons.visibility),
-              label: const Text('Show Report'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ],
         ),
+      ),
+    );
+  }
+
+  // Add this new helper method for mobile-friendly filter rows
+  Widget _buildMobileDialogFilterRow(
+    String label,
+    IconData icon,
+    Widget control,
+    bool isMobile,
+  ) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isMobile ? 16 : 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: isMobile ? 18 : 20, color: Colors.blue),
+              SizedBox(width: isMobile ? 6 : 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: isMobile ? 14 : 16,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: isMobile ? 8 : 10),
+          control,
+        ],
       ),
     );
   }
@@ -1828,47 +2457,6 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     return 5 +
         (reportName.length %
             3); // Cash, Credit Card, Debit Card, Digital Wallet, etc.
-  }
-
-  Widget _buildDialogFilterRow(String label, IconData icon, Widget control) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 20, color: Colors.blue),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          control,
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showDateRangePicker() async {
-    final DateTimeRange? picked = await showDateRangePicker(
-      context: context,
-      initialDateRange: _selectedDateRange,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-    );
-
-    if (picked != null && picked != _selectedDateRange) {
-      setState(() {
-        _selectedDateRange = picked;
-      });
-    }
   }
 
   void _showReportPreview(String reportName) {
