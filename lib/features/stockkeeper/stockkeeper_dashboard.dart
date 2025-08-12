@@ -20,7 +20,6 @@ class StockKeeperDashboard extends StatefulWidget {
   State<StockKeeperDashboard> createState() => _StockKeeperDashboardState();
 }
 
-
 class _StockKeeperDashboardState extends State<StockKeeperDashboard>
     with TickerProviderStateMixin {
   final List<String> topProducts = [
@@ -41,14 +40,9 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-
-  // Drag visual state
-  int? _draggingIndex;
-
   @override
   void initState() {
     super.initState();
-
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -69,7 +63,6 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
     super.dispose();
   }
 
-
   void _navigateTo(Widget page) {
     Navigator.push(
       context,
@@ -86,44 +79,10 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
     );
   }
 
-  void _reorder(int from, int to) {
-    if (from == to || from < 0 || to < 0 || from >= _items.length || to >= _items.length) return;
-
-    final FocusNode? focusedNode =
-        (_nodes.isNotEmpty && _focusedIndex < _nodes.length) ? _nodes[_focusedIndex] : null;
-
-    setState(() {
-      final spec = _items.removeAt(from);
-      _items.insert(to, spec);
-
-      final node = _nodes.removeAt(from);
-      _nodes.insert(to, node);
-
-      if (focusedNode != null) {
-        final idx = _nodes.indexOf(focusedNode);
-        if (idx != -1) _focusedIndex = idx;
-      }
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_nodes.isNotEmpty && _focusedIndex < _nodes.length) {
-        _nodes[_focusedIndex].requestFocus();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    for (final n in _nodes) n.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
-
 
     return Scaffold(
       backgroundColor: const Color(0xFF0A0E1A),
@@ -187,7 +146,6 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
             ],
           ),
         ),
-
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: CustomScrollView(
@@ -239,7 +197,6 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                           end: Alignment.bottomRight,
                         ),
                         onActivate: () => _navigateTo(const StockKeeperReports()),
-
                       ),
                     ),
                     _buildAnimatedTile(
@@ -269,7 +226,6 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                         ),
                         onActivate: () => _navigateTo(const StockKeeperReports()),
                       ),
-
                     ),
                     _buildAnimatedTile(
                       delay: 300,
@@ -281,12 +237,10 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                           colors: [Color(0xFFF093FB), Color(0xFFF5576C)],
                           begin: Alignment.topLeft, 
                           end: Alignment.bottomRight,
-
                         ),
                         onActivate: () => _navigateTo(const StockKeeperCashier()),
                       ),
                     ),
-
                   ]),
                 ),
               ),
@@ -295,11 +249,9 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
               SliverPadding(
                 padding: const EdgeInsets.all(16),
                 sliver: SliverToBoxAdapter(
-
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-
                       const SizedBox(height: 24),
                       Text(
                         'Quick Insights',
@@ -340,7 +292,6 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                             ),
                             items: topCategories,
                             onActivate: () => _navigateTo(const StockKeeperInventory()),
-
                           ),
                         ),
                       ] else ...[
@@ -382,7 +333,6 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                           ],
                         ),
                       ],
-
                       
                       const SizedBox(height: 24),
                       
@@ -391,7 +341,6 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                         delay: 600,
                         child: BackTile(
                           onActivate: () => Navigator.pop(context),
-
                         ),
                       ),
                       
@@ -408,7 +357,6 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
     );
   }
 
-
   Widget _buildAnimatedTile({required int delay, required Widget child}) {
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 600 + delay),
@@ -420,7 +368,6 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
           child: Opacity(
             opacity: value,
             child: child,
-
           ),
         );
       },
