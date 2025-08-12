@@ -212,6 +212,7 @@ class _StockKeeperProductsState extends State<StockKeeperProducts> {
                             TraversalDirection.right => LogicalKeyboardKey.arrowRight,
                             TraversalDirection.up    => LogicalKeyboardKey.arrowUp,
                             TraversalDirection.down  => LogicalKeyboardKey.arrowDown,
+                            // ignore: unreachable_switch_case
                             _ => LogicalKeyboardKey.arrowRight,
                           };
                           final next = _nextIndex(
