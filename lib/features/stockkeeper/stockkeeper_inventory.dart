@@ -1,6 +1,70 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_system/features/stockkeeper/products/add_item_page.dart';
+
+/// ===== Shared styles (match StockKeeperHome) =====
+const kBgBase = Color(0xFF0B1623);
+const kPanelBg = Color(0xFF1a2332);
+const kRadius = 24.0;
+
+BoxDecoration glassBox({
+  double radius = kRadius,
+  double borderOpacity = .10,
+  double fillOpacity = .08,
+  List<Color>? overlayGradient,
+}) {
+  return BoxDecoration(
+    borderRadius: BorderRadius.circular(radius),
+    border: Border.all(color: Colors.white.withOpacity(borderOpacity), width: 1),
+    color: Colors.white.withOpacity(fillOpacity),
+    gradient: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: overlayGradient ??
+          [Colors.white.withOpacity(.10), Colors.white.withOpacity(.02)],
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(.35),
+        blurRadius: 18,
+        offset: const Offset(0, 10),
+      ),
+    ],
+  );
+}
+
+LinearGradient brandGradient(List<Color> colors) => LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: colors,
+    );
+
+/// ---- Custom intents for page-level keyboard handling ----
+class BackIntent extends Intent {
+  const BackIntent();
+}
+class MoveLeftIntent extends Intent {
+  const MoveLeftIntent();
+}
+class MoveRightIntent extends Intent {
+  const MoveRightIntent();
+}
+class MoveUpIntent extends Intent {
+  const MoveUpIntent();
+}
+class MoveDownIntent extends Intent {
+  const MoveDownIntent();
+}
+class FocusSearchIntent extends Intent {
+  const FocusSearchIntent();
+}
+class JumpFirstIntent extends Intent {
+  const JumpFirstIntent();
+}
+class JumpLastIntent extends Intent {
+  const JumpLastIntent();
+}
 
 class StockKeeperInventory extends StatefulWidget {
   const StockKeeperInventory({Key? key}) : super(key: key);
@@ -13,6 +77,12 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
   String searchQuery = '';
   String selectedCategory = 'All';
   String selectedStockStatus = 'All';
+
+  // Focus management
+  final FocusNode _searchNode = FocusNode(debugLabel: 'inventory_search');
+  final List<FocusNode> _cardNodes = <FocusNode>[];
+  int _focusedIndex = 0; // index in grid
+  int _cols = 2; // updated at layout time
 
   // Sample data - in real app, this would come from database
   List<Product> products = [
@@ -86,24 +156,95 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
 
   List<Product> get filteredProducts {
     return products.where((product) {
-      final matchesSearch =
-          product.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
+      final q = searchQuery.trim().toLowerCase();
+      final matchesSearch = q.isEmpty ||
+          product.name.toLowerCase().contains(q) ||
           product.barcode.contains(searchQuery) ||
-          product.id.toLowerCase().contains(searchQuery.toLowerCase());
+          product.id.toLowerCase().contains(q);
 
       final matchesCategory =
           selectedCategory == 'All' || product.category == selectedCategory;
 
-      final matchesStockStatus =
-          selectedStockStatus == 'All' ||
+      final matchesStockStatus = selectedStockStatus == 'All' ||
           (selectedStockStatus == 'Low Stock' && product.isLowStock) ||
           (selectedStockStatus == 'In Stock' &&
               !product.isLowStock &&
               product.currentStock > 0) ||
-          (selectedStockStatus == 'Out of Stock' && product.currentStock == 0);
+          (selectedStockStatus == 'Out of Stock' &&
+              product.currentStock == 0);
 
       return matchesSearch && matchesCategory && matchesStockStatus;
     }).toList();
+  }
+
+  /// Ensure we have exactly [count] card focus nodes
+  void _ensureCardNodes(int count) {
+    while (_cardNodes.length > count) {
+      _cardNodes.removeLast().dispose();
+    }
+    while (_cardNodes.length < count) {
+      _cardNodes.add(FocusNode(debugLabel: 'card_${_cardNodes.length}'));
+    }
+    if (_cardNodes.isNotEmpty) {
+      _focusedIndex = _focusedIndex.clamp(0, _cardNodes.length - 1);
+    } else {
+      _focusedIndex = 0;
+    }
+    // keep focus valid if we were on a removed item
+    if (_cardNodes.isNotEmpty && !_cardNodes[_focusedIndex].hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _cardNodes[_focusedIndex].requestFocus();
+      });
+    }
+  }
+
+  /// Move focus to a given card index
+  void _focusCard(int i) {
+    if (_cardNodes.isEmpty) return;
+    final idx = (i % _cardNodes.length + _cardNodes.length) % _cardNodes.length;
+    _focusedIndex = idx;
+    _cardNodes[idx].requestFocus();
+    setState(() {});
+  }
+
+  /// Compute next index for arrow navigation
+  int _nextIndex(int current, LogicalKeyboardKey key) {
+    final count = _cardNodes.length;
+    if (count == 0) return 0;
+    if (key == LogicalKeyboardKey.arrowRight) return (current + 1) % count;
+    if (key == LogicalKeyboardKey.arrowLeft) return (current - 1 + count) % count;
+    if (key == LogicalKeyboardKey.arrowDown) {
+      final j = current + _cols;
+      if (j < count) return j;
+      // wrap same column to first row
+      final col = current % _cols;
+      return col;
+    }
+    if (key == LogicalKeyboardKey.arrowUp) {
+      final j = current - _cols;
+      if (j >= 0) return j;
+      // going above first row is handled by caller (jump to search)
+      return current;
+    }
+    return current;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Start with search focused
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchNode.dispose();
+    for (final n in _cardNodes) {
+      n.dispose();
+    }
+    super.dispose();
   }
 
   @override
@@ -112,57 +253,188 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
     final isTablet = screenWidth > 800;
     final isMobile = screenWidth < 600;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0B1623),
-      appBar: AppBar(
-        title: const Text(
-          'Inventory Management',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(0xFF0B1623),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Feather.search, color: Colors.white),
-            onPressed: () {
-              // Open search focus
-            },
-          ),
-          IconButton(
-            icon: const Icon(Feather.download, color: Colors.white),
-            onPressed: () {
-              _showExportDialog(context);
-            },
-          ),
-        ],
-      ),
-      body: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1400),
-        child: Column(
-          children: [
-            // Dashboard Summary Cards
-            _buildDashboardSummary(isTablet, isMobile),
+    // Keep card focus nodes in sync with filtered list
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _ensureCardNodes(filteredProducts.length);
+    });
 
-            // Search and Filter Section
-            _buildSearchAndFilter(isTablet, isMobile),
+    return Shortcuts(
+      shortcuts: <ShortcutActivator, Intent>{
+        // Global: Esc to go back
+        const SingleActivator(LogicalKeyboardKey.escape): const BackIntent(),
+        // Focus search
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true): const FocusSearchIntent(),
+        const SingleActivator(LogicalKeyboardKey.slash): const FocusSearchIntent(),
+        // Arrows (page-level handling)
+        const SingleActivator(LogicalKeyboardKey.arrowLeft): const MoveLeftIntent(),
+        const SingleActivator(LogicalKeyboardKey.arrowRight): const MoveRightIntent(),
+        const SingleActivator(LogicalKeyboardKey.arrowUp): const MoveUpIntent(),
+        const SingleActivator(LogicalKeyboardKey.arrowDown): const MoveDownIntent(),
+        // Jump
+        const SingleActivator(LogicalKeyboardKey.home): const JumpFirstIntent(),
+        const SingleActivator(LogicalKeyboardKey.end): const JumpLastIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          BackIntent: CallbackAction<BackIntent>(onInvoke: (_) {
+            Navigator.maybePop(context);
+            return null;
+          }),
+          FocusSearchIntent: CallbackAction<FocusSearchIntent>(onInvoke: (_) {
+            _searchNode.requestFocus();
+            return null;
+          }),
+          JumpFirstIntent: CallbackAction<JumpFirstIntent>(onInvoke: (_) {
+            if (_cardNodes.isNotEmpty) _focusCard(0);
+            return null;
+          }),
+          JumpLastIntent: CallbackAction<JumpLastIntent>(onInvoke: (_) {
+            if (_cardNodes.isNotEmpty) _focusCard(_cardNodes.length - 1);
+            return null;
+          }),
+          MoveDownIntent: CallbackAction<MoveDownIntent>(onInvoke: (_) {
+            final focused = FocusManager.instance.primaryFocus;
+            final onSearch = focused == _searchNode;
+            if (onSearch && _cardNodes.isNotEmpty) {
+              _focusCard(0); // jump into grid
+            } else if (_cardNodes.isNotEmpty && _cardNodes.contains(focused)) {
+              final i = _cardNodes.indexOf(focused!);
+              final next = _nextIndex(i, LogicalKeyboardKey.arrowDown);
+              if (next == i) return null;
+              _focusCard(next);
+            }
+            return null;
+          }),
+          MoveUpIntent: CallbackAction<MoveUpIntent>(onInvoke: (_) {
+            final focused = FocusManager.instance.primaryFocus;
+            if (_cardNodes.isNotEmpty && _cardNodes.contains(focused)) {
+              final i = _cardNodes.indexOf(focused!);
+              final j = i - _cols;
+              if (j < 0) {
+                _searchNode.requestFocus(); // top row -> back to search
+              } else {
+                _focusCard(j);
+              }
+            }
+            return null;
+          }),
+          MoveLeftIntent: CallbackAction<MoveLeftIntent>(onInvoke: (_) {
+            final focused = FocusManager.instance.primaryFocus;
+            if (_cardNodes.isNotEmpty && _cardNodes.contains(focused)) {
+              final i = _cardNodes.indexOf(focused!);
+              _focusCard(_nextIndex(i, LogicalKeyboardKey.arrowLeft));
+            }
+            return null;
+          }),
+          MoveRightIntent: CallbackAction<MoveRightIntent>(onInvoke: (_) {
+            final focused = FocusManager.instance.primaryFocus;
+            if (_cardNodes.isNotEmpty && _cardNodes.contains(focused)) {
+              final i = _cardNodes.indexOf(focused!);
+              _focusCard(_nextIndex(i, LogicalKeyboardKey.arrowRight));
+            }
+            return null;
+          }),
+        },
+        child: Scaffold(
+          backgroundColor: kBgBase,
+          appBar: AppBar(
+            title: ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
+              ).createShader(bounds),
+              child: const Text(
+                'Inventory Management',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+            backgroundColor: kBgBase,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: Colors.white),
+            actions: [
+              IconButton(
+                icon: const Icon(Feather.search, color: Colors.white),
+                tooltip: 'Search',
+                onPressed: () => _searchNode.requestFocus(),
+              ),
+              IconButton(
+                icon: const Icon(Feather.download, color: Colors.white),
+                tooltip: 'Export',
+                onPressed: () {
+                  _showExportDialog(context);
+                },
+              ),
+            ],
+          ),
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF0F172A)],
+              ),
+            ),
+            child: Stack(
+              children: [
+                // subtle floating blobs
+                Positioned(top: 60, left: 40, child: _blob(const Color(0xFF3B82F6))),
+                Positioned(right: 80, bottom: 120, child: _blob(const Color(0xFF8B5CF6), size: 140)),
+                Positioned(right: 150, top: 220, child: _blob(const Color(0xFFEC4899), size: 90)),
 
-            // Product Grid/List
-            Expanded(child: _buildProductGrid(isTablet, isMobile)),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddProductDialog(context),
-        backgroundColor: Colors.green,
-        icon: const Icon(Feather.plus, color: Colors.white),
-        label: Text(
-          isMobile ? 'Add' : 'Add Product',
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+                // content
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1400),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 12),
+                        _buildDashboardSummary(isTablet, isMobile),
+                        _buildSearchAndFilter(isTablet, isMobile),
+                        Expanded(child: _buildProductGrid(isTablet, isMobile)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          floatingActionButton: _primaryFAB(
+            label: isMobile ? 'Add' : 'Add Product',
+            icon: Feather.plus,
+            onPressed: () => _showAddProductDialog(context),
           ),
         ),
+      ),
+    );
+  }
+
+  /// ====== UI pieces ======
+
+  Widget _blob(Color c, {double size = 110}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: c.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(size / 2),
+      ),
+    );
+  }
+
+  Widget _primaryFAB({
+    required String label,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6, right: 6),
+      child: FloatingActionButton.extended(
+        onPressed: onPressed,
+        backgroundColor: const Color(0xFF10B981),
+        foregroundColor: Colors.white,
+        icon: Icon(icon),
+        label: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        elevation: 8,
       ),
     );
   }
@@ -171,55 +443,48 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
     final totalItems = products.length;
     final lowStockItems = products.where((p) => p.isLowStock).length;
     final outOfStockItems = products.where((p) => p.currentStock == 0).length;
-    final totalValue = products.fold(
-      0.0,
-      (sum, p) => sum + (p.price * p.currentStock),
-    );
+    final totalValue =
+        products.fold(0.0, (sum, p) => sum + (p.price * p.currentStock));
 
-    return Container(
-      padding: EdgeInsets.all(isMobile ? 8 : 20),
+    return Padding(
+      padding: EdgeInsets.all(isMobile ? 10 : 20),
       child: LayoutBuilder(
-        builder: (context, constraints) {
+        builder: (context, _) {
           final crossAxisCount = isTablet ? 4 : (isMobile ? 2 : 3);
-
           return GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: crossAxisCount,
-            crossAxisSpacing: isMobile ? 8 : 12,
-            mainAxisSpacing: isMobile ? 8 : 12,
-            childAspectRatio: isMobile ? 1.8 : 2.2, // Increased from 1.5 to 1.8
+            crossAxisSpacing: isMobile ? 10 : 16,
+            mainAxisSpacing: isMobile ? 10 : 16,
+            childAspectRatio: isMobile ? 1.8 : 2.3,
             children: [
-              _buildSummaryCard(
-                'Total Items',
-                totalItems.toString(),
-                Icons.inventory,
-                Colors.blue,
-                Colors.blue.withOpacity(0.1),
+              _summaryCard(
+                title: 'Total Items',
+                value: totalItems.toString(),
+                icon: Icons.inventory_2_outlined,
+                gradient: brandGradient([const Color(0xFF3B82F6), const Color(0xFF06B6D4)]),
                 isMobile: isMobile,
               ),
-              _buildSummaryCard(
-                'Low Stock',
-                lowStockItems.toString(),
-                Icons.warning,
-                Colors.orange,
-                Colors.orange.withOpacity(0.1),
+              _summaryCard(
+                title: 'Low Stock',
+                value: lowStockItems.toString(),
+                icon: Icons.warning_amber_rounded,
+                gradient: brandGradient([const Color(0xFFF59E0B), const Color(0xFFEF4444)]),
                 isMobile: isMobile,
               ),
-              _buildSummaryCard(
-                'Out of Stock',
-                outOfStockItems.toString(),
-                Icons.cancel,
-                Colors.red,
-                Colors.red.withOpacity(0.1),
+              _summaryCard(
+                title: 'Out of Stock',
+                value: outOfStockItems.toString(),
+                icon: Icons.block_outlined,
+                gradient: brandGradient([const Color(0xFFEF4444), const Color(0xFFDC2626)]),
                 isMobile: isMobile,
               ),
-              _buildSummaryCard(
-                'Total Value',
-                'Rs. ${totalValue.toStringAsFixed(0)}',
-                Icons.trending_up,
-                Colors.green,
-                Colors.green.withOpacity(0.1),
+              _summaryCard(
+                title: 'Total Value',
+                value: 'Rs. ${totalValue.toStringAsFixed(0)}',
+                icon: Icons.trending_up_rounded,
+                gradient: brandGradient([const Color(0xFF10B981), const Color(0xFF059669)]),
                 isMobile: isMobile,
               ),
             ],
@@ -229,156 +494,155 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
     );
   }
 
-  Widget _buildSummaryCard(
-    String title,
-    String value,
-    IconData icon,
-    Color iconColor,
-    Color bgColor, {
+  Widget _summaryCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Gradient gradient,
     bool isMobile = false,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(isMobile ? 12 : 16),
-        border: Border.all(color: iconColor.withOpacity(0.2)),
-      ),
-      padding: EdgeInsets.all(isMobile ? 8 : 16), // Reduced padding for mobile
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min, // Important: minimize the column size
-        children: [
-          Icon(
-            icon,
-            color: iconColor,
-            size: isMobile ? 18 : 24,
-          ), // Reduced icon size
-          SizedBox(height: isMobile ? 2 : 6), // Reduced spacing
-          Flexible(
-            // Wrap in Flexible to prevent overflow
-            child: Text(
-              value,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: isMobile ? 14 : 18, // Reduced font size
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+    return _HoverGlow(
+      borderGlow: true,
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(isMobile ? 16 : kRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(.25),
+              blurRadius: 16,
+              offset: const Offset(0, 10),
             ),
+          ],
+          border: Border.all(color: Colors.white.withOpacity(.12), width: 1),
+        ),
+        child: Container(
+          decoration: glassBox(
+            radius: isMobile ? 16 : kRadius,
+            borderOpacity: .10,
+            fillOpacity: .0,
+            overlayGradient: [Colors.white.withOpacity(.12), Colors.white.withOpacity(.00)],
           ),
-          SizedBox(height: isMobile ? 1 : 2), // Reduced spacing
-          Flexible(
-            // Wrap in Flexible to prevent overflow
-            child: Text(
-              title,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: isMobile ? 10 : 12, // Reduced font size
+          padding: EdgeInsets.all(isMobile ? 10 : 16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: isMobile ? 22 : 26),
+              SizedBox(height: isMobile ? 4 : 8),
+              Text(
+                value,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: isMobile ? 16 : 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+              SizedBox(height: isMobile ? 2 : 4),
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: isMobile ? 11 : 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildSearchAndFilter(bool isTablet, bool isMobile) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 12 : 20,
-        vertical: 10,
-      ),
-      child: Column(
-        children: [
-          // Search Bar
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 20, vertical: 10),
+      child: Container(
+        decoration: glassBox(),
+        padding: EdgeInsets.all(isMobile ? 12 : 16),
+        child: Column(
+          children: [
+            // Search
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.white.withOpacity(.15)),
+              ),
+              child: TextField(
+                focusNode: _searchNode,
+                style: const TextStyle(color: Colors.white),
+                cursorColor: Colors.white70,
+                decoration: InputDecoration(
+                  hintText: 'Search products, barcode, or ID...   (Esc: back, ↓: to grid)',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(.6)),
+                  prefixIcon: Icon(Feather.search, color: Colors.white.withOpacity(.7)),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                ),
+                onChanged: (value) => setState(() => searchQuery = value),
+              ),
             ),
-            child: TextField(
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Search products, barcode, or ID...',
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
-                prefixIcon: Icon(
-                  Feather.search,
-                  color: Colors.white.withOpacity(0.6),
+            const SizedBox(height: 12),
+            // Filters
+            Row(
+              children: [
+                Expanded(
+                  child: _filterDropdown(
+                    hint: 'Category',
+                    value: selectedCategory,
+                    items: categories,
+                    onChanged: (v) => setState(() {
+                      selectedCategory = v!;
+                      _ensureCardNodes(filteredProducts.length);
+                    }),
+                  ),
                 ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _filterDropdown(
+                    hint: 'Stock Status',
+                    value: selectedStockStatus,
+                    items: const ['All', 'In Stock', 'Low Stock', 'Out of Stock'],
+                    onChanged: (v) => setState(() {
+                      selectedStockStatus = v!;
+                      _ensureCardNodes(filteredProducts.length);
+                    }),
+                  ),
                 ),
-              ),
-              onChanged: (value) {
-                setState(() {
-                  searchQuery = value;
-                });
-              },
+              ],
             ),
-          ),
-
-          const SizedBox(height: 12),
-
-          // Filter Row
-          Row(
-            children: [
-              Expanded(
-                child: _buildFilterDropdown(
-                  'Category',
-                  selectedCategory,
-                  categories,
-                  (value) => setState(() => selectedCategory = value!),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildFilterDropdown(
-                  'Stock Status',
-                  selectedStockStatus,
-                  ['All', 'In Stock', 'Low Stock', 'Out of Stock'],
-                  (value) => setState(() => selectedStockStatus = value!),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildFilterDropdown(
-    String hint,
-    String value,
-    List<String> items,
-    void Function(String?) onChanged,
-  ) {
+  Widget _filterDropdown({
+    required String hint,
+    required String value,
+    required List<String> items,
+    required void Function(String?) onChanged,
+  }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        color: Colors.white.withOpacity(.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(.15)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
-          hint: Text(
-            hint,
-            style: TextStyle(color: Colors.white.withOpacity(0.6)),
-          ),
-          dropdownColor: const Color(0xFF1a2332),
+          hint: Text(hint, style: TextStyle(color: Colors.white.withOpacity(.7))),
+          dropdownColor: kPanelBg,
           style: const TextStyle(color: Colors.white),
-          items: items
-              .map((item) => DropdownMenuItem(value: item, child: Text(item)))
-              .toList(),
+          items: items.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
           onChanged: onChanged,
           isExpanded: true,
         ),
@@ -392,28 +656,16 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Feather.search,
-              size: 64,
-              color: Colors.white.withOpacity(0.5),
-            ),
+            Icon(Feather.search, size: 64, color: Colors.white.withOpacity(.5)),
             const SizedBox(height: 16),
-            Text(
-              'No products found',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try adjusting your search or filters',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
-                fontSize: 14,
-              ),
-            ),
+            Text('No products found',
+                style: TextStyle(
+                    color: Colors.white.withOpacity(.8),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            Text('Try adjusting your search or filters',
+                style: TextStyle(color: Colors.white.withOpacity(.6), fontSize: 14)),
           ],
         ),
       );
@@ -423,234 +675,347 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
       padding: EdgeInsets.all(isMobile ? 12 : 20),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final crossAxisCount = isTablet ? 3 : (isMobile ? 1 : 2);
-
-          return GridView.builder(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 15,
-              mainAxisSpacing: 15,
-              childAspectRatio: isMobile ? 3.5 : 1.2,
+          _cols = isTablet ? 3 : (isMobile ? 1 : 2); // keep cols for nav math
+          return FocusTraversalGroup(
+            policy: ReadingOrderTraversalPolicy(),
+            child: GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: _cols,
+                crossAxisSpacing: 18,
+                mainAxisSpacing: 18,
+                childAspectRatio: isMobile ? 3.5 : 1.18,
+              ),
+              itemCount: filteredProducts.length,
+              itemBuilder: (context, index) {
+                final fn = _cardNodes.length > index ? _cardNodes[index] : FocusNode();
+                return _ProductCard(
+                  key: ValueKey(filteredProducts[index].id),
+                  focusNode: fn,
+                  product: filteredProducts[index],
+                  onTap: () => _showProductDetails(filteredProducts[index]),
+                  onMore: () => _showProductActions(filteredProducts[index]),
+                );
+              },
             ),
-            itemCount: filteredProducts.length,
-            itemBuilder: (context, index) {
-              return _buildProductCard(filteredProducts[index], isMobile);
-            },
           );
         },
       ),
     );
   }
 
-  Widget _buildProductCard(Product product, bool isMobile) {
-    return InkWell(
-      onTap: () => _showProductDetails(product),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: product.isLowStock
-                ? Colors.orange.withOpacity(0.5)
-                : product.currentStock == 0
-                ? Colors.red.withOpacity(0.5)
-                : Colors.white.withOpacity(0.1),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
+  void _showProductDetails(Product product) {
+    showDialog(
+      context: context,
+      builder: (context) => ProductDetailsDialog(product: product),
+    );
+  }
+
+  void _showProductActions(Product product) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: kPanelBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => ProductActionsSheet(product: product),
+    );
+  }
+
+  void _showAddProductDialog(BuildContext context) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, a, __) => const AddItemPage(),
+        transitionsBuilder: (_, a, __, child) {
+          const begin = Offset(1.0, 0.0);
+          const end = Offset.zero;
+          final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: Curves.ease));
+          return SlideTransition(position: a.drive(tween), child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+  }
+
+  void _showExportDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: kPanelBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('Export Inventory', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Choose export format for your inventory data.',
+          style: TextStyle(color: Colors.white70),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: isMobile
-              ? _buildMobileProductCard(product)
-              : _buildDesktopProductCard(product),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          _pillButton('Export CSV', Feather.file_text, onTap: () {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context)
+                .showSnackBar(const SnackBar(content: Text('Exporting CSV...')));
+          }),
+          _pillButton('Export PDF', Feather.file, onTap: () {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context)
+                .showSnackBar(const SnackBar(content: Text('Exporting PDF...')));
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _pillButton(String label, IconData icon, {required VoidCallback onTap}) {
+    return TextButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+    );
+  }
+}
+
+/// ===== Product card with hover/scale + glow focus & keyboard activate =====
+class _ProductCard extends StatefulWidget {
+  final Product product;
+  final VoidCallback onTap;
+  final VoidCallback onMore;
+  final FocusNode? focusNode;
+
+  const _ProductCard({
+    Key? key,
+    required this.product,
+    required this.onTap,
+    required this.onMore,
+    this.focusNode,
+  }) : super(key: key);
+
+  @override
+  State<_ProductCard> createState() => _ProductCardState();
+}
+
+class _ProductCardState extends State<_ProductCard> with SingleTickerProviderStateMixin {
+  bool _focused = false;
+  late final AnimationController _ctrl =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 160));
+  late final Animation<double> _scale =
+      Tween(begin: 1.0, end: 1.03).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+
+  VoidCallback? _focusListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _attachFocusListener();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProductCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode != widget.focusNode) {
+      _detachFocusListener(oldWidget.focusNode);
+      _attachFocusListener();
+    }
+  }
+
+  void _attachFocusListener() {
+    if (widget.focusNode == null) return;
+    _focusListener = () {
+      final hasFocus = widget.focusNode!.hasFocus;
+      if (mounted) setState(() => _focused = hasFocus);
+      if (hasFocus) {
+        // bring into view when focused via keyboard
+        Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 140),
+          alignment: 0.1,
+          curve: Curves.easeOut,
+        );
+      }
+    };
+    widget.focusNode!.addListener(_focusListener!);
+  }
+
+  void _detachFocusListener(FocusNode? node) {
+    if (node != null && _focusListener != null) {
+      node.removeListener(_focusListener!);
+    }
+  }
+
+  @override
+  void dispose() {
+    _detachFocusListener(widget.focusNode);
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final product = widget.product;
+
+    final borderColor = product.currentStock == 0
+        ? Colors.red
+        : (product.isLowStock ? Colors.orange : Colors.white);
+
+    return FocusableActionDetector(
+      focusNode: widget.focusNode,
+      onShowFocusHighlight: (v) => setState(() => _focused = v),
+      mouseCursor: SystemMouseCursors.click,
+      // Non-const: prevents duplicate-keys const-map issues
+      shortcuts: {
+        const SingleActivator(LogicalKeyboardKey.enter): const ActivateIntent(),
+        const SingleActivator(LogicalKeyboardKey.space): const ActivateIntent(),
+      },
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
+          widget.onTap();
+          return null;
+        }),
+      },
+      child: MouseRegion(
+        onEnter: (_) => _ctrl.forward(),
+        onExit: (_) => _ctrl.reverse(),
+        child: AnimatedBuilder(
+          animation: _ctrl,
+          builder: (_, __) => Transform.scale(
+            scale: _scale.value * (_focused ? 1.02 : 1.0),
+            child: InkWell(
+              onTap: widget.onTap,
+              borderRadius: BorderRadius.circular(16),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
+                curve: Curves.easeOut,
+                padding: const EdgeInsets.all(16),
+                decoration: glassBox(
+                  radius: 16,
+                  borderOpacity: .08,
+                  fillOpacity: .05,
+                ).copyWith(
+                  border: Border.all(
+                    color: _focused ? Colors.white.withOpacity(0.95) : borderColor.withOpacity(
+                      product.currentStock == 0 ? 0.55 : product.isLowStock ? 0.45 : 0.18),
+                    width: _focused ? 2.6 : 1.5,
+                  ),
+                  boxShadow: [
+                    if (_focused)
+                      BoxShadow(
+                        color: Colors.white.withOpacity(.30),
+                        blurRadius: 22,
+                        spreadRadius: 1.2,
+                      ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(.18),
+                      blurRadius: 10,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isMobile = constraints.maxWidth < 420;
+                    return isMobile
+                        ? _mobile(product, widget.onMore)
+                        : _desktop(product, widget.onMore);
+                  },
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildMobileProductCard(Product product) {
+  Widget _mobile(Product product, VoidCallback onMore) {
     return Row(
       children: [
-        // Product Image
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: product.image != null
-              ? ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    product.image!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Icon(
-                        Feather.package,
-                        color: Colors.white.withOpacity(0.5),
-                        size: 20,
-                      );
-                    },
-                  ),
-                )
-              : Icon(
-                  Feather.package,
-                  color: Colors.white.withOpacity(0.5),
-                  size: 20,
-                ),
-        ),
-
-        const SizedBox(width: 10),
-
-        // Product Info
+        _thumb(product),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                product.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+              Text(product.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               const SizedBox(height: 2),
-              Text(
-                product.category,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
-                  fontSize: 11,
-                ),
-              ),
-              const SizedBox(height: 4),
+              Text(product.category,
+                  style: TextStyle(color: Colors.white.withOpacity(.7), fontSize: 12)),
+              const SizedBox(height: 6),
               Row(
                 children: [
-                  _buildStockBadge(product),
+                  _stockBadge(product),
                   const Spacer(),
-                  Text(
-                    'Rs. ${product.price.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
+                  Text('Rs. ${product.price.toStringAsFixed(0)}',
+                      style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w700)),
                 ],
               ),
             ],
           ),
         ),
-
-        // Action Button
-        IconButton(
-          onPressed: () => _showProductActions(product),
-          icon: const Icon(Feather.more_vertical, color: Colors.white),
-        ),
+        IconButton(onPressed: onMore, icon: const Icon(Feather.more_vertical, color: Colors.white))
       ],
     );
   }
 
-  Widget _buildDesktopProductCard(Product product) {
+  Widget _desktop(Product product, VoidCallback onMore) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header with image and actions
-        Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: product.image != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        product.image!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Feather.package,
-                            color: Colors.white.withOpacity(0.5),
-                          );
-                        },
-                      ),
-                    )
-                  : Icon(
-                      Feather.package,
-                      color: Colors.white.withOpacity(0.5),
-                      size: 20,
-                    ),
-            ),
-            const Spacer(),
-            IconButton(
-              onPressed: () => _showProductActions(product),
-              icon: const Icon(
-                Feather.more_horizontal,
-                color: Colors.white,
-                size: 18,
-              ),
-            ),
-          ],
-        ),
-
+        Row(children: [
+          _thumb(product),
+          const Spacer(),
+          IconButton(
+              onPressed: onMore,
+              icon: const Icon(Feather.more_horizontal, color: Colors.white, size: 18)),
+        ]),
         const SizedBox(height: 12),
-
-        // Product name
-        Text(
-          product.name,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-
+        Text(product.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         const SizedBox(height: 4),
-
-        // Category
-        Text(
-          product.category,
-          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
-        ),
-
+        Text(product.category, style: TextStyle(color: Colors.white.withOpacity(.7))),
         const Spacer(),
-
-        // Stock info
-        _buildStockBadge(product),
-
+        _stockBadge(product),
         const SizedBox(height: 8),
-
-        // Price
-        Text(
-          'Rs. ${product.price.toStringAsFixed(0)}',
-          style: const TextStyle(
-            color: Colors.green,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
+        Text('Rs. ${product.price.toStringAsFixed(0)}',
+            style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
       ],
     );
   }
 
-  Widget _buildStockBadge(Product product) {
+  Widget _thumb(Product product) {
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(.12)),
+      ),
+      child: product.image != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                product.image!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    Icon(Feather.package, color: Colors.white.withOpacity(.5), size: 20),
+              ),
+            )
+          : Icon(Feather.package, color: Colors.white.withOpacity(.5), size: 20),
+    );
+  }
+
+  Widget _stockBadge(Product product) {
     Color badgeColor;
     String text;
     IconData icon;
@@ -672,96 +1037,25 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: badgeColor.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: badgeColor.withOpacity(0.5)),
+        color: badgeColor.withOpacity(.18),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: badgeColor.withOpacity(.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 12, color: badgeColor),
-          const SizedBox(width: 4),
-          Text(
-            text,
-            style: TextStyle(
-              color: badgeColor,
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showProductDetails(Product product) {
-    showDialog(
-      context: context,
-      builder: (context) => ProductDetailsDialog(product: product),
-    );
-  }
-
-  void _showProductActions(Product product) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1a2332),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => ProductActionsSheet(product: product),
-    );
-  }
-
-  void _showAddProductDialog(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AddItemPage()),
-    );
-  }
-
-  void _showExportDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1a2332),
-        title: const Text(
-          'Export Inventory',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'Choose export format for your inventory data.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Exporting inventory...')),
-              );
-            },
-            child: const Text('Export CSV'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Exporting inventory...')),
-              );
-            },
-            child: const Text('Export PDF'),
-          ),
+          const SizedBox(width: 6),
+          Text(text,
+              style: TextStyle(
+                  color: badgeColor, fontSize: 11, fontWeight: FontWeight.w600)),
         ],
       ),
     );
   }
 }
 
-// Product Model
+/// ===== Product model =====
 class Product {
   final String id;
   final String name;
@@ -790,281 +1084,237 @@ class Product {
   bool get isLowStock => currentStock <= minStock && currentStock > 0;
 }
 
-// Product Details Dialog
+/// ===== Details dialog (styled) =====
 class ProductDetailsDialog extends StatelessWidget {
   final Product product;
 
-  const ProductDetailsDialog({Key? key, required this.product})
-    : super(key: key);
+  const ProductDetailsDialog({Key? key, required this.product}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: const Color(0xFF1a2332),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: kPanelBg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(kRadius)),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 500),
+        constraints: const BoxConstraints(maxWidth: 520),
         padding: const EdgeInsets.all(24),
+        decoration: glassBox(radius: kRadius, borderOpacity: .12, fillOpacity: .02),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: product.image != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.asset(
-                            product.image!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
-                                Feather.package,
-                                color: Colors.white.withOpacity(0.5),
-                              );
-                            },
-                          ),
-                        )
-                      : Icon(
-                          Feather.package,
-                          color: Colors.white.withOpacity(0.5),
-                        ),
+            Row(children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white.withOpacity(.12)),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.name,
+                child: product.image != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.asset(
+                          product.image!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              Icon(Feather.package, color: Colors.white.withOpacity(.5)),
+                        ),
+                      )
+                    : Icon(Feather.package, color: Colors.white.withOpacity(.5)),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(product.name,
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        product.category,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
+                            color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(product.category,
+                        style: TextStyle(color: Colors.white.withOpacity(.7), fontSize: 14)),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Feather.x, color: Colors.white),
+              ),
+            ]),
+            const SizedBox(height: 20),
+            _detail('Product ID', product.id),
+            _detail('Barcode', product.barcode),
+            _detail('Supplier', product.supplier),
+            _detail('Price', 'Rs. ${product.price.toStringAsFixed(2)}'),
+            _detail('Current Stock', '${product.currentStock} units'),
+            _detail('Min Stock Level', '${product.minStock} units'),
+            _detail('Max Stock Level', '${product.maxStock} units'),
+            const SizedBox(height: 18),
+            Row(children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    // Open edit dialog
+                  },
+                  icon: const Icon(Feather.edit_2),
+                  label: const Text('Edit'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3B82F6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Feather.x, color: Colors.white),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            _buildDetailRow('Product ID', product.id),
-            _buildDetailRow('Barcode', product.barcode),
-            _buildDetailRow('Supplier', product.supplier),
-            _buildDetailRow('Price', 'Rs. ${product.price.toStringAsFixed(2)}'),
-            _buildDetailRow('Current Stock', '${product.currentStock} units'),
-            _buildDetailRow('Min Stock Level', '${product.minStock} units'),
-            _buildDetailRow('Max Stock Level', '${product.maxStock} units'),
-
-            const SizedBox(height: 24),
-
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      // Open edit dialog
-                    },
-                    icon: const Icon(Feather.edit_2),
-                    label: const Text('Edit'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    // Open stock adjustment dialog
+                  },
+                  icon: const Icon(Feather.trending_up),
+                  label: const Text('Adjust Stock'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      // Open stock adjustment dialog
-                    },
-                    icon: const Icon(Feather.trending_up),
-                    label: const Text('Adjust Stock'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ])
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _detail(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 14,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(
+          width: 130,
+          child: Text(label,
+              style: TextStyle(color: Colors.white.withOpacity(.7), fontSize: 14)),
+        ),
+        Expanded(
+          child: Text(value,
               style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
+                  color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+        ),
+      ]),
     );
   }
 }
 
-// Product Actions Bottom Sheet
+/// ===== Bottom sheet actions (compact) =====
 class ProductActionsSheet extends StatelessWidget {
   final Product product;
 
-  const ProductActionsSheet({Key? key, required this.product})
-    : super(key: key);
+  const ProductActionsSheet({Key? key, required this.product}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: BoxConstraints(
-        maxHeight:
-            MediaQuery.of(context).size.height *
-            0.7, // Limit height to 70% of screen
-      ),
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
       padding: const EdgeInsets.all(20),
       child: SingleChildScrollView(
-        // Make it scrollable
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 44,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(3),
             ),
-            const SizedBox(height: 16), // Reduced from 20
-            Text(
-              product.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+          ),
+          const SizedBox(height: 16),
+          Text(product.name,
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 16), // Reduced from 20
-            _buildActionTile(
-              icon: Feather.eye,
-              title: 'View Details',
-              onTap: () {
-                Navigator.pop(context);
-                // Show details
-              },
-            ),
-            _buildActionTile(
-              icon: Feather.edit_2,
-              title: 'Edit Product',
-              onTap: () {
-                Navigator.pop(context);
-                // Edit product
-              },
-            ),
-            _buildActionTile(
-              icon: Feather.trending_up,
-              title: 'Adjust Stock',
-              onTap: () {
-                Navigator.pop(context);
-                // Adjust stock
-              },
-            ),
-            _buildActionTile(
-              icon: Feather.copy,
-              title: 'Duplicate',
-              onTap: () {
-                Navigator.pop(context);
-                // Duplicate product
-              },
-            ),
-            _buildActionTile(
+              style:
+                  const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 14),
+          _actionTile(icon: Feather.eye, title: 'View Details', onTap: () {
+            Navigator.pop(context);
+          }),
+          _actionTile(icon: Feather.edit_2, title: 'Edit Product', onTap: () {
+            Navigator.pop(context);
+          }),
+          _actionTile(icon: Feather.trending_up, title: 'Adjust Stock', onTap: () {
+            Navigator.pop(context);
+          }),
+          _actionTile(icon: Feather.copy, title: 'Duplicate', onTap: () {
+            Navigator.pop(context);
+          }),
+          _actionTile(
               icon: Feather.trash_2,
               title: 'Delete',
               color: Colors.red,
               onTap: () {
                 Navigator.pop(context);
-                // Delete product with confirmation
-              },
-            ),
-            SizedBox(
-              height: MediaQuery.of(context).viewInsets.bottom + 10,
-            ), // Account for keyboard
-          ],
-        ),
+              }),
+          SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 10),
+        ]),
       ),
     );
   }
 
-  Widget _buildActionTile({
+  Widget _actionTile({
     required IconData icon,
     required String title,
     required VoidCallback onTap,
     Color? color,
   }) {
     final actionColor = color ?? Colors.white;
-
     return ListTile(
-      leading: Icon(icon, color: actionColor, size: 20), // Reduced icon size
-      title: Text(
-        title,
-        style: TextStyle(
-          color: actionColor,
-          fontSize: 14, // Reduced font size
-        ),
-      ),
+      leading: Icon(icon, color: actionColor, size: 20),
+      title: Text(title, style: TextStyle(color: actionColor, fontSize: 14)),
       onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 0,
-        vertical: 2,
-      ), // Reduced vertical padding
-      dense: true, // Make tiles more compact
+      contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 2),
+      dense: true,
+    );
+  }
+}
+
+/// ===== Small hover glow wrapper =====
+class _HoverGlow extends StatefulWidget {
+  final Widget child;
+  final bool borderGlow;
+  const _HoverGlow({required this.child, this.borderGlow = false});
+
+  @override
+  State<_HoverGlow> createState() => _HoverGlowState();
+}
+
+class _HoverGlowState extends State<_HoverGlow> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(kRadius),
+          boxShadow: _hover
+              ? [
+                  BoxShadow(
+                    color: Colors.white.withOpacity(.22),
+                    blurRadius: 24,
+                    spreadRadius: 1,
+                  )
+                ]
+              : [],
+        ),
+        child: widget.child,
+      ),
     );
   }
 }
