@@ -7,7 +7,7 @@ import '../stockkeeper/stockkeeper_products.dart';
 import '../stockkeeper/stockkeeper_inventory.dart';
 import '../stockkeeper/stockkeeper_reports.dart';
 import '../stockkeeper/stockkeeper_cashier.dart';
-import '../stockkeeper/stockkeeper_more.dart';
+import '../stockkeeper/stockkeeper_setting.dart';
 
 /// Custom intents for extra keyboard actions
 class JumpToFirstIntent extends Intent { const JumpToFirstIntent(); }
@@ -100,7 +100,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
           colors: [Color.fromARGB(255, 21, 4, 13), Color.fromARGB(255, 111, 107, 107)],
           begin: Alignment.topLeft, end: Alignment.bottomRight,
         ),
-        pageBuilder: () => const StockKeeperMore(),
+        pageBuilder: () => const StockKeeperSetting(),
       ),
       _TileSpec(
         id: 'back',
@@ -123,7 +123,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
       _tileNodes.removeLast().dispose();
     }
     while (_tileNodes.length < count) {
-      tileNodes.add(FocusNode(debugLabel: 'tile${_tileNodes.length}'));
+      _tileNodes.add(FocusNode(debugLabel: 'tile${_tileNodes.length}'));
     }
     if (requestFirstFocus && _tileNodes.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
