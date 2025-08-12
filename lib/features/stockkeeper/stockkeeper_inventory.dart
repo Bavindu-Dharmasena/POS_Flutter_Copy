@@ -59,6 +59,12 @@ class MoveDownIntent extends Intent {
 class FocusSearchIntent extends Intent {
   const FocusSearchIntent();
 }
+class JumpFirstIntent extends Intent {
+  const JumpFirstIntent();
+}
+class JumpLastIntent extends Intent {
+  const JumpLastIntent();
+}
 
 class StockKeeperInventory extends StatefulWidget {
   const StockKeeperInventory({Key? key}) : super(key: key);
@@ -75,8 +81,8 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
   // Focus management
   final FocusNode _searchNode = FocusNode(debugLabel: 'inventory_search');
   final List<FocusNode> _cardNodes = <FocusNode>[];
-  int _focusedIndex = 0;      // index in grid
-  int _cols = 2;              // updated at layout time
+  int _focusedIndex = 0; // index in grid
+  int _cols = 2; // updated at layout time
 
   // Sample data - in real app, this would come from database
   List<Product> products = [
@@ -184,6 +190,12 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
     } else {
       _focusedIndex = 0;
     }
+    // keep focus valid if we were on a removed item
+    if (_cardNodes.isNotEmpty && !_cardNodes[_focusedIndex].hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _cardNodes[_focusedIndex].requestFocus();
+      });
+    }
   }
 
   /// Move focus to a given card index
@@ -211,11 +223,21 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
     if (key == LogicalKeyboardKey.arrowUp) {
       final j = current - _cols;
       if (j >= 0) return j;
-      // if trying to go above first row -> special (caller may focus search)
-      return current; // caller handles the "jump to search"
+      // going above first row is handled by caller (jump to search)
+      return current;
     }
     return current;
-    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Start with search focused
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchNode.requestFocus();
+    });
+  }
+
   @override
   void dispose() {
     _searchNode.dispose();
@@ -240,14 +262,17 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
       shortcuts: <ShortcutActivator, Intent>{
         // Global: Esc to go back
         const SingleActivator(LogicalKeyboardKey.escape): const BackIntent(),
-        // F to focus search (also '/')
+        // Focus search
         const SingleActivator(LogicalKeyboardKey.keyF, control: true): const FocusSearchIntent(),
         const SingleActivator(LogicalKeyboardKey.slash): const FocusSearchIntent(),
-        // Arrow keys (page-level handling)
+        // Arrows (page-level handling)
         const SingleActivator(LogicalKeyboardKey.arrowLeft): const MoveLeftIntent(),
         const SingleActivator(LogicalKeyboardKey.arrowRight): const MoveRightIntent(),
         const SingleActivator(LogicalKeyboardKey.arrowUp): const MoveUpIntent(),
         const SingleActivator(LogicalKeyboardKey.arrowDown): const MoveDownIntent(),
+        // Jump
+        const SingleActivator(LogicalKeyboardKey.home): const JumpFirstIntent(),
+        const SingleActivator(LogicalKeyboardKey.end): const JumpLastIntent(),
       },
       child: Actions(
         actions: <Type, Action<Intent>>{
@@ -257,6 +282,14 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
           }),
           FocusSearchIntent: CallbackAction<FocusSearchIntent>(onInvoke: (_) {
             _searchNode.requestFocus();
+            return null;
+          }),
+          JumpFirstIntent: CallbackAction<JumpFirstIntent>(onInvoke: (_) {
+            if (_cardNodes.isNotEmpty) _focusCard(0);
+            return null;
+          }),
+          JumpLastIntent: CallbackAction<JumpLastIntent>(onInvoke: (_) {
+            if (_cardNodes.isNotEmpty) _focusCard(_cardNodes.length - 1);
             return null;
           }),
           MoveDownIntent: CallbackAction<MoveDownIntent>(onInvoke: (_) {
@@ -278,8 +311,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
               final i = _cardNodes.indexOf(focused!);
               final j = i - _cols;
               if (j < 0) {
-                // top row -> go to search
-                _searchNode.requestFocus();
+                _searchNode.requestFocus(); // top row -> back to search
               } else {
                 _focusCard(j);
               }
@@ -355,9 +387,9 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
                     child: Column(
                       children: [
                         const SizedBox(height: 12),
-                        _buildDashboardSummary(screenWidth > 800, screenWidth < 600),
-                        _buildSearchAndFilter(screenWidth > 800, screenWidth < 600),
-                        Expanded(child: _buildProductGrid(screenWidth > 800, screenWidth < 600)),
+                        _buildDashboardSummary(isTablet, isMobile),
+                        _buildSearchAndFilter(isTablet, isMobile),
+                        Expanded(child: _buildProductGrid(isTablet, isMobile)),
                       ],
                     ),
                   ),
@@ -366,7 +398,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
             ),
           ),
           floatingActionButton: _primaryFAB(
-            label: screenWidth < 600 ? 'Add' : 'Add Product',
+            label: isMobile ? 'Add' : 'Add Product',
             icon: Feather.plus,
             onPressed: () => _showAddProductDialog(context),
           ),
@@ -567,7 +599,6 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
                     items: categories,
                     onChanged: (v) => setState(() {
                       selectedCategory = v!;
-                      // rebuild nodes after filter changes
                       _ensureCardNodes(filteredProducts.length);
                     }),
                   ),
@@ -658,6 +689,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
               itemBuilder: (context, index) {
                 final fn = _cardNodes.length > index ? _cardNodes[index] : FocusNode();
                 return _ProductCard(
+                  key: ValueKey(filteredProducts[index].id),
                   focusNode: fn,
                   product: filteredProducts[index],
                   onTap: () => _showProductDetails(filteredProducts[index]),
@@ -756,11 +788,12 @@ class _ProductCard extends StatefulWidget {
   final FocusNode? focusNode;
 
   const _ProductCard({
+    Key? key,
     required this.product,
     required this.onTap,
     required this.onMore,
     this.focusNode,
-  });
+  }) : super(key: key);
 
   @override
   State<_ProductCard> createState() => _ProductCardState();
@@ -768,13 +801,55 @@ class _ProductCard extends StatefulWidget {
 
 class _ProductCardState extends State<_ProductCard> with SingleTickerProviderStateMixin {
   bool _focused = false;
-  late AnimationController _ctrl =
+  late final AnimationController _ctrl =
       AnimationController(vsync: this, duration: const Duration(milliseconds: 160));
-  late Animation<double> _scale = Tween(begin: 1.0, end: 1.03)
-      .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  late final Animation<double> _scale =
+      Tween(begin: 1.0, end: 1.03).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+
+  VoidCallback? _focusListener;
+
+  @override
+  void initState() {
+    super.initState();
+    _attachFocusListener();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProductCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode != widget.focusNode) {
+      _detachFocusListener(oldWidget.focusNode);
+      _attachFocusListener();
+    }
+  }
+
+  void _attachFocusListener() {
+    if (widget.focusNode == null) return;
+    _focusListener = () {
+      final hasFocus = widget.focusNode!.hasFocus;
+      if (mounted) setState(() => _focused = hasFocus);
+      if (hasFocus) {
+        // bring into view when focused via keyboard
+        Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 140),
+          alignment: 0.1,
+          curve: Curves.easeOut,
+        );
+      }
+    };
+    widget.focusNode!.addListener(_focusListener!);
+  }
+
+  void _detachFocusListener(FocusNode? node) {
+    if (node != null && _focusListener != null) {
+      node.removeListener(_focusListener!);
+    }
+  }
 
   @override
   void dispose() {
+    _detachFocusListener(widget.focusNode);
     _ctrl.dispose();
     super.dispose();
   }
@@ -791,12 +866,17 @@ class _ProductCardState extends State<_ProductCard> with SingleTickerProviderSta
       focusNode: widget.focusNode,
       onShowFocusHighlight: (v) => setState(() => _focused = v),
       mouseCursor: SystemMouseCursors.click,
-      // Non-const: prevents duplicate-key const-map issues
+      // Non-const: prevents duplicate-keys const-map issues
       shortcuts: {
         const SingleActivator(LogicalKeyboardKey.enter): const ActivateIntent(),
         const SingleActivator(LogicalKeyboardKey.space): const ActivateIntent(),
       },
-      actions: {ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onTap())},
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
+          widget.onTap();
+          return null;
+        }),
+      },
       child: MouseRegion(
         onEnter: (_) => _ctrl.forward(),
         onExit: (_) => _ctrl.reverse(),
@@ -807,23 +887,34 @@ class _ProductCardState extends State<_ProductCard> with SingleTickerProviderSta
             child: InkWell(
               onTap: widget.onTap,
               borderRadius: BorderRadius.circular(16),
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
+                curve: Curves.easeOut,
+                padding: const EdgeInsets.all(16),
                 decoration: glassBox(
                   radius: 16,
                   borderOpacity: .08,
                   fillOpacity: .05,
                 ).copyWith(
                   border: Border.all(
-                    color: (_focused ? Colors.white : borderColor).withOpacity(
-                        product.currentStock == 0
-                            ? 0.55
-                            : product.isLowStock
-                                ? 0.45
-                                : 0.18),
-                    width: (_focused ? 2 : 1.5),
+                    color: _focused ? Colors.white.withOpacity(0.95) : borderColor.withOpacity(
+                      product.currentStock == 0 ? 0.55 : product.isLowStock ? 0.45 : 0.18),
+                    width: _focused ? 2.6 : 1.5,
                   ),
+                  boxShadow: [
+                    if (_focused)
+                      BoxShadow(
+                        color: Colors.white.withOpacity(.30),
+                        blurRadius: 22,
+                        spreadRadius: 1.2,
+                      ),
+                    BoxShadow(
+                      color: Colors.black.withOpacity(.18),
+                      blurRadius: 10,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
-                padding: const EdgeInsets.all(16),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final isMobile = constraints.maxWidth < 420;
@@ -863,8 +954,7 @@ class _ProductCardState extends State<_ProductCard> with SingleTickerProviderSta
                   _stockBadge(product),
                   const Spacer(),
                   Text('Rs. ${product.price.toStringAsFixed(0)}',
-                      style:
-                          const TextStyle(color: Colors.green, fontWeight: FontWeight.w700)),
+                      style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w700)),
                 ],
               ),
             ],
