@@ -285,7 +285,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
               ),
             ),
 
-            // Main content with ReorderableGridView
+            // Main content with Reorderable-like grid
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: LayoutBuilder(
@@ -369,7 +369,6 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
                                   childAspectRatio: isWide ? 1.2 : 1.0,
                                 ),
                               ),
-                              // Add coming soon box for wide screens
                               if (isWide)
                                 SliverToBoxAdapter(
                                   child: Padding(
@@ -500,9 +499,9 @@ class _DraggableGridTileState extends State<_DraggableGridTile> {
             color: Colors.transparent,
             child: Transform.scale(
               scale: 0.8, // Slightly smaller feedback
-              child: Container(
-                width: 150, // Fixed width for feedback
-                height: 150, // Fixed height for feedback
+              child: SizedBox(
+                width: 150,
+                height: 150,
                 child: _TileBody(
                   tile: widget.tile,
                   focusNode: null,
@@ -660,8 +659,8 @@ class _TileBodyState extends State<_TileBody> with SingleTickerProviderStateMixi
                       ),
                       child: Stack(
                         children: [
-                          // Enhanced drag hint with better visibility
-                          if (!widget.isDragging) // Hide drag hint when dragging
+                          // Drag hint (hidden while dragging)
+                          if (!widget.isDragging)
                             Positioned(
                               right: 10,
                               top: 10,
@@ -681,47 +680,64 @@ class _TileBodyState extends State<_TileBody> with SingleTickerProviderStateMixi
                                 ),
                               ),
                             ),
-                          // Content
+                          // Content (scaled + clamped to avoid overflow)
                           Center(
-                            child: Semantics(
-                              button: true,
-                              label: tile.title,
-                              hint: 'Long-press to drag. Press Enter to open ${tile.title}',
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: _focused
-                                          ? Border.all(color: Colors.white.withOpacity(0.7), width: 1)
-                                          : null,
-                                    ),
-                                    child: Icon(tile.icon, size: 32, color: Colors.white),
+                            child: MediaQuery(
+                              data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Semantics(
+                                  button: true,
+                                  label: tile.title,
+                                  hint: 'Long-press to drag. Press Enter to open ${tile.title}',
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(20),
+                                          border: _focused
+                                              ? Border.all(color: Colors.white.withOpacity(0.7), width: 1)
+                                              : null,
+                                        ),
+                                        child: Icon(tile.icon, size: 32, color: Colors.white),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(maxWidth: 140),
+                                        child: Text(
+                                          tile.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 18, 
+                                            fontWeight: FontWeight.bold, 
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(maxWidth: 140),
+                                        child: Text(
+                                          tile.subtitle,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 13, 
+                                            color: Colors.white70, 
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    tile.title,
-                                    style: const TextStyle(
-                                      fontSize: 18, 
-                                      fontWeight: FontWeight.bold, 
-                                      color: Colors.white
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    tile.subtitle,
-                                    style: const TextStyle(
-                                      fontSize: 13, 
-                                      color: Colors.white70, 
-                                      fontWeight: FontWeight.w500
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           ),
