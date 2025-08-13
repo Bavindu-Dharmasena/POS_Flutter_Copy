@@ -13,6 +13,7 @@
 migrate_working_dir/
 
 # ----------pramuka---------
+lib/features/cashier/billingview.dart
 lib/features/cashier/testbill.dart
 lib/features/splashscreen.dart
 
