@@ -7,7 +7,7 @@ import '../stockkeeper/stockkeeper_products.dart';
 import '../stockkeeper/stockkeeper_inventory.dart';
 import '../stockkeeper/stockkeeper_reports.dart';
 import '../stockkeeper/stockkeeper_cashier.dart';
-import '../stockkeeper/stockkeeper_setting.dart';
+import 'settings/stockkeeper_setting.dart';
 
 /// Custom intents for extra keyboard actions
 class JumpToFirstIntent extends Intent { const JumpToFirstIntent(); }
