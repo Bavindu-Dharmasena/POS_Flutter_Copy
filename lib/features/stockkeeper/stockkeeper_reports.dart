@@ -1,6 +1,7 @@
 // ignore_for_file: unused_import
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pos_system/widget/stock_Keeper_Report/category_filter_bar.dart';
 import 'package:pos_system/widget/stock_Keeper_Report/report_card.dart';
 import 'package:pos_system/widget/stock_Keeper_Report/report_preview_dialog.dart';
@@ -93,36 +94,47 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth <= 600;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F0F23),
-      extendBodyBehindAppBar: true,
-      appBar: _buildModernAppBar(isMobile),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0F0F23),
-              Color(0xFF1A1A2E),
-              Color(0xFF16213E),
-            ],
+    return RawKeyboardListener(
+      focusNode: FocusNode(),
+      autofocus: true,
+      onKey: (RawKeyEvent event) {
+        if (event is RawKeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.escape) {
+            Navigator.pop(context);
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0F0F23),
+        extendBodyBehindAppBar: true,
+        appBar: _buildModernAppBar(isMobile),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF0F0F23),
+                Color(0xFF1A1A2E),
+                Color(0xFF16213E),
+              ],
+            ),
           ),
-        ),
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: SingleChildScrollView(
-              padding: EdgeInsets.only(
-                left: isMobile ? 16.0 : 24.0,
-                right: isMobile ? 16.0 : 24.0,
-                top: isMobile ? 140 : 160,
-                bottom: 24.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: _buildFilteredContent(isMobile),
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  left: isMobile ? 16.0 : 24.0,
+                  right: isMobile ? 16.0 : 24.0,
+                  top: isMobile ? 140 : 160,
+                  bottom: 24.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _buildFilteredContent(isMobile),
+                ),
               ),
             ),
           ),
@@ -226,20 +238,20 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
           _buildGlassButton(
             icon: Icons.print_outlined,
             onPressed: () => _showSnackBar('Printing report...'),
-            tooltip: 'Print Report',
+            tooltip: 'Print Report (Enter)',
             isMobile: isMobile,
           ),
           if (!isMobile) ...[
             _buildGlassButton(
               icon: Icons.picture_as_pdf_outlined,
               onPressed: () => _showSnackBar('Exporting to PDF...'),
-              tooltip: 'Export to PDF',
+              tooltip: 'Export to PDF (Enter)',
               isMobile: isMobile,
             ),
             _buildGlassButton(
               icon: Icons.grid_on_outlined,
               onPressed: () => _showSnackBar('Exporting to Excel...'),
-              tooltip: 'Export to Excel',
+              tooltip: 'Export to Excel (Enter)',
               isMobile: isMobile,
             ),
           ] else
@@ -296,17 +308,26 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
   }) {
     return Tooltip(
       message: tooltip,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: EdgeInsets.all(isMobile ? 10 : 12),
-            child: Icon(
-              icon,
-              color: Colors.white.withOpacity(0.9),
-              size: isMobile ? 18 : 20,
+      child: RawKeyboardListener(
+        focusNode: FocusNode(),
+        onKey: (RawKeyEvent event) {
+          if (event is RawKeyDownEvent &&
+              event.logicalKey == LogicalKeyboardKey.enter) {
+            onPressed();
+          }
+        },
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: EdgeInsets.all(isMobile ? 10 : 12),
+              child: Icon(
+                icon,
+                color: Colors.white.withOpacity(0.9),
+                size: isMobile ? 18 : 20,
+              ),
             ),
           ),
         ),
@@ -647,471 +668,514 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
     showDialog(
       context: context,
       barrierColor: Colors.black.withOpacity(0.7),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: EdgeInsets.symmetric(
-            horizontal: isMobile ? 16 : 40,
-            vertical: 24,
-          ),
-          child: Container(
-            width: isMobile ? double.infinity : 520,
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.85,
+      builder: (context) => RawKeyboardListener(
+        focusNode: FocusNode(),
+        autofocus: true,
+        onKey: (RawKeyEvent event) {
+          if (event is RawKeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.escape) {
+              Navigator.pop(context);
+            }
+          }
+        },
+        child: StatefulBuilder(
+          builder: (context, setDialogState) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 16 : 40,
+              vertical: 24,
             ),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF1A1A2E).withOpacity(0.95),
-                  const Color(0xFF16213E).withOpacity(0.95),
+            child: Container(
+              width: isMobile ? double.infinity : 520,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF1A1A2E).withOpacity(0.95),
+                    const Color(0xFF16213E).withOpacity(0.95),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.1),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 30,
+                    offset: const Offset(0, 15),
+                  ),
                 ],
               ),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.1),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 30,
-                  offset: const Offset(0, 15),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Modern Dialog Header
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF64FFDA).withOpacity(0.1),
-                        const Color(0xFF1DE9B6).withOpacity(0.05),
-                      ],
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(24),
-                      topRight: Radius.circular(24),
-                    ),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Colors.white.withOpacity(0.1),
-                        width: 1,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF64FFDA), Color(0xFF1DE9B6)],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.tune_outlined,
-                          color: Color(0xFF0F0F23),
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Report Filters',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              reportName,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.7),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => Navigator.pop(context),
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.close_rounded,
-                              color: Colors.white.withOpacity(0.8),
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Dialog Content (Scrollable)
-                Flexible(
-                  child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Modern Dialog Header
+                  Container(
                     padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF64FFDA).withOpacity(0.1),
+                          const Color(0xFF1DE9B6).withOpacity(0.05),
+                        ],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.white.withOpacity(0.1),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Row(
                       children: [
-                        // Date Range Filter
-                        _buildModernFilterRow(
-                          'Date Range',
-                          Icons.date_range_outlined,
-                          InkWell(
-                            onTap: () async {
-                              final picked = await showDateRangePicker(
-                                context: context,
-                                initialDateRange: _selectedDateRange,
-                                firstDate: DateTime(2020),
-                                lastDate: DateTime.now(),
-                                builder: (context, child) {
-                                  return Theme(
-                                    data: Theme.of(context).copyWith(
-                                      colorScheme: const ColorScheme.dark(
-                                        primary: Color(0xFF64FFDA),
-                                        surface: Color(0xFF1A1A2E),
-                                      ),
-                                    ),
-                                    child: child!,
-                                  );
-                                },
-                              );
-                              if (picked != null) {
-                                setDialogState(() {
-                                  _selectedDateRange = picked;
-                                });
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 16,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.05),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.1),
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      _getDateRangeText(),
-                                      style: const TextStyle(color: Colors.white),
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.calendar_today_outlined,
-                                    size: 20,
-                                    color: Colors.white.withOpacity(0.6),
-                                  ),
-                                ],
-                              ),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF64FFDA), Color(0xFF1DE9B6)],
                             ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.tune_outlined,
+                            color: Color(0xFF0F0F23),
+                            size: 20,
                           ),
                         ),
-
-                        // Conditional Filters (same logic as original)
-                        if (_shouldShowUserFilter(reportName))
-                          _buildModernFilterRow(
-                            'User',
-                            Icons.person_outline,
-                            _buildModernDropdown(
-                              value: _selectedUser,
-                              items: ['All', 'User 1', 'User 2', 'User 3'],
-                              onChanged: (value) {
-                                setDialogState(() {
-                                  _selectedUser = value!;
-                                });
-                              },
-                            ),
-                          ),
-
-                        if (_shouldShowSupplierFilter(reportName))
-                          _buildModernFilterRow(
-                            'Supplier',
-                            Icons.local_shipping_outlined,
-                            _buildModernDropdown(
-                              value: _selectedSupplier,
-                              items: [
-                                'All',
-                                'Alpha Suppliers Ltd',
-                                'Beta Distribution Co',
-                                'Gamma Wholesale Inc',
-                                'Delta Trading House',
-                              ],
-                              onChanged: (value) {
-                                setDialogState(() {
-                                  _selectedSupplier = value!;
-                                });
-                              },
-                            ),
-                          ),
-
-                        if (_shouldShowCashRegisterFilter(reportName))
-                          _buildModernFilterRow(
-                            'Cash Register',
-                            Icons.point_of_sale_outlined,
-                            _buildModernDropdown(
-                              value: _selectedCashRegister,
-                              items: [
-                                'All',
-                                'Register 1',
-                                'Register 2',
-                                'Register 3',
-                              ],
-                              onChanged: (value) {
-                                setDialogState(() {
-                                  _selectedCashRegister = value!;
-                                });
-                              },
-                            ),
-                          ),
-
-                        // Product Filters
-                        if (_shouldShowProductFilters(reportName)) ...[
-                          _buildModernFilterRow(
-                            'Product',
-                            Icons.shopping_bag_outlined,
-                            _buildModernDropdown(
-                              value: _selectedProduct,
-                              items: [
-                                'All',
-                                'Product 1',
-                                'Product 2',
-                                'Product 3',
-                              ],
-                              onChanged: (value) {
-                                setDialogState(() {
-                                  _selectedProduct = value!;
-                                });
-                              },
-                            ),
-                          ),
-
-                          _buildModernFilterRow(
-                            'Product Group',
-                            Icons.category_outlined,
-                            _buildModernDropdown(
-                              value: _selectedProductGroup,
-                              items: [
-                                'Products',
-                                'Electronics',
-                                'Clothing',
-                                'Food & Beverages',
-                              ],
-                              onChanged: (value) {
-                                setDialogState(() {
-                                  _selectedProductGroup = value!;
-                                });
-                              },
-                            ),
-                          ),
-
-                          _buildModernFilterRow(
-                            'Include Subgroups',
-                            Icons.account_tree_outlined,
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.05),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.1),
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                children: [
-                                  Switch(
-                                    value: _includeSubgroups,
-                                    onChanged: (value) {
-                                      setDialogState(() {
-                                        _includeSubgroups = value;
-                                      });
-                                    },
-                                    activeColor: const Color(0xFF64FFDA),
-                                    activeTrackColor: const Color(0xFF64FFDA).withOpacity(0.3),
-                                    inactiveThumbColor: Colors.white.withOpacity(0.6),
-                                    inactiveTrackColor: Colors.white.withOpacity(0.1),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    _includeSubgroups ? 'Enabled' : 'Disabled',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-
-                        // Filter Summary
-                        const SizedBox(height: 24),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFF64FFDA).withOpacity(0.1),
-                                const Color(0xFF1DE9B6).withOpacity(0.05),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xFF64FFDA).withOpacity(0.3),
-                            ),
-                          ),
+                        const SizedBox(width: 16),
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.summarize_outlined,
-                                    color: const Color(0xFF64FFDA),
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Text(
-                                    'Filter Summary',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              _buildSummaryItem('Date Range', _getDateRangeText()),
-                              if (_shouldShowUserFilter(reportName))
-                                _buildSummaryItem('User', _selectedUser),
-                              if (_shouldShowSupplierFilter(reportName))
-                                _buildSummaryItem('Supplier', _selectedSupplier),
-                              if (_shouldShowCashRegisterFilter(reportName))
-                                _buildSummaryItem('Cash Register', _selectedCashRegister),
-                              if (_shouldShowProductFilters(reportName)) ...[
-                                _buildSummaryItem('Product', _selectedProduct),
-                                _buildSummaryItem('Product Group', _selectedProductGroup),
-                                _buildSummaryItem(
-                                  'Include Subgroups',
-                                  _includeSubgroups ? "Yes" : "No",
+                              Text(
+                                'Report Filters',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
                                 ),
-                              ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                reportName,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white.withOpacity(0.7),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ],
+                          ),
+                        ),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => Navigator.pop(context),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.close_rounded,
+                                color: Colors.white.withOpacity(0.8),
+                                size: 20,
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
 
-                // Dialog Actions
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(
-                        color: Colors.white.withOpacity(0.1),
-                        width: 1,
+                  // Dialog Content (Scrollable)
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Date Range Filter
+                          _buildModernFilterRow(
+                            'Date Range',
+                            Icons.date_range_outlined,
+                            RawKeyboardListener(
+                              focusNode: FocusNode(),
+                              onKey: (RawKeyEvent event) {
+                                if (event is RawKeyDownEvent &&
+                                    event.logicalKey == LogicalKeyboardKey.enter) {
+                                  _openDateRangePicker(setDialogState);
+                                }
+                              },
+                              child: InkWell(
+                                onTap: () => _openDateRangePicker(setDialogState),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.05),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.1),
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          _getDateRangeText(),
+                                          style: const TextStyle(color: Colors.white),
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.calendar_today_outlined,
+                                        size: 20,
+                                        color: Colors.white.withOpacity(0.6),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // Conditional Filters (same logic as original)
+                          if (_shouldShowUserFilter(reportName))
+                            _buildModernFilterRow(
+                              'User',
+                              Icons.person_outline,
+                              _buildModernDropdown(
+                                value: _selectedUser,
+                                items: ['All', 'User 1', 'User 2', 'User 3'],
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    _selectedUser = value!;
+                                  });
+                                },
+                              ),
+                            ),
+
+                          if (_shouldShowSupplierFilter(reportName))
+                            _buildModernFilterRow(
+                              'Supplier',
+                              Icons.local_shipping_outlined,
+                              _buildModernDropdown(
+                                value: _selectedSupplier,
+                                items: [
+                                  'All',
+                                  'Alpha Suppliers Ltd',
+                                  'Beta Distribution Co',
+                                  'Gamma Wholesale Inc',
+                                  'Delta Trading House',
+                                ],
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    _selectedSupplier = value!;
+                                  });
+                                },
+                              ),
+                            ),
+
+                          if (_shouldShowCashRegisterFilter(reportName))
+                            _buildModernFilterRow(
+                              'Cash Register',
+                              Icons.point_of_sale_outlined,
+                              _buildModernDropdown(
+                                value: _selectedCashRegister,
+                                items: [
+                                  'All',
+                                  'Register 1',
+                                  'Register 2',
+                                  'Register 3',
+                                ],
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    _selectedCashRegister = value!;
+                                  });
+                                },
+                              ),
+                            ),
+
+                          // Product Filters
+                          if (_shouldShowProductFilters(reportName)) ...[
+                            _buildModernFilterRow(
+                              'Product',
+                              Icons.shopping_bag_outlined,
+                              _buildModernDropdown(
+                                value: _selectedProduct,
+                                items: [
+                                  'All',
+                                  'Product 1',
+                                  'Product 2',
+                                  'Product 3',
+                                ],
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    _selectedProduct = value!;
+                                  });
+                                },
+                              ),
+                            ),
+
+                            _buildModernFilterRow(
+                              'Product Group',
+                              Icons.category_outlined,
+                              _buildModernDropdown(
+                                value: _selectedProductGroup,
+                                items: [
+                                  'Products',
+                                  'Electronics',
+                                  'Clothing',
+                                  'Food & Beverages',
+                                ],
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    _selectedProductGroup = value!;
+                                  });
+                                },
+                              ),
+                            ),
+
+                            _buildModernFilterRow(
+                              'Include Subgroups',
+                              Icons.account_tree_outlined,
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.05),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.1),
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Switch(
+                                      value: _includeSubgroups,
+                                      onChanged: (value) {
+                                        setDialogState(() {
+                                          _includeSubgroups = value;
+                                        });
+                                      },
+                                      activeColor: const Color(0xFF64FFDA),
+                                      activeTrackColor: const Color(0xFF64FFDA).withOpacity(0.3),
+                                      inactiveThumbColor: Colors.white.withOpacity(0.6),
+                                      inactiveTrackColor: Colors.white.withOpacity(0.1),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      _includeSubgroups ? 'Enabled' : 'Disabled',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.9),
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+
+                          // Filter Summary
+                          const SizedBox(height: 24),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFF64FFDA).withOpacity(0.1),
+                                  const Color(0xFF1DE9B6).withOpacity(0.05),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFF64FFDA).withOpacity(0.3),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.summarize_outlined,
+                                      color: const Color(0xFF64FFDA),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'Filter Summary',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                _buildSummaryItem('Date Range', _getDateRangeText()),
+                                if (_shouldShowUserFilter(reportName))
+                                  _buildSummaryItem('User', _selectedUser),
+                                if (_shouldShowSupplierFilter(reportName))
+                                  _buildSummaryItem('Supplier', _selectedSupplier),
+                                if (_shouldShowCashRegisterFilter(reportName))
+                                  _buildSummaryItem('Cash Register', _selectedCashRegister),
+                                if (_shouldShowProductFilters(reportName)) ...[
+                                  _buildSummaryItem('Product', _selectedProduct),
+                                  _buildSummaryItem('Product Group', _selectedProductGroup),
+                                  _buildSummaryItem(
+                                    'Include Subgroups',
+                                    _includeSubgroups ? "Yes" : "No",
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 1,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            setDialogState(() {
-                              _resetFilters();
-                            });
-                          },
-                          icon: const Icon(
-                            Icons.refresh_outlined,
-                            size: 18,
-                          ),
-                          label: const Text('Reset'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white.withOpacity(0.8),
-                            side: BorderSide(
-                              color: Colors.white.withOpacity(0.3),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+
+                  // Dialog Actions
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                          color: Colors.white.withOpacity(0.1),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: RawKeyboardListener(
+                            focusNode: FocusNode(),
+                            onKey: (RawKeyEvent event) {
+                              if (event is RawKeyDownEvent &&
+                                  event.logicalKey == LogicalKeyboardKey.enter) {
+                                setDialogState(() {
+                                  _resetFilters();
+                                });
+                              }
+                            },
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                setDialogState(() {
+                                  _resetFilters();
+                                });
+                              },
+                              icon: const Icon(
+                                Icons.refresh_outlined,
+                                size: 18,
+                              ),
+                              label: const Text('Reset'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white.withOpacity(0.8),
+                                side: BorderSide(
+                                  color: Colors.white.withOpacity(0.3),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _showReportWithSelectedFilters(reportName);
-                          },
-                          icon: const Icon(
-                            Icons.visibility_outlined,
-                            size: 18,
-                          ),
-                          label: const Text('Generate Report'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF64FFDA),
-                            foregroundColor: const Color(0xFF0F0F23),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 2,
+                          child: RawKeyboardListener(
+                            focusNode: FocusNode(),
+                            onKey: (RawKeyEvent event) {
+                              if (event is RawKeyDownEvent &&
+                                  event.logicalKey == LogicalKeyboardKey.enter) {
+                                Navigator.pop(context);
+                                _showReportWithSelectedFilters(reportName);
+                              }
+                            },
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showReportWithSelectedFilters(reportName);
+                              },
+                              icon: const Icon(
+                                Icons.visibility_outlined,
+                                size: 18,
+                              ),
+                              label: const Text('Generate Report'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF64FFDA),
+                                foregroundColor: const Color(0xFF0F0F23),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _openDateRangePicker(Function setDialogState) async {
+    final picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: _selectedDateRange,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF64FFDA),
+              surface: Color(0xFF1A1A2E),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setDialogState(() {
+        _selectedDateRange = picked;
+      });
+    }
   }
 
   Widget _buildModernFilterRow(String label, IconData icon, Widget control) {
@@ -1157,39 +1221,48 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
     required List<String> items,
     required Function(String?) onChanged,
   }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          dropdownColor: const Color(0xFF1A1A2E),
-          style: const TextStyle(color: Colors.white),
-          icon: Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: Colors.white.withOpacity(0.6),
+    return RawKeyboardListener(
+      focusNode: FocusNode(),
+      onKey: (RawKeyEvent event) {
+        if (event is RawKeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.enter) {
+          // Trigger dropdown open
+        }
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.1),
           ),
-          items: items
-              .map(
-                (item) => DropdownMenuItem<String>(
-                  value: item,
-                  child: Text(
-                    item,
-                    style: const TextStyle(color: Colors.white),
-                    overflow: TextOverflow.ellipsis,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: value,
+            isExpanded: true,
+            dropdownColor: const Color(0xFF1A1A2E),
+            style: const TextStyle(color: Colors.white),
+            icon: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Colors.white.withOpacity(0.6),
+            ),
+            items: items
+                .map(
+                  (item) => DropdownMenuItem<String>(
+                    value: item,
+                    child: Text(
+                      item,
+                      style: const TextStyle(color: Colors.white),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-              )
-              .toList(),
-          onChanged: onChanged,
+                )
+                .toList(),
+            onChanged: onChanged,
+          ),
         ),
       ),
     );
@@ -1266,8 +1339,17 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
 
     showDialog(
       context: context,
-      builder: (context) =>
-          ReportPreviewDialog(reportName: reportName, filters: filters),
+      builder: (context) => RawKeyboardListener(
+        focusNode: FocusNode(),
+        autofocus: true,
+        onKey: (RawKeyEvent event) {
+          if (event is RawKeyDownEvent &&
+              event.logicalKey == LogicalKeyboardKey.escape) {
+            Navigator.pop(context);
+          }
+        },
+        child: ReportPreviewDialog(reportName: reportName, filters: filters),
+      ),
     );
   }
 
@@ -1324,55 +1406,64 @@ class ModernCategoryFilterBar extends StatelessWidget implements PreferredSizeWi
 
           return Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => onCategorySelected(category),
-                borderRadius: BorderRadius.circular(12),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isMobile ? 12 : 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: isSelected
-                        ? const LinearGradient(
-                            colors: [Color(0xFF64FFDA), Color(0xFF1DE9B6)],
-                          )
-                        : null,
-                    color: isSelected 
-                        ? null 
-                        : Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected
-                          ? Colors.transparent
-                          : Colors.white.withOpacity(0.2),
+            child: RawKeyboardListener(
+              focusNode: FocusNode(),
+              onKey: (RawKeyEvent event) {
+                if (event is RawKeyDownEvent &&
+                    event.logicalKey == LogicalKeyboardKey.enter) {
+                  onCategorySelected(category);
+                }
+              },
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => onCategorySelected(category),
+                  borderRadius: BorderRadius.circular(12),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isMobile ? 12 : 16,
+                      vertical: 8,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        getCategoryIcon(category),
-                        size: isMobile ? 16 : 18,
-                        color: isSelected 
-                            ? const Color(0xFF0F0F23) 
-                            : Colors.white.withOpacity(0.8),
+                    decoration: BoxDecoration(
+                      gradient: isSelected
+                          ? const LinearGradient(
+                              colors: [Color(0xFF64FFDA), Color(0xFF1DE9B6)],
+                            )
+                          : null,
+                      color: isSelected 
+                          ? null 
+                          : Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected
+                            ? Colors.transparent
+                            : Colors.white.withOpacity(0.2),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        category,
-                        style: TextStyle(
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          getCategoryIcon(category),
+                          size: isMobile ? 16 : 18,
                           color: isSelected 
                               ? const Color(0xFF0F0F23) 
                               : Colors.white.withOpacity(0.8),
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                          fontSize: isMobile ? 12 : 14,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Text(
+                          category,
+                          style: TextStyle(
+                            color: isSelected 
+                                ? const Color(0xFF0F0F23) 
+                                : Colors.white.withOpacity(0.8),
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            fontSize: isMobile ? 12 : 14,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1553,81 +1644,90 @@ class _ModernReportCardState extends State<ModernReportCard>
                 ),
               ],
             ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: widget.onFiltersTap,
-                onHover: (isHovering) {
-                  if (isHovering) {
-                    _hoverController.forward();
-                  } else {
-                    _hoverController.reverse();
-                  }
-                },
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withOpacity(0.1),
-                        Colors.white.withOpacity(0.05),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.1),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: widget.colors,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              widget.icon,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            color: Colors.white.withOpacity(0.4),
-                            size: 16,
-                          ),
+            child: RawKeyboardListener(
+              focusNode: FocusNode(),
+              onKey: (RawKeyEvent event) {
+                if (event is RawKeyDownEvent &&
+                    event.logicalKey == LogicalKeyboardKey.enter) {
+                  widget.onFiltersTap();
+                }
+              },
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: widget.onFiltersTap,
+                  onHover: (isHovering) {
+                    if (isHovering) {
+                      _hoverController.forward();
+                    } else {
+                      _hoverController.reverse();
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withOpacity(0.1),
+                          Colors.white.withOpacity(0.05),
                         ],
                       ),
-                      const Spacer(),
-                      Text(
-                        widget.title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.1),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Click to configure filters',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withOpacity(0.6),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: widget.colors,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                widget.icon,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: Colors.white.withOpacity(0.4),
+                              size: 16,
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        const Spacer(),
+                        Text(
+                          widget.title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Click to configure filters (Enter)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
