@@ -5,10 +5,7 @@ import 'routes/app_routes.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AuthService(),
-      child: const MyApp(),
-    ),
+    ChangeNotifierProvider(create: (_) => AuthService(), child: const MyApp()),
   );
 }
 
