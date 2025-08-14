@@ -424,7 +424,11 @@ class _CashierViewPageState extends State<CashierViewPage> {
                   selectedBatch['name'] = item['name'];
                   final qty = await _showQuantityInputDialog(selectedBatch);
                   if (qty != null) {
-                    _addToCart(selectedBatch, quantity: qty, fromSearch: fromSearch);
+                    _addToCart(
+                      selectedBatch,
+                      quantity: qty,
+                      fromSearch: fromSearch,
+                    );
                   }
                 },
               );
@@ -759,23 +763,29 @@ class _CashierViewPageState extends State<CashierViewPage> {
   Widget _buildPauseOnlyRow({
     required VoidCallback? onPause,
     double horizontalPadding = 0,
+    bool isWideScreen =
+        false, // Make sure to pass this in or determine it dynamically
   }) {
     return Padding(
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 20),
       child: ElevatedButton.icon(
         onPressed: onPause,
-        icon: const Icon(
-          Icons.attach_money,
-          size: 30,
-        ),
-        label: const Text(
+        icon: Icon(Icons.attach_money, size: isWideScreen ? 30 : 20),
+        label: Text(
           'New Sale',
-          style: TextStyle(fontSize: 30),
+          style: TextStyle(
+            fontSize: isWideScreen ? 30 : 22,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         style: ElevatedButton.styleFrom(
           disabledForegroundColor: Colors.white54,
           disabledBackgroundColor: Colors.white12,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: EdgeInsets.symmetric(
+            horizontal: isWideScreen ? 40 : 20,
+            vertical: isWideScreen ? 20 : 14,
+          ),
+          minimumSize: isWideScreen ? const Size(200, 60) : null,
         ),
       ),
     );
@@ -902,10 +912,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
       child: Center(
         child: ElevatedButton.icon(
           onPressed: _handleQuickSale,
-          icon: Icon(
-            Icons.flash_on,
-            size: isWideScreen ? 30 : 20,
-          ),
+          icon: Icon(Icons.flash_on, size: isWideScreen ? 30 : 20),
           label: Text(
             'Quick Sale',
             style: TextStyle(
@@ -999,10 +1006,12 @@ class _CashierViewPageState extends State<CashierViewPage> {
             searchedItems: searchedItems,
             onCategoryTap: (cat) async {
               // 👉 Await CategoryItemsPage result and add to cart when back
-              final categoryItems = (itemsByCategory.firstWhere(
-                (c) => c['category'] == cat,
-              )['items'] as List)
-                  .cast<Map<String, dynamic>>();
+              final categoryItems =
+                  (itemsByCategory.firstWhere(
+                            (c) => c['category'] == cat,
+                          )['items']
+                          as List)
+                      .cast<Map<String, dynamic>>();
 
               final result = await Navigator.push(
                 context,
@@ -1018,7 +1027,8 @@ class _CashierViewPageState extends State<CashierViewPage> {
               if (result != null && mounted) {
                 final item = result['item'] as Map<String, dynamic>;
                 final batch = Map<String, dynamic>.from(
-                    result['batch'] as Map<String, dynamic>);
+                  result['batch'] as Map<String, dynamic>,
+                );
                 final qty = result['quantity'] as int;
 
                 // Build the shape _addToCart expects
@@ -1066,13 +1076,13 @@ class _CashierViewPageState extends State<CashierViewPage> {
                 ),
               ),
               PrimaryActionsRow(
-                onAddItem: _showAddItemDialog,
+                onQuickSale: _handleQuickSale,
                 onPay: cartItems.isEmpty ? null : _showPaymentMethodDialog,
                 payEnabled: cartItems.isNotEmpty,
               ),
 
               // NEW: Quick Sale button
-              _buildQuickSaleButton(isWideScreen: true),
+              // _buildQuickSaleButton(isWideScreen: true),
 
               // pause-only row (no resume button)
               _buildPauseOnlyRow(
@@ -1101,10 +1111,10 @@ class _CashierViewPageState extends State<CashierViewPage> {
     final crossAxisCount = width >= 800
         ? 6
         : width >= 700
-            ? 5
-            : width >= 600
-                ? 4
-                : 4;
+        ? 5
+        : width >= 600
+        ? 4
+        : 4;
 
     final searchedItems = itemsByCategory
         .expand((cat) => cat['items'] as List<Map<String, dynamic>>)
@@ -1131,10 +1141,12 @@ class _CashierViewPageState extends State<CashierViewPage> {
               gridHeight: 300,
               gridCrossAxisCount: crossAxisCount,
               onCategoryTap: (cat) async {
-                final categoryItems = (itemsByCategory.firstWhere(
-                  (c) => c['category'] == cat,
-                )['items'] as List)
-                    .cast<Map<String, dynamic>>();
+                final categoryItems =
+                    (itemsByCategory.firstWhere(
+                              (c) => c['category'] == cat,
+                            )['items']
+                            as List)
+                        .cast<Map<String, dynamic>>();
 
                 final result = await Navigator.push(
                   context,
@@ -1150,7 +1162,8 @@ class _CashierViewPageState extends State<CashierViewPage> {
                 if (result != null && mounted) {
                   final item = result['item'] as Map<String, dynamic>;
                   final batch = Map<String, dynamic>.from(
-                      result['batch'] as Map<String, dynamic>);
+                    result['batch'] as Map<String, dynamic>,
+                  );
                   final qty = result['quantity'] as int;
 
                   final batchForCart = {
@@ -1192,14 +1205,14 @@ class _CashierViewPageState extends State<CashierViewPage> {
             ),
           ),
           PrimaryActionsRow(
-            onAddItem: _showAddItemDialog,
+            onQuickSale: _handleQuickSale,
             onPay: cartItems.isEmpty ? null : _showPaymentMethodDialog,
             payEnabled: cartItems.isNotEmpty,
             horizontalPadding: 40,
           ),
 
           // NEW: Quick Sale button
-          _buildQuickSaleButton(horizontalPadding: 40),
+          // _buildQuickSaleButton(horizontalPadding: 40),
 
           // pause-only row (no resume button)
           _buildPauseOnlyRow(
