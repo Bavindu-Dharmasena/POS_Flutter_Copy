@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:pos_system/features/cashier/cashier_view_page.dart';
+import 'package:pos_system/features/stockkeeper/settings/settings_provider.dart';
 
 import '../stockkeeper/stockkeeper_dashboard.dart';
 import '../stockkeeper/stockkeeper_products.dart';
@@ -35,88 +37,91 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
   @override
   void initState() {
     super.initState();
-    _tiles = [
-      _TileSpec(
-        id: 'dashboard',
-        title: 'Dashboard',
-        subtitle: 'Overview & Analytics',
-        icon: Icons.dashboard_outlined,
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEF4444), Color(0xFFEC4899)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
-        pageBuilder: () => const StockKeeperDashboard(),
-      ),
-      _TileSpec(
-        id: 'products',
-        title: 'Products',
-        subtitle: 'Manage Items',
-        icon: Icons.category_outlined,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF10B981), Color(0xFF059669)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
-        pageBuilder: () => const StockKeeperProducts(),
-      ),
-      _TileSpec(
-        id: 'inventory',
-        title: 'Inventory',
-        subtitle: 'Stock Management',
-        icon: Icons.inventory_2_outlined,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF0891B2)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
-        pageBuilder: () => const StockKeeperInventory(),
-      ),
-      _TileSpec(
-        id: 'reports',
-        title: 'Reports',
-        subtitle: 'Charts & Analytics',
-        icon: Icons.bar_chart_outlined,
-        gradient: const LinearGradient(
-          colors: [Color.fromARGB(255, 188, 32, 151), Color.fromARGB(255, 154, 121, 156)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
-        pageBuilder: () => const StockKeeperReports(),
-      ),
-      _TileSpec(
-        id: 'cashier',
-        title: 'Cashier',
-        subtitle: 'Billing & Payments',
-        icon: Icons.receipt_long_outlined,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF8B5CF6), Color(0xFF4F46E5)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
-        pageBuilder: () => const CashierViewPage(),
-      ),
-      _TileSpec(
-        id: 'settings',
-        title: 'Settings',
-        subtitle: 'More Options',
-        icon: Icons.settings_outlined,
-        gradient: const LinearGradient(
-          colors: [Color.fromARGB(255, 21, 4, 13), Color.fromARGB(255, 111, 107, 107)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
-        pageBuilder: () => const StockKeeperSetting(),
-      ),
-      _TileSpec(
-        id: 'back',
-        title: 'Back',
-        subtitle: 'Go Back',
-        icon: Icons.arrow_back_outlined,
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEAB308), Color(0xFFF97316)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
-        onTap: () => Navigator.of(context).maybePop(),
-      ),
-    ];
+    _initializeTiles();
     _ensureNodes(_tiles.length, requestFirstFocus: true);
   }
 
+  void _initializeTiles() {
+  _tiles = [
+    _TileSpec(
+      id: 'dashboard',
+      title: 'Dashboard',
+      subtitle: 'Overview & Analytics',
+      icon: Icons.dashboard_outlined,
+      gradientBuilder: (cs) => LinearGradient(
+        colors: [Color(0xFF6A11CB), Color(0xFF2575FC)], // Purple to Blue
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+      pageBuilder: () => const StockKeeperDashboard(),
+    ),
+    _TileSpec(
+      id: 'products',
+      title: 'Products',
+      subtitle: 'Manage Items',
+      icon: Icons.category_outlined,
+      gradientBuilder: (cs) => LinearGradient(
+        colors: [Color(0xFF11998E), Color(0xFF38EF7D)], // Teal to Green
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+      pageBuilder: () => const StockKeeperProducts(),
+    ),
+    _TileSpec(
+      id: 'inventory',
+      title: 'Inventory',
+      subtitle: 'Stock Management',
+      icon: Icons.inventory_2_outlined,
+      gradientBuilder: (cs) => LinearGradient(
+        colors: [Color(0xFFFF416C), Color(0xFFFF4B2B)], // Pink to Orange
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+      pageBuilder: () => const StockKeeperInventory(),
+    ),
+    _TileSpec(
+      id: 'reports',
+      title: 'Reports',
+      subtitle: 'Charts & Analytics',
+      icon: Icons.bar_chart_outlined,
+      gradientBuilder: (cs) => LinearGradient(
+        colors: [Color(0xFF0575E6), Color(0xFF021B79)], // Deep Blue
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+      pageBuilder: () => const StockKeeperReports(),
+    ),
+    _TileSpec(
+      id: 'cashier',
+      title: 'Cashier',
+      subtitle: 'Billing & Payments',
+      icon: Icons.receipt_long_outlined,
+      gradientBuilder: (cs) => LinearGradient(
+        colors: [Color(0xFF43C6AC), Color(0xFF191654)], // Aqua to Navy
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+      pageBuilder: () => const CashierViewPage(),
+    ),
+    _TileSpec(
+      id: 'settings',
+      title: 'Settings',
+      subtitle: 'More Options',
+      icon: Icons.settings_outlined,
+      gradientBuilder: (cs) => LinearGradient(
+        colors: [Color(0xFF8E2DE2), Color(0xFF4A00E0)], // Purple to Dark Purple
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+      pageBuilder: () => const StockKeeperSetting(),
+    ),
+    // _TileSpec(
+    //   id: 'back',
+    //   title: 'Back',
+    //   subtitle: 'Go Back',
+    //   icon: Icons.arrow_back_outlined,
+    //   gradientBuilder: (cs) => LinearGradient(
+    //     colors: [Color(0xFFDA22FF), Color(0xFF9733EE)], // Pink to Purple
+    //     begin: Alignment.topLeft, end: Alignment.bottomRight,
+    //   ),
+    //   onTap: () => Navigator.of(context).maybePop(),
+    // ),
+  ];
+}
   // Ensure we have exactly [count] focus nodes; optionally focus first
   void _ensureNodes(int count, {bool requestFirstFocus = false}) {
     while (_tileNodes.length > count) {
@@ -155,14 +160,14 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
       final j = current + cols;
       if (j < count) return j;
       final col = current % cols;
-      return col; // wrap to top, same column
+      return col;
     }
     if (key == LogicalKeyboardKey.arrowUp) {
       final j = current - cols;
       if (j >= 0) return j;
       final col = current % cols;
       final lastRow = ((count - 1 - col) ~/ cols);
-      return lastRow * cols + col; // wrap to last row, same column
+      return lastRow * cols + col;
     }
     return current;
   }
@@ -183,34 +188,25 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
     );
   }
 
-  // Fixed reorder method with proper bounds checking
   void _reorder(int from, int to) {
-    if (from == to || from < 0 || to < 0 || from >= _tiles.length || to >= _tiles.length) {
-      return;
-    }
+    if (from == to || from < 0 || to < 0 || from >= _tiles.length || to >= _tiles.length) return;
 
     final FocusNode? focusedNode = (_tileNodes.isNotEmpty && _focusedIndex < _tileNodes.length) 
         ? _tileNodes[_focusedIndex] : null;
 
     setState(() {
-      // Reorder tiles
       final item = _tiles.removeAt(from);
       _tiles.insert(to, item);
 
-      // Reorder focus nodes
       final node = _tileNodes.removeAt(from);
       _tileNodes.insert(to, node);
 
-      // Update focused index
       if (focusedNode != null) {
         final idx = _tileNodes.indexOf(focusedNode);
-        if (idx != -1) {
-          _focusedIndex = idx;
-        }
+        if (idx != -1) _focusedIndex = idx;
       }
     });
 
-    // Request focus after the next frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_tileNodes.isNotEmpty && _focusedIndex < _tileNodes.length) {
         _tileNodes[_focusedIndex].requestFocus();
@@ -220,172 +216,53 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
 
   @override
   void dispose() {
-    for (final n in _tileNodes) {
-      n.dispose();
-    }
+    for (final n in _tileNodes) n.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0B1623),
-      appBar: AppBar(
-        title: ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
-          ).createShader(bounds),
-          child: const Text(
-            'Stock Keeper Home',
-            style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-        ),
-        backgroundColor: const Color(0xFF0B1623),
-        elevation: 0,
-        centerTitle: true,
+  Widget _buildTileText(String text, TextStyle? style, BuildContext context) {
+    final settings = Provider.of<SettingsController>(context, listen: false);
+    return Text(
+      text,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
+      style: style?.copyWith(
+        fontSize: (style.fontSize ?? 14) * settings.textScaleFactor,
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF0F172A)],
-          ),
+    );
+  }
+
+  Widget _comingSoonBox(ColorScheme cs) {
+    final settings = Provider.of<SettingsController>(context, listen: false);
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [cs.surfaceVariant.withOpacity(0.5), cs.surface.withOpacity(0.5)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
         ),
-        child: Stack(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: cs.outlineVariant.withOpacity(0.35), width: 1),
+        boxShadow: [BoxShadow(color: cs.shadow.withOpacity(0.3), offset: const Offset(0, 8), blurRadius: 16)],
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Floating decorative elements
-            Positioned(
-              top: 50, left: 50,
-              child: Container(
-                width: 100, height: 100,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(50),
-                ),
+            Icon(Icons.add_outlined, color: cs.onSurfaceVariant.withOpacity(.7), size: 24),
+            const SizedBox(height: 12),
+            Text('Coming Soon',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: cs.onSurfaceVariant.withOpacity(.8),
+                fontWeight: FontWeight.bold,
+                fontSize: 16 * settings.textScaleFactor,
               ),
             ),
-            Positioned(
-              bottom: 100, right: 80,
-              child: Container(
-                width: 120, height: 120,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8B5CF6).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(60),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 200, right: 150,
-              child: Container(
-                width: 80, height: 80,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEC4899).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(40),
-                ),
-              ),
-            ),
-
-            // Main content with Reorderable-like grid
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth > 800;
-                  final crossAxisCount = isWide ? 4 : 2;
-
-                  return Focus(
-                    autofocus: true,
-                    child: Shortcuts(
-                      shortcuts: const <ShortcutActivator, Intent>{
-                        SingleActivator(LogicalKeyboardKey.arrowLeft):  DirectionalFocusIntent(TraversalDirection.left),
-                        SingleActivator(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(TraversalDirection.right),
-                        SingleActivator(LogicalKeyboardKey.arrowUp):    DirectionalFocusIntent(TraversalDirection.up),
-                        SingleActivator(LogicalKeyboardKey.arrowDown):  DirectionalFocusIntent(TraversalDirection.down),
-                        SingleActivator(LogicalKeyboardKey.home):       JumpToFirstIntent(),
-                        SingleActivator(LogicalKeyboardKey.end):        JumpToLastIntent(),
-                        SingleActivator(LogicalKeyboardKey.escape):     BackIntent(),
-                      },
-                      child: Actions(
-                        actions: <Type, Action<Intent>>{
-                          DirectionalFocusIntent: CallbackAction<DirectionalFocusIntent>(
-                            onInvoke: (intent) {
-                              LogicalKeyboardKey key;
-                              switch (intent.direction) {
-                                case TraversalDirection.left:  key = LogicalKeyboardKey.arrowLeft;  break;
-                                case TraversalDirection.right: key = LogicalKeyboardKey.arrowRight; break;
-                                case TraversalDirection.up:    key = LogicalKeyboardKey.arrowUp;    break;
-                                case TraversalDirection.down:  key = LogicalKeyboardKey.arrowDown;  break;
-                              }
-                              final next = _nextIndex(
-                                current: _focusedIndex,
-                                cols: crossAxisCount,
-                                count: _tiles.length,
-                                key: key,
-                              );
-                              _focusAt(next);
-                              return null;
-                            },
-                          ),
-                          JumpToFirstIntent: CallbackAction<JumpToFirstIntent>(
-                            onInvoke: (_) { _focusAt(0); return null; },
-                          ),
-                          JumpToLastIntent: CallbackAction<JumpToLastIntent>(
-                            onInvoke: (_) { _focusAt(_tiles.length - 1); return null; },
-                          ),
-                          BackIntent: CallbackAction<BackIntent>(
-                            onInvoke: (_) { Navigator.maybePop(context); return null; },
-                          ),
-                        },
-                        child: FocusTraversalGroup(
-                          policy: ReadingOrderTraversalPolicy(),
-                          child: CustomScrollView(
-                            slivers: [
-                              SliverGrid(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    if (index >= _tiles.length) return null;
-                                    return _DraggableGridTile(
-                                      key: ValueKey(_tiles[index].id),
-                                      index: index,
-                                      isDragging: _draggingIndex == index,
-                                      focusNode: _tileNodes.length > index ? _tileNodes[index] : null,
-                                      tile: _tiles[index],
-                                      onActivate: () {
-                                        final t = _tiles[index];
-                                        if (t.onTap != null) t.onTap!();
-                                        else if (t.pageBuilder != null) _navigateTo(context, t.pageBuilder!());
-                                      },
-                                      onDragStarted: () => setState(() => _draggingIndex = index),
-                                      onDragEnded: () => setState(() => _draggingIndex = null),
-                                      onAccept: (from) => _reorder(from, index),
-                                    );
-                                  },
-                                  childCount: _tiles.length,
-                                ),
-                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  crossAxisSpacing: isWide ? 24 : 20,
-                                  mainAxisSpacing: isWide ? 24 : 20,
-                                  childAspectRatio: isWide ? 1.2 : 1.0,
-                                ),
-                              ),
-                              if (isWide)
-                                SliverToBoxAdapter(
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(top: 24),
-                                    child: SizedBox(
-                                      height: 200,
-                                      child: _comingSoonBox(),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
+            const SizedBox(height: 4),
+            Text('New Features',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant.withOpacity(.6),
+                fontSize: 14 * settings.textScaleFactor,
               ),
             ),
           ],
@@ -394,40 +271,182 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
     );
   }
 
-  Widget _comingSoonBox() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [const Color(0xFF475569).withOpacity(0.5), const Color(0xFF334155).withOpacity(0.5)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
+  @override
+  Widget build(BuildContext context) {
+    final settings = Provider.of<SettingsController>(context, listen: false);
+    final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Stock Keeper Home',
+          style: textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            fontSize: 20 * settings.textScaleFactor,
+          ),
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), offset: const Offset(0, 8), blurRadius: 16)],
+        centerTitle: true,
       ),
-      child: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.add_outlined, color: Colors.white54, size: 24),
-            SizedBox(height: 12),
-            Text('Coming Soon', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white54)),
-            SizedBox(height: 4),
-            Text('New Features', style: TextStyle(fontSize: 13, color: Colors.white38)),
-          ],
+      body: MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaleFactor: settings.textScaleFactor,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+              colors: [cs.surface, cs.surfaceVariant.withOpacity(.4), cs.background],
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                top: 50, left: 50,
+                child: Container(
+                  width: 100, height: 100,
+                  decoration: BoxDecoration(
+                    color: cs.primary.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(50),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 100, right: 80,
+                child: Container(
+                  width: 120, height: 120,
+                  decoration: BoxDecoration(
+                    color: cs.secondary.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(60),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 200, right: 150,
+                child: Container(
+                  width: 80, height: 80,
+                  decoration: BoxDecoration(
+                    color: cs.tertiary.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth > 800;
+                    final crossAxisCount = isWide ? 4 : 2;
+
+                    return Focus(
+                      autofocus: true,
+                      child: Shortcuts(
+                        shortcuts: const <ShortcutActivator, Intent>{
+                          SingleActivator(LogicalKeyboardKey.arrowLeft):  DirectionalFocusIntent(TraversalDirection.left),
+                          SingleActivator(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(TraversalDirection.right),
+                          SingleActivator(LogicalKeyboardKey.arrowUp):    DirectionalFocusIntent(TraversalDirection.up),
+                          SingleActivator(LogicalKeyboardKey.arrowDown):  DirectionalFocusIntent(TraversalDirection.down),
+                          SingleActivator(LogicalKeyboardKey.home):       JumpToFirstIntent(),
+                          SingleActivator(LogicalKeyboardKey.end):        JumpToLastIntent(),
+                          SingleActivator(LogicalKeyboardKey.escape):     BackIntent(),
+                        },
+                        child: Actions(
+                          actions: <Type, Action<Intent>>{
+                            DirectionalFocusIntent: CallbackAction<DirectionalFocusIntent>(
+                              onInvoke: (intent) {
+                                LogicalKeyboardKey key;
+                                switch (intent.direction) {
+                                  case TraversalDirection.left:  key = LogicalKeyboardKey.arrowLeft;  break;
+                                  case TraversalDirection.right: key = LogicalKeyboardKey.arrowRight; break;
+                                  case TraversalDirection.up:    key = LogicalKeyboardKey.arrowUp;    break;
+                                  case TraversalDirection.down:  key = LogicalKeyboardKey.arrowDown;  break;
+                                }
+                                final next = _nextIndex(
+                                  current: _focusedIndex,
+                                  cols: crossAxisCount,
+                                  count: _tiles.length,
+                                  key: key,
+                                );
+                                _focusAt(next);
+                                return null;
+                              },
+                            ),
+                            JumpToFirstIntent: CallbackAction<JumpToFirstIntent>(
+                              onInvoke: (_) { _focusAt(0); return null; },
+                            ),
+                            JumpToLastIntent: CallbackAction<JumpToLastIntent>(
+                              onInvoke: (_) { _focusAt(_tiles.length - 1); return null; },
+                            ),
+                            BackIntent: CallbackAction<BackIntent>(
+                              onInvoke: (_) { Navigator.maybePop(context); return null; },
+                            ),
+                          },
+                          child: FocusTraversalGroup(
+                            policy: ReadingOrderTraversalPolicy(),
+                            child: CustomScrollView(
+                              slivers: [
+                                SliverGrid(
+                                  delegate: SliverChildBuilderDelegate(
+                                    (context, index) {
+                                      if (index >= _tiles.length) return null;
+                                      return _DraggableGridTile(
+                                        key: ValueKey(_tiles[index].id),
+                                        index: index,
+                                        isDragging: _draggingIndex == index,
+                                        focusNode: _tileNodes.length > index ? _tileNodes[index] : null,
+                                        tile: _tiles[index],
+                                        onActivate: () {
+                                          final t = _tiles[index];
+                                          if (t.onTap != null) t.onTap!();
+                                          else if (t.pageBuilder != null) _navigateTo(context, t.pageBuilder!());
+                                        },
+                                        onDragStarted: () => setState(() => _draggingIndex = index),
+                                        onDragEnded: () => setState(() => _draggingIndex = null),
+                                        onAccept: (from) => _reorder(from, index),
+                                      );
+                                    },
+                                    childCount: _tiles.length,
+                                  ),
+                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: crossAxisCount,
+                                    crossAxisSpacing: isWide ? 24 : 20,
+                                    mainAxisSpacing: isWide ? 24 : 20,
+                                    childAspectRatio: isWide ? 1.2 : 1.0,
+                                  ),
+                                ),
+                                if (isWide)
+                                  SliverToBoxAdapter(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(top: 24),
+                                      child: SizedBox(
+                                        height: 200,
+                                        child: _comingSoonBox(cs),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/* -------------------- Data model -------------------- */
 class _TileSpec {
-  final String id; // stable key for reordering
+  final String id;
   final String title;
   final String subtitle;
   final IconData icon;
-  final LinearGradient gradient;
+  final LinearGradient Function(ColorScheme) gradientBuilder;
   final Widget Function()? pageBuilder;
   final VoidCallback? onTap;
 
@@ -436,13 +455,12 @@ class _TileSpec {
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.gradient,
+    required this.gradientBuilder,
     this.pageBuilder,
     this.onTap,
   });
 }
 
-/* -------------------- Enhanced DragTarget + Draggable wrapper -------------------- */
 class _DraggableGridTile extends StatefulWidget {
   final int index;
   final bool isDragging;
@@ -474,7 +492,6 @@ class _DraggableGridTileState extends State<_DraggableGridTile> {
 
   @override
   Widget build(BuildContext context) {
-    // Enhanced DragTarget with better visual feedback
     return DragTarget<int>(
       onWillAccept: (from) => from != null && from != widget.index,
       onAccept: (from) {
@@ -485,8 +502,6 @@ class _DraggableGridTileState extends State<_DraggableGridTile> {
       onLeave: (data) => setState(() => _isHovering = false),
       builder: (context, candidateData, rejected) {
         final isReceiving = candidateData.isNotEmpty || _isHovering;
-        
-        // Enhanced Draggable with better feedback
         return Draggable<int>(
           data: widget.index,
           onDragStarted: widget.onDragStarted,
@@ -494,11 +509,10 @@ class _DraggableGridTileState extends State<_DraggableGridTile> {
             widget.onDragEnded();
             setState(() => _isHovering = false);
           },
-          // Improved feedback widget
           feedback: Material(
             color: Colors.transparent,
             child: Transform.scale(
-              scale: 0.8, // Slightly smaller feedback
+              scale: 0.8,
               child: SizedBox(
                 width: 150,
                 height: 150,
@@ -512,7 +526,6 @@ class _DraggableGridTileState extends State<_DraggableGridTile> {
               ),
             ),
           ),
-          // More transparent when dragging
           childWhenDragging: Opacity(
             opacity: 0.3,
             child: _TileBody(
@@ -528,7 +541,7 @@ class _DraggableGridTileState extends State<_DraggableGridTile> {
               borderRadius: BorderRadius.circular(26),
               boxShadow: isReceiving ? [
                 BoxShadow(
-                  color: Colors.white.withOpacity(0.4),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
                   blurRadius: 20,
                   spreadRadius: 2,
                 ),
@@ -548,7 +561,6 @@ class _DraggableGridTileState extends State<_DraggableGridTile> {
   }
 }
 
-/* -------------------- Enhanced visual tile -------------------- */
 class _TileBody extends StatefulWidget {
   final _TileSpec tile;
   final FocusNode? focusNode;
@@ -588,7 +600,10 @@ class _TileBodyState extends State<_TileBody> with SingleTickerProviderStateMixi
 
   @override
   Widget build(BuildContext context) {
+    final settings = Provider.of<SettingsController>(context, listen: false);
+    final cs = Theme.of(context).colorScheme;
     final tile = widget.tile;
+    final gradient = tile.gradientBuilder(cs);
 
     return FocusableActionDetector(
       focusNode: widget.focusNode,
@@ -624,27 +639,27 @@ class _TileBodyState extends State<_TileBody> with SingleTickerProviderStateMixi
                   angle: _rotationAnimation.value,
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: tile.gradient,
+                      gradient: gradient,
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         if (widget.elevate)
                           BoxShadow(
-                            color: tile.gradient.colors.first.withOpacity(0.4),
+                            color: cs.shadow.withOpacity(0.35),
                             offset: const Offset(0, 8),
                             blurRadius: 16,
                             spreadRadius: _controller.value * 2,
                           ),
                         if (_focused || widget.receiving)
                           BoxShadow(
-                            color: Colors.white.withOpacity(0.25), 
-                            blurRadius: 20, 
-                            spreadRadius: 1
+                            color: cs.primary.withOpacity(0.35),
+                            blurRadius: 20,
+                            spreadRadius: 1,
                           ),
                       ],
                       border: Border.all(
                         color: (_focused || widget.receiving)
-                            ? Colors.white.withOpacity(0.9)
-                            : Colors.white.withOpacity(0.1),
+                            ? cs.primary.withOpacity(0.9)
+                            : cs.outlineVariant.withOpacity(0.5),
                         width: (_focused || widget.receiving) ? 2 : 1,
                       ),
                     ),
@@ -652,35 +667,27 @@ class _TileBodyState extends State<_TileBody> with SingleTickerProviderStateMixi
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(24),
                         gradient: LinearGradient(
-                          colors: [Colors.white.withOpacity(0.12), Colors.white.withOpacity(0.0)],
-                          begin: Alignment.topLeft, 
-                          end: Alignment.bottomRight,
+                          colors: [cs.onSurface.withOpacity(0.10), cs.onSurface.withOpacity(0.02)],
+                          begin: Alignment.topLeft, end: Alignment.bottomRight,
                         ),
                       ),
                       child: Stack(
                         children: [
-                          // Drag hint (hidden while dragging)
                           if (!widget.isDragging)
                             Positioned(
-                              right: 10,
-                              top: 10,
+                              right: 10, top: 10,
                               child: Opacity(
                                 opacity: 0.8,
                                 child: Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.15),
+                                    color: cs.onSurface.withOpacity(0.10),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const Icon(
-                                    Icons.drag_indicator, 
-                                    size: 18, 
-                                    color: Colors.white70
-                                  ),
+                                  child: Icon(Icons.drag_indicator, size: 18, color: cs.onSurfaceVariant),
                                 ),
                               ),
                             ),
-                          // Content (scaled + clamped to avoid overflow)
                           Center(
                             child: MediaQuery(
                               data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
@@ -697,13 +704,13 @@ class _TileBodyState extends State<_TileBody> with SingleTickerProviderStateMixi
                                       Container(
                                         padding: const EdgeInsets.all(12),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.1),
+                                          color: cs.onSurface.withOpacity(0.08),
                                           borderRadius: BorderRadius.circular(20),
                                           border: _focused
-                                              ? Border.all(color: Colors.white.withOpacity(0.7), width: 1)
+                                              ? Border.all(color: cs.primary.withOpacity(0.7), width: 1)
                                               : null,
                                         ),
-                                        child: Icon(tile.icon, size: 32, color: Colors.white),
+                                        child: Icon(tile.icon, size: 32, color: cs.onSurface),
                                       ),
                                       const SizedBox(height: 12),
                                       ConstrainedBox(
@@ -713,10 +720,10 @@ class _TileBodyState extends State<_TileBody> with SingleTickerProviderStateMixi
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                            fontSize: 18, 
-                                            fontWeight: FontWeight.bold, 
-                                            color: Colors.white,
+                                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: cs.onSurface,
+                                            fontSize: 16 * settings.textScaleFactor,
                                           ),
                                         ),
                                       ),
@@ -728,10 +735,10 @@ class _TileBodyState extends State<_TileBody> with SingleTickerProviderStateMixi
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           textAlign: TextAlign.center,
-                                          style: const TextStyle(
-                                            fontSize: 13, 
-                                            color: Colors.white70, 
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: cs.onSurfaceVariant,
                                             fontWeight: FontWeight.w500,
+                                            fontSize: 14 * settings.textScaleFactor,
                                           ),
                                         ),
                                       ),
@@ -759,4 +766,4 @@ class _TileBodyState extends State<_TileBody> with SingleTickerProviderStateMixi
     _controller.dispose(); 
     super.dispose(); 
   }
-}
+} 
