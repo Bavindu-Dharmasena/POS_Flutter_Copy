@@ -24,9 +24,7 @@ class ModernSectionHeader extends StatelessWidget {
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Row(
         children: [
@@ -38,11 +36,7 @@ class ModernSectionHeader extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: const Color(0xFF0F0F23),
-              size: 24,
-            ),
+            child: Icon(icon, color: const Color(0xFF0F0F23), size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(

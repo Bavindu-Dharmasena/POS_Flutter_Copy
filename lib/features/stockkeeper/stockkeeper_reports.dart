@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_system/widget/stock_Keeper_Report/category_filter_bar.dart';
-import 'package:pos_system/widget/stock_Keeper_Report/report_card.dart';
+import 'package:pos_system/widget/stock_Keeper_Report/ModernReportCard.dart';
 import 'package:pos_system/widget/stock_Keeper_Report/report_preview_dialog.dart';
-import 'package:pos_system/widget/stock_Keeper_Report/section_header.dart';
+import 'package:pos_system/widget/stock_Keeper_Report/ModernSectionHeader.dart';
 
 class StockKeeperReports extends StatefulWidget {
   const StockKeeperReports({Key? key}) : super(key: key);
@@ -60,21 +60,14 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOutCubic,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
+    );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutExpo,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutExpo),
+        );
 
     // Start animations
     _fadeController.forward();
@@ -113,11 +106,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF0F0F23),
-                Color(0xFF1A1A2E),
-                Color(0xFF16213E),
-              ],
+              colors: [Color(0xFF0F0F23), Color(0xFF1A1A2E), Color(0xFF16213E)],
             ),
           ),
           child: FadeTransition(
@@ -171,11 +160,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
           centerTitle: true,
           title: ShaderMask(
             shaderCallback: (bounds) => const LinearGradient(
-              colors: [
-                Color(0xFF64FFDA),
-                Color(0xFF1DE9B6),
-                Color(0xFF00BCD4),
-              ],
+              colors: [Color(0xFF64FFDA), Color(0xFF1DE9B6), Color(0xFF00BCD4)],
             ).createShader(bounds),
             child: Text(
               'Reports Dashboard',
@@ -227,10 +212,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -277,7 +259,10 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
                   value: 'pdf',
                   child: Row(
                     children: [
-                      Icon(Icons.picture_as_pdf_outlined, color: Colors.white70),
+                      Icon(
+                        Icons.picture_as_pdf_outlined,
+                        color: Colors.white70,
+                      ),
                       const SizedBox(width: 12),
                       Text('Export PDF', style: TextStyle(color: Colors.white)),
                     ],
@@ -289,7 +274,10 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
                     children: [
                       Icon(Icons.grid_on_outlined, color: Colors.white70),
                       const SizedBox(width: 12),
-                      Text('Export Excel', style: TextStyle(color: Colors.white)),
+                      Text(
+                        'Export Excel',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ],
                   ),
                 ),
@@ -619,7 +607,10 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
     return content;
   }
 
-  Widget _buildModernReportGrid(List<Map<String, dynamic>> reports, bool isMobile) {
+  Widget _buildModernReportGrid(
+    List<Map<String, dynamic>> reports,
+    bool isMobile,
+  ) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isTablet = screenWidth > 600 && screenWidth <= 1024;
 
@@ -815,12 +806,14 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
                               focusNode: FocusNode(),
                               onKey: (RawKeyEvent event) {
                                 if (event is RawKeyDownEvent &&
-                                    event.logicalKey == LogicalKeyboardKey.enter) {
+                                    event.logicalKey ==
+                                        LogicalKeyboardKey.enter) {
                                   _openDateRangePicker(setDialogState);
                                 }
                               },
                               child: InkWell(
-                                onTap: () => _openDateRangePicker(setDialogState),
+                                onTap: () =>
+                                    _openDateRangePicker(setDialogState),
                                 borderRadius: BorderRadius.circular(12),
                                 child: Container(
                                   width: double.infinity,
@@ -840,7 +833,9 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
                                       Expanded(
                                         child: Text(
                                           _getDateRangeText(),
-                                          style: const TextStyle(color: Colors.white),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                          ),
                                         ),
                                       ),
                                       Icon(
@@ -978,13 +973,19 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
                                         });
                                       },
                                       activeColor: const Color(0xFF64FFDA),
-                                      activeTrackColor: const Color(0xFF64FFDA).withOpacity(0.3),
-                                      inactiveThumbColor: Colors.white.withOpacity(0.6),
-                                      inactiveTrackColor: Colors.white.withOpacity(0.1),
+                                      activeTrackColor: const Color(
+                                        0xFF64FFDA,
+                                      ).withOpacity(0.3),
+                                      inactiveThumbColor: Colors.white
+                                          .withOpacity(0.6),
+                                      inactiveTrackColor: Colors.white
+                                          .withOpacity(0.1),
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
-                                      _includeSubgroups ? 'Enabled' : 'Disabled',
+                                      _includeSubgroups
+                                          ? 'Enabled'
+                                          : 'Disabled',
                                       style: TextStyle(
                                         color: Colors.white.withOpacity(0.9),
                                         fontSize: 16,
@@ -1035,16 +1036,31 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-                                _buildSummaryItem('Date Range', _getDateRangeText()),
+                                _buildSummaryItem(
+                                  'Date Range',
+                                  _getDateRangeText(),
+                                ),
                                 if (_shouldShowUserFilter(reportName))
                                   _buildSummaryItem('User', _selectedUser),
                                 if (_shouldShowSupplierFilter(reportName))
-                                  _buildSummaryItem('Supplier', _selectedSupplier),
+                                  _buildSummaryItem(
+                                    'Supplier',
+                                    _selectedSupplier,
+                                  ),
                                 if (_shouldShowCashRegisterFilter(reportName))
-                                  _buildSummaryItem('Cash Register', _selectedCashRegister),
+                                  _buildSummaryItem(
+                                    'Cash Register',
+                                    _selectedCashRegister,
+                                  ),
                                 if (_shouldShowProductFilters(reportName)) ...[
-                                  _buildSummaryItem('Product', _selectedProduct),
-                                  _buildSummaryItem('Product Group', _selectedProductGroup),
+                                  _buildSummaryItem(
+                                    'Product',
+                                    _selectedProduct,
+                                  ),
+                                  _buildSummaryItem(
+                                    'Product Group',
+                                    _selectedProductGroup,
+                                  ),
                                   _buildSummaryItem(
                                     'Include Subgroups',
                                     _includeSubgroups ? "Yes" : "No",
@@ -1077,7 +1093,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
                             focusNode: FocusNode(),
                             onKey: (RawKeyEvent event) {
                               if (event is RawKeyDownEvent &&
-                                  event.logicalKey == LogicalKeyboardKey.enter) {
+                                  event.logicalKey ==
+                                      LogicalKeyboardKey.enter) {
                                 setDialogState(() {
                                   _resetFilters();
                                 });
@@ -1099,7 +1116,9 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
                                 side: BorderSide(
                                   color: Colors.white.withOpacity(0.3),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -1114,7 +1133,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
                             focusNode: FocusNode(),
                             onKey: (RawKeyEvent event) {
                               if (event is RawKeyDownEvent &&
-                                  event.logicalKey == LogicalKeyboardKey.enter) {
+                                  event.logicalKey ==
+                                      LogicalKeyboardKey.enter) {
                                 Navigator.pop(context);
                                 _showReportWithSelectedFilters(reportName);
                               }
@@ -1132,7 +1152,9 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF64FFDA),
                                 foregroundColor: const Color(0xFF0F0F23),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -1192,11 +1214,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
                   color: const Color(0xFF64FFDA).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  icon,
-                  size: 16,
-                  color: const Color(0xFF64FFDA),
-                ),
+                child: Icon(icon, size: 16, color: const Color(0xFF64FFDA)),
               ),
               const SizedBox(width: 12),
               Text(
@@ -1234,9 +1252,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.05),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.1),
-          ),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: DropdownButtonHideUnderline(
@@ -1375,7 +1391,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports>
 }
 
 // Modern Category Filter Bar Widget
-class ModernCategoryFilterBar extends StatelessWidget implements PreferredSizeWidget {
+class ModernCategoryFilterBar extends StatelessWidget
+    implements PreferredSizeWidget {
   final String selectedCategory;
   final List<String> categories;
   final IconData Function(String) getCategoryIcon;
@@ -1431,9 +1448,7 @@ class ModernCategoryFilterBar extends StatelessWidget implements PreferredSizeWi
                               colors: [Color(0xFF64FFDA), Color(0xFF1DE9B6)],
                             )
                           : null,
-                      color: isSelected 
-                          ? null 
-                          : Colors.white.withOpacity(0.1),
+                      color: isSelected ? null : Colors.white.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected
@@ -1447,18 +1462,20 @@ class ModernCategoryFilterBar extends StatelessWidget implements PreferredSizeWi
                         Icon(
                           getCategoryIcon(category),
                           size: isMobile ? 16 : 18,
-                          color: isSelected 
-                              ? const Color(0xFF0F0F23) 
+                          color: isSelected
+                              ? const Color(0xFF0F0F23)
                               : Colors.white.withOpacity(0.8),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           category,
                           style: TextStyle(
-                            color: isSelected 
-                                ? const Color(0xFF0F0F23) 
+                            color: isSelected
+                                ? const Color(0xFF0F0F23)
                                 : Colors.white.withOpacity(0.8),
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
                             fontSize: isMobile ? 12 : 14,
                           ),
                         ),
@@ -1476,177 +1493,4 @@ class ModernCategoryFilterBar extends StatelessWidget implements PreferredSizeWi
 
   @override
   Size get preferredSize => const Size.fromHeight(50);
-}
-
-
-
-// Modern Report Card Widget
-class ModernReportCard extends StatefulWidget {
-  final String title;
-  final IconData icon;
-  final List<Color> colors;
-  final int index;
-  final VoidCallback onFiltersTap;
-
-  const ModernReportCard({
-    Key? key,
-    required this.title,
-    required this.icon,
-    required this.colors,
-    required this.index,
-    required this.onFiltersTap,
-  }) : super(key: key);
-
-  @override
-  State<ModernReportCard> createState() => _ModernReportCardState();
-}
-
-class _ModernReportCardState extends State<ModernReportCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _hoverController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _elevationAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _hoverController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.03,
-    ).animate(CurvedAnimation(
-      parent: _hoverController,
-      curve: Curves.easeOut,
-    ));
-
-    _elevationAnimation = Tween<double>(
-      begin: 0.0,
-      end: 20.0,
-    ).animate(CurvedAnimation(
-      parent: _hoverController,
-      curve: Curves.easeOut,
-    ));
-  }
-
-  @override
-  void dispose() {
-    _hoverController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _hoverController,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _scaleAnimation.value,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.colors.first.withOpacity(0.3),
-                  blurRadius: _elevationAnimation.value,
-                  offset: Offset(0, _elevationAnimation.value / 2),
-                ),
-              ],
-            ),
-            child: RawKeyboardListener(
-              focusNode: FocusNode(),
-              onKey: (RawKeyEvent event) {
-                if (event is RawKeyDownEvent &&
-                    event.logicalKey == LogicalKeyboardKey.enter) {
-                  widget.onFiltersTap();
-                }
-              },
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: widget.onFiltersTap,
-                  onHover: (isHovering) {
-                    if (isHovering) {
-                      _hoverController.forward();
-                    } else {
-                      _hoverController.reverse();
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Colors.white.withOpacity(0.1),
-                          Colors.white.withOpacity(0.05),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.1),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: widget.colors,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                widget.icon,
-                                color: Colors.white,
-                                size: 24,
-                              ),
-                            ),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              color: Colors.white.withOpacity(0.4),
-                              size: 16,
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
-                        Text(
-                          widget.title,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Click to configure filters (Enter)',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white.withOpacity(0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
 }
