@@ -153,7 +153,6 @@ class _ProductCardState extends State<ProductCard>
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 p.name,
