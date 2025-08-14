@@ -1,15 +1,11 @@
-import 'package:flutter/material.dart';
-import '../../widget/stockKeeperReportCard.dart';
+// ignore_for_file: unused_import
 
-// Constants for better maintainability
-class AppConstants {
-  static const primaryDark = Color(0xFF0B1623);
-  static const cardPadding = EdgeInsets.all(20.0);
-  static const gridSpacing = 16.0;
-  static const borderRadius = 16.0;
-  static const iconContainerRadius = 12.0;
-  static const buttonBorderRadius = 8.0;
-}
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pos_system/widget/stock_Keeper_Report/ModernCategoryFilterBar.dart';
+import 'package:pos_system/widget/stock_Keeper_Report/ModernReportCard.dart';
+import 'package:pos_system/widget/stock_Keeper_Report/report_preview_dialog.dart';
+import 'package:pos_system/widget/stock_Keeper_Report/ModernSectionHeader.dart';
 
 class StockKeeperReports extends StatefulWidget {
   const StockKeeperReports({Key? key}) : super(key: key);
@@ -18,228 +14,117 @@ class StockKeeperReports extends StatefulWidget {
   State<StockKeeperReports> createState() => _StockKeeperReportsState();
 }
 
-class _StockKeeperReportsState extends State<StockKeeperReports> {
-  final Set<String> _downloadingReports = {};
+class _StockKeeperReportsState extends State<StockKeeperReports>
+    with TickerProviderStateMixin {
+  // --- STATE VARIABLES ---
   DateTimeRange? _selectedDateRange;
-  Map<String, dynamic> _quickSalesData = {
-    'totalSales': 0,
-    'totalItems': 0,
-    'topProducts': [],
-  };
+  String _selectedUser = 'All';
+  String _selectedCashRegister = 'All';
+  String _selectedProduct = 'All';
+  String _selectedProductGroup = 'Products';
+  String _selectedSupplier = 'All';
+  bool _includeSubgroups = true;
+  String _selectedCategory = 'All';
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
+  final List<String> _categories = [
+    'All',
+    'Sales Reports',
+    'Purchase Reports',
+    'Stock Return',
+    'Loss and Damage',
+    'Finance',
+    'Stock Control',
+  ];
+
+  // --- LIFECYCLE METHODS ---
   @override
   void initState() {
     super.initState();
-    // Set default date range to current month
     final now = DateTime.now();
     _selectedDateRange = DateTimeRange(
       start: DateTime(now.year, now.month, 1),
       end: now,
     );
-    _loadQuickSalesData();
-  }
 
-  Future<void> _loadQuickSalesData() async {
-    // Simulate API call to get sales data
-    await Future.delayed(const Duration(seconds: 1));
+    // Initialize animations
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
 
-    setState(() {
-      _quickSalesData = {
-        'totalSales': 12540.75,
-        'totalItems': 342,
-        'topProducts': [
-          {'name': 'Premium Widget', 'sales': 4200},
-          {'name': 'Standard Gadget', 'sales': 3800},
-          {'name': 'Basic Tool', 'sales': 2100},
-        ],
-      };
-    });
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
+    );
+
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutExpo),
+        );
+
+    // Start animations
+    _fadeController.forward();
+    _slideController.forward();
   }
 
   @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    super.dispose();
+  }
+
+  // --- UI BUILD METHOD ---
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Stock Keeper Reports',
-          style: TextStyle(color: Colors.white, fontSize: 18),
-        ),
-        backgroundColor: AppConstants.primaryDark,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          // Date range selector
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: TextButton.icon(
-              onPressed: _showDateRangePicker,
-              icon: const Icon(Icons.date_range, color: Colors.white),
-              label: Text(
-                _getDateRangeText(),
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
-              style: TextButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppConstants.buttonBorderRadius,
-                  ),
-                ),
-              ),
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 600;
+
+    return RawKeyboardListener(
+      focusNode: FocusNode(),
+      autofocus: true,
+      onKey: (RawKeyEvent event) {
+        if (event is RawKeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.escape) {
+            Navigator.pop(context);
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0F0F23),
+        extendBodyBehindAppBar: true,
+        appBar: _buildModernAppBar(isMobile),
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF0F0F23), Color(0xFF1A1A2E), Color(0xFF16213E)],
             ),
           ),
-        ],
-      ),
-      backgroundColor: AppConstants.primaryDark,
-      body: SingleChildScrollView(
-        padding: AppConstants.cardPadding,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1000),
-            child: Column(
-              children: [
-                // Quick info card with date range
-                _buildDateRangeCard(),
-                const SizedBox(height: 20),
-                // Quick sales report
-                _buildQuickSalesReport(),
-                const SizedBox(height: 20),
-                // Reports grid
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    int crossAxisCount = 1;
-                    if (constraints.maxWidth > 900) {
-                      crossAxisCount = 3;
-                    } else if (constraints.maxWidth > 600) {
-                      crossAxisCount = 2;
-                    } else {
-                      crossAxisCount = 1;
-                    }
-
-                    return GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: crossAxisCount,
-                      crossAxisSpacing: AppConstants.gridSpacing,
-                      mainAxisSpacing: AppConstants.gridSpacing,
-                      childAspectRatio: 1.3,
-                      children: [
-                        StockKeeperReportCard(
-                          reportId: 'daily',
-                          title: 'Daily Report',
-                          subtitle: 'View today\'s sales & transactions',
-                          icon: Icons.today_outlined,
-                          gradientColors: [
-                            const Color(0xFF1e3c72),
-                            const Color(0xFF2a5298),
-                          ],
-                          onViewTap: () => _showReportPreview(
-                            'Daily Sales Report',
-                            'This report shows all sales transactions for ${_getFormattedDate(DateTime.now())}.\n\n• Total Sales: Rs${_quickSalesData['totalSales']}\n• Items Sold: ${_quickSalesData['totalItems']}\n• Top Products: ${_quickSalesData['topProducts'].map((p) => p['name']).join(', ')}',
-                          ),
-                          onDownloadTap: () =>
-                              _handleDownloadReport('daily', 'Daily Report'),
-                          isDownloading: _downloadingReports.contains('daily'),
-                        ),
-                        StockKeeperReportCard(
-                          reportId: 'weekly',
-                          title: 'Weekly Report',
-                          subtitle: 'Analyze weekly performance',
-                          icon: Icons.view_week_outlined,
-                          gradientColors: [
-                            const Color(0xFF134e5e),
-                            const Color(0xFF71b280),
-                          ],
-                          onViewTap: () => _showReportPreview(
-                            'Weekly Sales Report',
-                            'Weekly sales summary for ${_getDateRangeText()}:\n\n• Total Revenue: Rs${(_quickSalesData['totalSales'] * 4).toStringAsFixed(2)}\n• Average Daily Sales: Rs${(_quickSalesData['totalSales'] / 7).toStringAsFixed(2)}\n• Most Sold Day: Friday\n• Product Trends: Premium products up 12%',
-                          ),
-                          onDownloadTap: () =>
-                              _handleDownloadReport('weekly', 'Weekly Report'),
-                          isDownloading: _downloadingReports.contains('weekly'),
-                        ),
-
-                        StockKeeperReportCard(
-                          reportId: 'monthly',
-                          title: 'Monthly Report',
-                          subtitle: 'Monthly business insights',
-                          icon: Icons.calendar_month_outlined,
-                          gradientColors: [
-                            const Color(0xFF8B4513),
-                            const Color(0xFFD2691E),
-                          ],
-                          onViewTap: () => _showReportPreview(
-                            'Monthly Sales Report',
-                            'Monthly performance overview:\n\n• Total Sales: Rs${(_quickSalesData['totalSales'] * 30).toStringAsFixed(2)}\n• New Customers: 45\n• Returns: 5 (1.2% of sales)\n• Inventory Turnover: 2.4x\n• Profit Margin: 32.5%',
-                          ),
-                          onDownloadTap: () => _handleDownloadReport(
-                            'monthly',
-                            'Monthly Report',
-                          ),
-                          isDownloading: _downloadingReports.contains(
-                            'monthly',
-                          ),
-                        ),
-                        StockKeeperReportCard(
-                          reportId: 'sales',
-                          title: 'Sales Report',
-                          subtitle: 'Detailed sales analytics',
-                          icon: Icons.trending_up_outlined,
-                          gradientColors: [
-                            const Color(0xFF2C5364),
-                            const Color(0xFF203A43),
-                          ],
-                          onViewTap: () => _showReportPreview(
-                            'Detailed Sales Analysis',
-                            'Comprehensive sales data for ${_getDateRangeText()}:\n\n• Sales by Category:\n   - Electronics: 42%\n   - Home Goods: 28%\n   - Clothing: 22%\n   - Other: 8%\n\n• Sales by Hour:\n   - Peak: 2PM (18% of sales)\n   - Slowest: 9AM (4% of sales)\n\n• Customer Demographics:\n   - Repeat Customers: 65%\n   - New Customers: 35%',
-                          ),
-                          onDownloadTap: () =>
-                              _handleDownloadReport('sales', 'Sales Report'),
-                          isDownloading: _downloadingReports.contains('sales'),
-                        ),
-                        StockKeeperReportCard(
-                          reportId: 'inventory',
-                          title: 'Inventory Report',
-                          subtitle: 'Stock levels & movements',
-                          icon: Icons.inventory_2_outlined,
-                          gradientColors: [
-                            const Color(0xFF4B0082),
-                            const Color(0xFF8B008B),
-                          ],
-                          onViewTap: () => _showReportPreview(
-                            'Inventory Status Report',
-                            'Current inventory status:\n\n• Total SKUs: 142\n• Low Stock Items: 18\n• Out of Stock: 5\n• Overstocked Items: 7\n\nRecent Movements:\n• Received: 45 items\n• Sold: 342 items\n• Damaged: 3 items\n• Returned: 12 items',
-                          ),
-                          onDownloadTap: () => _handleDownloadReport(
-                            'inventory',
-                            'Inventory Report',
-                          ),
-                          isDownloading: _downloadingReports.contains(
-                            'inventory',
-                          ),
-                        ),
-                        StockKeeperReportCard(
-                          reportId: 'profit',
-                          title: 'Profit Report',
-                          subtitle: 'Profit margins & analysis',
-                          icon: Icons.account_balance_wallet_outlined,
-                          gradientColors: [
-                            const Color(0xFF1a252f),
-                            const Color(0xFF2b5876),
-                          ],
-                          onViewTap: () => _showReportPreview(
-                            'Profitability Analysis',
-                            'Profit report for ${_getDateRangeText()}:\n\n• Gross Revenue: Rs${(_quickSalesData['totalSales'] * 30).toStringAsFixed(2)}\n• COGS: Rs${(_quickSalesData['totalSales'] * 30 * 0.6).toStringAsFixed(2)}\n• Gross Profit: Rs${(_quickSalesData['totalSales'] * 30 * 0.4).toStringAsFixed(2)}\n• Expenses: Rs${(_quickSalesData['totalSales'] * 30 * 0.08).toStringAsFixed(2)}\n• Net Profit: Rs${(_quickSalesData['totalSales'] * 30 * 0.32).toStringAsFixed(2)}\n\nProfit by Category:\n• Electronics: 38%\n• Home Goods: 42%\n• Clothing: 15%\n• Other: 5%',
-                          ),
-                          onDownloadTap: () =>
-                              _handleDownloadReport('profit', 'Profit Report'),
-                          isDownloading: _downloadingReports.contains('profit'),
-                        ),
-                      ],
-                    );
-                  },
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  left: isMobile ? 16.0 : 24.0,
+                  right: isMobile ? 16.0 : 24.0,
+                  top: isMobile ? 140 : 160,
+                  bottom: 24.0,
                 ),
-              ],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _buildFilteredContent(isMobile),
+                ),
+              ),
             ),
           ),
         ),
@@ -247,334 +132,1051 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     );
   }
 
-  // New method to show report preview
-  void _showReportPreview(String title, String content) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: SingleChildScrollView(child: Text(content)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showSnackBar('Report exported successfully!', isSuccess: true);
-            },
-            child: const Text('Export as PDF'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Enhanced date range card
-  Widget _buildDateRangeCard() {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-      ),
+  PreferredSizeWidget _buildModernAppBar(bool isMobile) {
+    return PreferredSize(
+      preferredSize: Size.fromHeight(isMobile ? 130 : 150),
       child: Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF2C5364), Color(0xFF203A43)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF0F0F23).withOpacity(0.95),
+              const Color(0xFF0F0F23).withOpacity(0.8),
+              const Color(0xFF0F0F23).withOpacity(0.0),
+            ],
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.date_range, color: Colors.white, size: 24),
-                const SizedBox(width: 12),
-                Text(
-                  'Selected Date Range',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'From:',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        _selectedDateRange != null
-                            ? _getFormattedDate(_selectedDateRange!.start)
-                            : 'Not selected',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'To:',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 14,
-                        ),
-                      ),
-                      Text(
-                        _selectedDateRange != null
-                            ? _getFormattedDate(_selectedDateRange!.end)
-                            : 'Not selected',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: _showDateRangePicker,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withOpacity(0.15),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppConstants.buttonBorderRadius,
-                      ),
-                    ),
-                  ),
-                  child: const Text('Change Range'),
-                ),
-              ],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
+        child: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: true,
+          title: ShaderMask(
+            shaderCallback: (bounds) => const LinearGradient(
+              colors: [Color(0xFF64FFDA), Color(0xFF1DE9B6), Color(0xFF00BCD4)],
+            ).createShader(bounds),
+            child: Text(
+              'Reports Dashboard',
+              style: TextStyle(
+                fontSize: isMobile ? 22 : 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          leading: Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          actions: [_buildModernAppBarActions(isMobile)],
+          bottom: ModernCategoryFilterBar(
+            selectedCategory: _selectedCategory,
+            categories: _categories,
+            getCategoryIcon: _getCategoryIcon,
+            isMobile: isMobile,
+            onCategorySelected: (category) {
+              setState(() => _selectedCategory = category);
+            },
+          ),
+        ),
       ),
     );
   }
 
-  // New quick sales report widget
-  Widget _buildQuickSalesReport() {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+  Widget _buildModernAppBarActions(bool isMobile) {
+    return Container(
+      margin: const EdgeInsets.only(right: 12, top: 8, bottom: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.1),
+            Colors.white.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF4B0082), Color(0xFF8B008B)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildGlassButton(
+            icon: Icons.print_outlined,
+            onPressed: () => _showSnackBar('Printing report...'),
+            tooltip: 'Print Report (Enter)',
+            isMobile: isMobile,
+          ),
+          if (!isMobile) ...[
+            _buildGlassButton(
+              icon: Icons.picture_as_pdf_outlined,
+              onPressed: () => _showSnackBar('Exporting to PDF...'),
+              tooltip: 'Export to PDF (Enter)',
+              isMobile: isMobile,
+            ),
+            _buildGlassButton(
+              icon: Icons.grid_on_outlined,
+              onPressed: () => _showSnackBar('Exporting to Excel...'),
+              tooltip: 'Export to Excel (Enter)',
+              isMobile: isMobile,
+            ),
+          ] else
+            PopupMenuButton<String>(
+              icon: Icon(
+                Icons.more_vert_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+              color: const Color(0xFF1A1A2E),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              onSelected: (value) {
+                if (value == 'pdf') {
+                  _showSnackBar('Exporting to PDF...');
+                } else if (value == 'excel') {
+                  _showSnackBar('Exporting to Excel...');
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'pdf',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.picture_as_pdf_outlined,
+                        color: Colors.white70,
+                      ),
+                      const SizedBox(width: 12),
+                      Text('Export PDF', style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'excel',
+                  child: Row(
+                    children: [
+                      Icon(Icons.grid_on_outlined, color: Colors.white70),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Export Excel',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+    required String tooltip,
+    required bool isMobile,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: RawKeyboardListener(
+        focusNode: FocusNode(),
+        onKey: (RawKeyEvent event) {
+          if (event is RawKeyDownEvent &&
+              event.logicalKey == LogicalKeyboardKey.enter) {
+            onPressed();
+          }
+        },
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: EdgeInsets.all(isMobile ? 10 : 12),
+              child: Icon(
+                icon,
+                color: Colors.white.withOpacity(0.9),
+                size: isMobile ? 18 : 20,
+              ),
+            ),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.bar_chart, color: Colors.white, size: 24),
-                const SizedBox(width: 12),
-                const Text(
-                  'Quick Sales Summary',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+
+  // --- LOGIC & DATA METHODS ---
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'All':
+        return Icons.dashboard_outlined;
+      case 'Sales Reports':
+        return Icons.trending_up_outlined;
+      case 'Purchase Reports':
+        return Icons.shopping_cart_outlined;
+      case 'Stock Return':
+        return Icons.assignment_return_outlined;
+      case 'Loss and Damage':
+        return Icons.warning_amber_outlined;
+      case 'Finance':
+        return Icons.account_balance_wallet_outlined;
+      case 'Stock Control':
+        return Icons.inventory_2_outlined;
+      default:
+        return Icons.folder_outlined;
+    }
+  }
+
+  // --- FILTER LOGIC METHODS (same as original) ---
+  bool _shouldShowUserFilter(String reportName) {
+    return ![
+      'Expiration Date',
+      'Transaction History',
+      'Reorder Product List',
+      'Low Stock Warning',
+    ].contains(reportName);
+  }
+
+  bool _shouldShowSupplierFilter(String reportName) {
+    return [
+      'Purchase Products',
+      'Suppliers',
+      'Unpaid Purchase',
+      'Purchase Discounts',
+      'Purchased Items Discounts',
+      'Purchase Invoice List',
+      'Expiration Date',
+    ].contains(reportName);
+  }
+
+  bool _shouldShowCashRegisterFilter(String reportName) {
+    return ![
+      'Purchase Products',
+      'Suppliers',
+      'Unpaid Purchase',
+      'Purchase Discounts',
+      'Purchased Items Discounts',
+      'Purchase Invoice List',
+      'Expiration Date',
+      'Stock Return Products',
+      'Loss and Damage Products',
+      'Transaction History',
+      'Reorder Product List',
+      'Low Stock Warning',
+    ].contains(reportName);
+  }
+
+  bool _shouldShowProductFilters(String reportName) {
+    return ![
+      'Payment Types',
+      'Payment Types by Users',
+      'Payment Types by Customers',
+      'Daily Sales',
+      'Hourly Sales',
+      'Table/Order Number',
+      'Unpaid Sales',
+      'Starting Cash Entries',
+      'Discounts Granted',
+      'Unpaid Purchase',
+      'Purchase Discounts',
+      'Transaction History',
+    ].contains(reportName);
+  }
+
+  List<Widget> _buildFilteredContent(bool isMobile) {
+    final reportData = {
+      'Sales Reports': [
+        {
+          'title': 'Products',
+          'icon': Icons.shopping_bag_outlined,
+          'colors': [const Color(0xFF64FFDA), const Color(0xFF1DE9B6)],
+        },
+        {
+          'title': 'Product Groups',
+          'icon': Icons.category_outlined,
+          'colors': [const Color(0xFFBB86FC), const Color(0xFF9C27B0)],
+        },
+        {
+          'title': 'Customers',
+          'icon': Icons.people_outline,
+          'colors': [const Color(0xFF4FC3F7), const Color(0xFF29B6F6)],
+        },
+        {
+          'title': 'Tax Rates',
+          'icon': Icons.receipt_long_outlined,
+          'colors': [const Color(0xFFFFB74D), const Color(0xFFFF9800)],
+        },
+        {
+          'title': 'Users',
+          'icon': Icons.person_outline,
+          'colors': [const Color(0xFFF48FB1), const Color(0xFFE91E63)],
+        },
+        {
+          'title': 'Item List',
+          'icon': Icons.list_alt_outlined,
+          'colors': [const Color(0xFF9FA8DA), const Color(0xFF3F51B5)],
+        },
+        {
+          'title': 'Payment Types',
+          'icon': Icons.payment_outlined,
+          'colors': [const Color(0xFF80DEEA), const Color(0xFF00BCD4)],
+        },
+        {
+          'title': 'Payment Types by Users',
+          'icon': Icons.account_balance_wallet_outlined,
+          'colors': [const Color(0xFFFFD54F), const Color(0xFFFFC107)],
+        },
+        {
+          'title': 'Payment Types by Customers',
+          'icon': Icons.credit_card_outlined,
+          'colors': [const Color(0xFFC8E6C9), const Color(0xFF4CAF50)],
+        },
+        {
+          'title': 'Refunds',
+          'icon': Icons.assignment_return_outlined,
+          'colors': [const Color(0xFFEF9A9A), const Color(0xFFF44336)],
+        },
+        {
+          'title': 'Invoice List',
+          'icon': Icons.description_outlined,
+          'colors': [const Color(0xFFB0BEC5), const Color(0xFF607D8B)],
+        },
+        {
+          'title': 'Daily Sales',
+          'icon': Icons.calendar_today_outlined,
+          'colors': [const Color(0xFF80CBC4), const Color(0xFF009688)],
+        },
+        {
+          'title': 'Hourly Sales',
+          'icon': Icons.access_time_outlined,
+          'colors': [const Color(0xFFCE93D8), const Color(0xFF9C27B0)],
+        },
+        {
+          'title': 'Hourly Sales by Product Groups',
+          'icon': Icons.timeline_outlined,
+          'colors': [const Color(0xFF81D4FA), const Color(0xFF03A9F4)],
+        },
+        {
+          'title': 'Table/Order Number',
+          'icon': Icons.table_chart_outlined,
+          'colors': [const Color(0xFFFFCC02), const Color(0xFFFF9800)],
+        },
+        {
+          'title': 'Profit & Margin',
+          'icon': Icons.attach_money_outlined,
+          'colors': [const Color(0xFF9CCC65), const Color(0xFF689F38)],
+        },
+        {
+          'title': 'Unpaid Sales',
+          'icon': Icons.money_off_outlined,
+          'colors': [const Color(0xFFE57373), const Color(0xFFD32F2F)],
+        },
+        {
+          'title': 'Starting Cash Entries',
+          'icon': Icons.point_of_sale_outlined,
+          'colors': [const Color(0xFF7986CB), const Color(0xFF3F51B5)],
+        },
+        {
+          'title': 'Voided Items',
+          'icon': Icons.verified_outlined,
+          'colors': [const Color(0xFF4DB6AC), const Color(0xFF00695C)],
+        },
+        {
+          'title': 'Discounts Granted',
+          'icon': Icons.discount_outlined,
+          'colors': [const Color(0xFFBA68C8), const Color(0xFF8E24AA)],
+        },
+        {
+          'title': 'Items Discounts',
+          'icon': Icons.percent_outlined,
+          'colors': [const Color(0xFFFFA726), const Color(0xFFEF6C00)],
+        },
+      ],
+      'Purchase Reports': [
+        {
+          'title': 'Purchase Products',
+          'icon': Icons.shopping_cart_outlined,
+          'colors': [const Color(0xFF64FFDA), const Color(0xFF00BCD4)],
+        },
+        {
+          'title': 'Suppliers',
+          'icon': Icons.local_shipping_outlined,
+          'colors': [const Color(0xFF81C784), const Color(0xFF388E3C)],
+        },
+        {
+          'title': 'Unpaid Purchase',
+          'icon': Icons.money_off_outlined,
+          'colors': [const Color(0xFFE57373), const Color(0xFFD32F2F)],
+        },
+        {
+          'title': 'Purchase Discounts',
+          'icon': Icons.discount_outlined,
+          'colors': [const Color(0xFFBA68C8), const Color(0xFF7B1FA2)],
+        },
+        {
+          'title': 'Purchased Items Discounts',
+          'icon': Icons.percent_outlined,
+          'colors': [const Color(0xFFFFA726), const Color(0xFFE65100)],
+        },
+        {
+          'title': 'Purchase Invoice List',
+          'icon': Icons.description_outlined,
+          'colors': [const Color(0xFFB0BEC5), const Color(0xFF546E7A)],
+        },
+        {
+          'title': 'Tax Rates',
+          'icon': Icons.receipt_long_outlined,
+          'colors': [const Color(0xFFFFB74D), const Color(0xFFFF6F00)],
+        },
+        {
+          'title': 'Expiration Date',
+          'icon': Icons.calendar_today_outlined,
+          'colors': [const Color(0xFF4DB6AC), const Color(0xFF00695C)],
+        },
+      ],
+      'Stock Return': [
+        {
+          'title': 'Stock Return Products',
+          'icon': Icons.assignment_return_outlined,
+          'colors': [const Color(0xFFE57373), const Color(0xFFD32F2F)],
+        },
+      ],
+      'Loss and Damage': [
+        {
+          'title': 'Loss and Damage Products',
+          'icon': Icons.warning_amber_outlined,
+          'colors': [const Color(0xFFFFB74D), const Color(0xFFE65100)],
+        },
+      ],
+      'Finance': [
+        {
+          'title': 'Transaction History',
+          'icon': Icons.history_outlined,
+          'colors': [const Color(0xFF90A4AE), const Color(0xFF455A64)],
+        },
+      ],
+      'Stock Control': [
+        {
+          'title': 'Reorder Product List',
+          'icon': Icons.repeat_outlined,
+          'colors': [const Color(0xFF81C784), const Color(0xFF2E7D32)],
+        },
+        {
+          'title': 'Low Stock Warning',
+          'icon': Icons.notifications_active_outlined,
+          'colors': [const Color(0xFFE57373), const Color(0xFFC62828)],
+        },
+      ],
+    };
+
+    List<Widget> content = [];
+
+    reportData.forEach((category, reports) {
+      if (_selectedCategory == 'All' || _selectedCategory == category) {
+        content.addAll([
+          ModernSectionHeader(
+            title: category,
+            icon: _getCategoryIcon(category),
+            reportCount: reports.length,
+          ),
+          const SizedBox(height: 16),
+          _buildModernReportGrid(reports, isMobile),
+          const SizedBox(height: 32),
+        ]);
+      }
+    });
+
+    return content;
+  }
+
+  Widget _buildModernReportGrid(
+    List<Map<String, dynamic>> reports,
+    bool isMobile,
+  ) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth > 600 && screenWidth <= 1024;
+
+    int crossAxisCount;
+    double childAspectRatio;
+
+    if (isMobile) {
+      crossAxisCount = 1;
+      childAspectRatio = 1.3;
+    } else if (isTablet) {
+      crossAxisCount = 2;
+      childAspectRatio = 1.4;
+    } else {
+      crossAxisCount = 3;
+      childAspectRatio = 1.5;
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: reports.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: isMobile ? 12 : 20,
+        mainAxisSpacing: isMobile ? 12 : 20,
+        childAspectRatio: childAspectRatio,
+      ),
+      itemBuilder: (context, index) {
+        final report = reports[index];
+        return ModernReportCard(
+          title: report['title'],
+          icon: report['icon'],
+          colors: report['colors'],
+          index: index,
+          onFiltersTap: () => _showFiltersDialog(report['title']),
+        );
+      },
+    );
+  }
+
+  // --- DIALOGS & HELPERS ---
+  void _showFiltersDialog(String reportName) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth <= 600;
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.7),
+      builder: (context) => RawKeyboardListener(
+        focusNode: FocusNode(),
+        autofocus: true,
+        onKey: (RawKeyEvent event) {
+          if (event is RawKeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.escape) {
+              Navigator.pop(context);
+            }
+          }
+        },
+        child: StatefulBuilder(
+          builder: (context, setDialogState) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 16 : 40,
+              vertical: 24,
+            ),
+            child: Container(
+              width: isMobile ? double.infinity : 520,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.85,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF1A1A2E).withOpacity(0.95),
+                    const Color(0xFF16213E).withOpacity(0.95),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.1),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 30,
+                    offset: const Offset(0, 15),
                   ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.refresh, color: Colors.white),
-                  onPressed: _loadQuickSalesData,
-                  tooltip: 'Refresh sales data',
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                _buildSalesMetric(
-                  'Total Sales',
-                  '${_quickSalesData['totalSales'].toStringAsFixed(2)}',
-                  Icons.attach_money,
-                ),
-                const SizedBox(width: 16),
-                _buildSalesMetric(
-                  'Items Sold',
-                  _quickSalesData['totalItems'].toString(),
-                  Icons.shopping_cart,
-                ),
-                const SizedBox(width: 16),
-                _buildSalesMetric(
-                  'Avg. Order',
-                  '${(_quickSalesData['totalSales'] / (_quickSalesData['totalItems'] > 0 ? _quickSalesData['totalItems'] : 1)).toStringAsFixed(2)}',
-                  Icons.assessment,
-                  prefix: 'LKR',
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            if (_quickSalesData['topProducts'].isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Top Selling Products:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
+                  // Modern Dialog Header
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF64FFDA).withOpacity(0.1),
+                          const Color(0xFF1DE9B6).withOpacity(0.05),
+                        ],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.white.withOpacity(0.1),
+                          width: 1,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  ..._quickSalesData['topProducts'].map<Widget>((product) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              product['name'],
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF64FFDA), Color(0xFF1DE9B6)],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.tune_outlined,
+                            color: Color(0xFF0F0F23),
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Report Filters',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                reportName,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white.withOpacity(0.7),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => Navigator.pop(context),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.close_rounded,
+                                color: Colors.white.withOpacity(0.8),
+                                size: 20,
                               ),
                             ),
                           ),
-                          Text(
-                            'Rs${product['sales']}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Dialog Content (Scrollable)
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Date Range Filter
+                          _buildModernFilterRow(
+                            'Date Range',
+                            Icons.date_range_outlined,
+                            RawKeyboardListener(
+                              focusNode: FocusNode(),
+                              onKey: (RawKeyEvent event) {
+                                if (event is RawKeyDownEvent &&
+                                    event.logicalKey ==
+                                        LogicalKeyboardKey.enter) {
+                                  _openDateRangePicker(setDialogState);
+                                }
+                              },
+                              child: InkWell(
+                                onTap: () =>
+                                    _openDateRangePicker(setDialogState),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.05),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.1),
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          _getDateRangeText(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.calendar_today_outlined,
+                                        size: 20,
+                                        color: Colors.white.withOpacity(0.6),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          // Conditional Filters (same logic as original)
+                          if (_shouldShowUserFilter(reportName))
+                            _buildModernFilterRow(
+                              'User',
+                              Icons.person_outline,
+                              _buildModernDropdown(
+                                value: _selectedUser,
+                                items: ['All', 'User 1', 'User 2', 'User 3'],
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    _selectedUser = value!;
+                                  });
+                                },
+                              ),
+                            ),
+
+                          if (_shouldShowSupplierFilter(reportName))
+                            _buildModernFilterRow(
+                              'Supplier',
+                              Icons.local_shipping_outlined,
+                              _buildModernDropdown(
+                                value: _selectedSupplier,
+                                items: [
+                                  'All',
+                                  'Alpha Suppliers Ltd',
+                                  'Beta Distribution Co',
+                                  'Gamma Wholesale Inc',
+                                  'Delta Trading House',
+                                ],
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    _selectedSupplier = value!;
+                                  });
+                                },
+                              ),
+                            ),
+
+                          if (_shouldShowCashRegisterFilter(reportName))
+                            _buildModernFilterRow(
+                              'Cash Register',
+                              Icons.point_of_sale_outlined,
+                              _buildModernDropdown(
+                                value: _selectedCashRegister,
+                                items: [
+                                  'All',
+                                  'Register 1',
+                                  'Register 2',
+                                  'Register 3',
+                                ],
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    _selectedCashRegister = value!;
+                                  });
+                                },
+                              ),
+                            ),
+
+                          // Product Filters
+                          if (_shouldShowProductFilters(reportName)) ...[
+                            _buildModernFilterRow(
+                              'Product',
+                              Icons.shopping_bag_outlined,
+                              _buildModernDropdown(
+                                value: _selectedProduct,
+                                items: [
+                                  'All',
+                                  'Product 1',
+                                  'Product 2',
+                                  'Product 3',
+                                ],
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    _selectedProduct = value!;
+                                  });
+                                },
+                              ),
+                            ),
+
+                            _buildModernFilterRow(
+                              'Product Group',
+                              Icons.category_outlined,
+                              _buildModernDropdown(
+                                value: _selectedProductGroup,
+                                items: [
+                                  'Products',
+                                  'Electronics',
+                                  'Clothing',
+                                  'Food & Beverages',
+                                ],
+                                onChanged: (value) {
+                                  setDialogState(() {
+                                    _selectedProductGroup = value!;
+                                  });
+                                },
+                              ),
+                            ),
+
+                            _buildModernFilterRow(
+                              'Include Subgroups',
+                              Icons.account_tree_outlined,
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.05),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.1),
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Switch(
+                                      value: _includeSubgroups,
+                                      onChanged: (value) {
+                                        setDialogState(() {
+                                          _includeSubgroups = value;
+                                        });
+                                      },
+                                      activeColor: const Color(0xFF64FFDA),
+                                      activeTrackColor: const Color(
+                                        0xFF64FFDA,
+                                      ).withOpacity(0.3),
+                                      inactiveThumbColor: Colors.white
+                                          .withOpacity(0.6),
+                                      inactiveTrackColor: Colors.white
+                                          .withOpacity(0.1),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      _includeSubgroups
+                                          ? 'Enabled'
+                                          : 'Disabled',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.9),
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+
+                          // Filter Summary
+                          const SizedBox(height: 24),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFF64FFDA).withOpacity(0.1),
+                                  const Color(0xFF1DE9B6).withOpacity(0.05),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFF64FFDA).withOpacity(0.3),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.summarize_outlined,
+                                      color: const Color(0xFF64FFDA),
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'Filter Summary',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                _buildSummaryItem(
+                                  'Date Range',
+                                  _getDateRangeText(),
+                                ),
+                                if (_shouldShowUserFilter(reportName))
+                                  _buildSummaryItem('User', _selectedUser),
+                                if (_shouldShowSupplierFilter(reportName))
+                                  _buildSummaryItem(
+                                    'Supplier',
+                                    _selectedSupplier,
+                                  ),
+                                if (_shouldShowCashRegisterFilter(reportName))
+                                  _buildSummaryItem(
+                                    'Cash Register',
+                                    _selectedCashRegister,
+                                  ),
+                                if (_shouldShowProductFilters(reportName)) ...[
+                                  _buildSummaryItem(
+                                    'Product',
+                                    _selectedProduct,
+                                  ),
+                                  _buildSummaryItem(
+                                    'Product Group',
+                                    _selectedProductGroup,
+                                  ),
+                                  _buildSummaryItem(
+                                    'Include Subgroups',
+                                    _includeSubgroups ? "Yes" : "No",
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ],
                       ),
-                    );
-                  }).toList(),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSalesMetric(
-    String label,
-    String value,
-    IconData icon, {
-    String? prefix,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 7),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(AppConstants.borderRadius),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 16, color: Colors.white.withOpacity(0.8)),
-                const SizedBox(width: 7),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                if (prefix != null)
-                  Text(
-                    prefix,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w400,
                     ),
                   ),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
+
+                  // Dialog Actions
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                          color: Colors.white.withOpacity(0.1),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: RawKeyboardListener(
+                            focusNode: FocusNode(),
+                            onKey: (RawKeyEvent event) {
+                              if (event is RawKeyDownEvent &&
+                                  event.logicalKey ==
+                                      LogicalKeyboardKey.enter) {
+                                setDialogState(() {
+                                  _resetFilters();
+                                });
+                              }
+                            },
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                setDialogState(() {
+                                  _resetFilters();
+                                });
+                              },
+                              icon: const Icon(
+                                Icons.refresh_outlined,
+                                size: 18,
+                              ),
+                              label: const Text('Reset'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white.withOpacity(0.8),
+                                side: BorderSide(
+                                  color: Colors.white.withOpacity(0.3),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 2,
+                          child: RawKeyboardListener(
+                            focusNode: FocusNode(),
+                            onKey: (RawKeyEvent event) {
+                              if (event is RawKeyDownEvent &&
+                                  event.logicalKey ==
+                                      LogicalKeyboardKey.enter) {
+                                Navigator.pop(context);
+                                _showReportWithSelectedFilters(reportName);
+                              }
+                            },
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                _showReportWithSelectedFilters(reportName);
+                              },
+                              icon: const Icon(
+                                Icons.visibility_outlined,
+                                size: 18,
+                              ),
+                              label: const Text('Generate Report'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF64FFDA),
+                                foregroundColor: const Color(0xFF0F0F23),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  // Helper methods for date formatting
-  String _getFormattedDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
-
-  String _getDateRangeText() {
-    if (_selectedDateRange == null) return 'Select Date Range';
-
-    final startDate = _selectedDateRange!.start;
-    final endDate = _selectedDateRange!.end;
-
-    return '${_getFormattedDate(startDate)} - ${_getFormattedDate(endDate)}';
-  }
-
-  // Method to handle report download
-  void _handleDownloadReport(String reportId, String reportName) async {
-    setState(() {
-      _downloadingReports.add(reportId);
-    });
-
-    // Simulate download delay
-    await Future.delayed(const Duration(seconds: 2));
-
-    setState(() {
-      _downloadingReports.remove(reportId);
-    });
-
-    _showSnackBar('$reportName downloaded successfully!', isSuccess: true);
-  }
-
-  // Method to show the date range picker dialog
-  Future<void> _showDateRangePicker() async {
-    final DateTimeRange? picked = await showDateRangePicker(
+  Future<void> _openDateRangePicker(Function setDialogState) async {
+    final picked = await showDateRangePicker(
       context: context,
       initialDateRange: _selectedDateRange,
       firstDate: DateTime(2020),
@@ -582,32 +1184,207 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppConstants.primaryDark,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: AppConstants.primaryDark,
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF64FFDA),
+              surface: Color(0xFF1A1A2E),
             ),
           ),
           child: child!,
         );
       },
     );
-    if (picked != null && picked != _selectedDateRange) {
-      setState(() {
+    if (picked != null) {
+      setDialogState(() {
         _selectedDateRange = picked;
       });
-      _loadQuickSalesData();
     }
   }
 
-  // Helper method to show a SnackBar
-  void _showSnackBar(String message, {bool isSuccess = false}) {
+  Widget _buildModernFilterRow(String label, IconData icon, Widget control) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF64FFDA).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 16, color: const Color(0xFF64FFDA)),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: Colors.white.withOpacity(0.9),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          control,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernDropdown({
+    required String value,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
+    return RawKeyboardListener(
+      focusNode: FocusNode(),
+      onKey: (RawKeyEvent event) {
+        if (event is RawKeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.enter) {
+          // Trigger dropdown open
+        }
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: value,
+            isExpanded: true,
+            dropdownColor: const Color(0xFF1A1A2E),
+            style: const TextStyle(color: Colors.white),
+            icon: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Colors.white.withOpacity(0.6),
+            ),
+            items: items
+                .map(
+                  (item) => DropdownMenuItem<String>(
+                    value: item,
+                    child: Text(
+                      item,
+                      style: const TextStyle(color: Colors.white),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                )
+                .toList(),
+            onChanged: onChanged,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            margin: const EdgeInsets.only(top: 6, right: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF64FFDA),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          ),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 14,
+                ),
+                children: [
+                  TextSpan(
+                    text: '$label: ',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  TextSpan(text: value),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _resetFilters() {
+    _selectedUser = 'All';
+    _selectedSupplier = 'All';
+    _selectedCashRegister = 'All';
+    _selectedProduct = 'All';
+    _selectedProductGroup = 'Products';
+    _includeSubgroups = true;
+    final now = DateTime.now();
+    _selectedDateRange = DateTimeRange(
+      start: DateTime(now.year, now.month, 1),
+      end: now,
+    );
+  }
+
+  void _showReportWithSelectedFilters(String reportName) {
+    Map<String, dynamic> filters = {'Date Range': _getDateRangeText()};
+
+    if (_shouldShowUserFilter(reportName)) {
+      filters['User'] = _selectedUser;
+    }
+    if (_shouldShowSupplierFilter(reportName)) {
+      filters['Supplier'] = _selectedSupplier;
+    }
+    if (_shouldShowCashRegisterFilter(reportName)) {
+      filters['Cash Register'] = _selectedCashRegister;
+    }
+    if (_shouldShowProductFilters(reportName)) {
+      filters['Product'] = _selectedProduct;
+      filters['Product Group'] = _selectedProductGroup;
+      filters['Include Subgroups'] = _includeSubgroups ? "Yes" : "No";
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => RawKeyboardListener(
+        focusNode: FocusNode(),
+        autofocus: true,
+        onKey: (RawKeyEvent event) {
+          if (event is RawKeyDownEvent &&
+              event.logicalKey == LogicalKeyboardKey.escape) {
+            Navigator.pop(context);
+          }
+        },
+        child: ReportPreviewDialog(reportName: reportName, filters: filters),
+      ),
+    );
+  }
+
+  String _getDateRangeText() {
+    if (_selectedDateRange != null) {
+      return '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month}/${_selectedDateRange!.start.year} - '
+          '${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}/${_selectedDateRange!.end.year}';
+    }
+    return 'Not selected';
+  }
+
+  void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isSuccess ? Colors.green : Colors.red,
         duration: const Duration(seconds: 2),
+        backgroundColor: const Color(0xFF1A1A2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
