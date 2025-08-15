@@ -1,6 +1,5 @@
 import "package:flutter/material.dart";
 import "package:provider/provider.dart";
-// import "../../core/services/auth_service.dart";
 import "package:pos_system/core/services/auth_service.dart";
 
 class LoginPage extends StatefulWidget {
@@ -190,7 +189,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
+            begin: Alignment.topLeft, 
             end: Alignment.bottomRight,
             colors: [
               _roleGradient[0].withOpacity(0.8),
