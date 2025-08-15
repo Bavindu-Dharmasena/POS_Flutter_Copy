@@ -210,7 +210,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
             Navigator.pop(context);
           } else if (event.logicalKey == LogicalKeyboardKey.enter ||
               event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-            final currentFocus = FocusScope.of(context);
+            var currentFocus = FocusScope.of(context);
             if (!currentFocus.hasPrimaryFocus ||
                 currentFocus.focusedChild == null) {
               _submitForm();
@@ -234,7 +234,6 @@ class _AddSupplierPageState extends State<AddSupplierPage>
             slivers: [
               SliverAppBar(
                 expandedHeight: 120,
-                floating: false,
                 pinned: true,
                 backgroundColor: Colors.transparent,
                 leading: Container(
@@ -269,7 +268,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                       colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
                     ).createShader(bounds),
                     child: const Text(
-                      'Add Supplier',
+                      "Add Supplier",
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -293,7 +292,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                           // Basic Information Section
                           _dashboardCard(
                             icon: Feather.info,
-                            title: 'Basic Information',
+                            title: "Basic Information",
                             gradient: const LinearGradient(
                               colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
                               begin: Alignment.topLeft,
@@ -303,8 +302,8 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                               _buildRow([
                                 _dashboardTextField(
                                   controller: _idCtrl,
-                                  label: 'Supplier ID',
-                                  hint: 'Ex: SUP001',
+                                  label: "Supplier ID",
+                                  hint: "Ex: SUP001",
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
                                       ? 'Required'
@@ -312,8 +311,8 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                                 ),
                                 _dashboardTextField(
                                   controller: _nameCtrl,
-                                  label: 'Supplier Name',
-                                  hint: 'Ex: ABC Traders',
+                                  label: "Supplier Name",
+                                  hint: "Ex: ABC Traders",
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
                                       ? 'Required'
@@ -324,8 +323,8 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                               _buildRow([
                                 _dashboardTextField(
                                   controller: _contactCtrl,
-                                  label: 'Contact Number',
-                                  hint: '071-2345678',
+                                  label: "Contact Number",
+                                  hint: "071-2345678",
                                   validator: (v) =>
                                       (v == null || v.trim().isEmpty)
                                       ? 'Required'
@@ -333,15 +332,15 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                                 ),
                                 _dashboardTextField(
                                   controller: _emailCtrl,
-                                  label: 'Email (Optional)',
-                                  hint: 'supplier@email.com',
+                                  label: "Email (Optional)",
+                                  hint: "supplier@email.com",
                                 ),
                               ]),
                               const SizedBox(height: 12),
                               _dashboardTextField(
                                 controller: _brandCtrl,
-                                label: 'Brand/Company',
-                                hint: 'Associated brand or company name',
+                                label: "Brand/Company",
+                                hint: "Associated brand or company name",
                                 validator: (v) =>
                                     (v == null || v.trim().isEmpty)
                                     ? 'Required'
@@ -351,12 +350,12 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                               const SizedBox(height: 12),
                               _buildRow([
                                 _dashboardSwitch(
-                                  label: 'Active Status',
+                                  label: "Active Status",
                                   value: _active,
                                   onChanged: (v) => setState(() => _active = v),
                                 ),
                                 _dashboardSwitch(
-                                  label: 'Preferred Supplier',
+                                  label: "Preferred Supplier",
                                   value: _preferredSupplier,
                                   onChanged: (v) =>
                                       setState(() => _preferredSupplier = v),
@@ -371,7 +370,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                           // Payment & Terms Section
                           _dashboardCard(
                             icon: Feather.credit_card,
-                            title: 'Payment & Terms',
+                            title: "Payment & Terms",
                             gradient: const LinearGradient(
                               colors: [Color(0xFF10B981), Color(0xFF059669)],
                               begin: Alignment.topLeft,
@@ -379,7 +378,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                             ),
                             children: [
                               _dashboardDropdown(
-                                label: 'Payment Terms',
+                                label: "Payment Terms",
                                 value: _paymentTerms,
                                 items: _paymentOptions,
                                 onChanged: (v) =>
@@ -395,7 +394,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                           // Locations Section
                           _dashboardCard(
                             icon: Feather.map_pin,
-                            title: 'Locations',
+                            title: "Locations",
                             gradient: const LinearGradient(
                               colors: [Color(0xFFF97316), Color(0xFFEAB308)],
                               begin: Alignment.topLeft,
@@ -407,8 +406,8 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                                   Expanded(
                                     child: _dashboardTextField(
                                       controller: _locationCtrl,
-                                      label: 'Add Location',
-                                      hint: 'Ex: Colombo, Kandy',
+                                      label: "Add Location",
+                                      hint: "Ex: Colombo, Kandy",
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -470,7 +469,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                                         CrossAxisAlignment.start,
                                     children: [
                                       const Text(
-                                        'Added Locations:',
+                                        "Added Locations:",
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,
@@ -551,7 +550,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                           // Appearance & Notes Section
                           _dashboardCard(
                             icon: Feather.layers,
-                            title: 'Appearance & Notes',
+                            title: "Appearance & Notes",
                             gradient: const LinearGradient(
                               colors: [Color(0xFFEC4899), Color(0xFFF43F5E)],
                               begin: Alignment.topLeft,
@@ -562,8 +561,8 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                               const SizedBox(height: 16),
                               _dashboardTextField(
                                 controller: _remarkCtrl,
-                                label: 'Remarks/Notes',
-                                hint: 'Optional notes about the supplier',
+                                label: "Remarks/Notes",
+                                hint: "Optional notes about the supplier",
                                 maxLines: 3,
                                 fullWidth: true,
                               ),
@@ -616,7 +615,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                                         ),
                                         SizedBox(width: 8),
                                         Text(
-                                          'Reset',
+                                          "Reset",
                                           style: TextStyle(
                                             color: Colors.white70,
                                             fontWeight: FontWeight.w600,
@@ -672,7 +671,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                                         ),
                                         SizedBox(width: 8),
                                         Text(
-                                          'Save Supplier',
+                                          "Save Supplier",
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
@@ -933,7 +932,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
         Row(
           children: [
             const Text(
-              'Color Theme',
+              "Color Theme",
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 14,
@@ -974,7 +973,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                   size: 14,
                 ),
                 label: const Text(
-                  'Reset',
+                  "Reset",
                   style: TextStyle(color: Colors.white70, fontSize: 12),
                 ),
                 style: TextButton.styleFrom(
@@ -1067,7 +1066,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _nameCtrl.text.isEmpty ? 'Supplier Preview' : _nameCtrl.text,
+                  _nameCtrl.text.isEmpty ? "Supplier Preview" : _nameCtrl.text,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -1076,7 +1075,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${_brandCtrl.text.isEmpty ? 'Brand' : _brandCtrl.text} • ${_contactCtrl.text.isEmpty ? 'No Contact' : _contactCtrl.text}',
+                  '${_brandCtrl.text.isEmpty ? "Brand" : _brandCtrl.text} • ${_contactCtrl.text.isEmpty ? "No Contact" : _contactCtrl.text}',
                   style: const TextStyle(color: Colors.white60, fontSize: 13),
                 ),
                 if (_locations.isNotEmpty) ...[
@@ -1116,7 +1115,7 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                   ],
                 ),
                 child: Text(
-                  _active ? 'Active' : 'Inactive',
+                  _active ? "Active" : "Inactive",
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
