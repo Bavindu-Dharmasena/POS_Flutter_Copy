@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import "package:flutter/material.dart";
 
 class CartTable extends StatelessWidget {
   final List<Map<String, dynamic>> cartItems;
@@ -6,10 +6,10 @@ class CartTable extends StatelessWidget {
   final void Function(int index) onRemove;
 
   const CartTable({
-    super.key,
     required this.cartItems,
     required this.onEdit,
     required this.onRemove,
+    super.key,
   });
 
   @override
@@ -35,42 +35,73 @@ class CartTable extends StatelessWidget {
                 ),
                 columns: [
                   DataColumn(
-                    label: Text('Item', style: TextStyle(fontSize: isMobile ? 8 : 14)),
+                    label: Text(
+                      "Item",
+                      style: TextStyle(fontSize: isMobile ? 8 : 14),
+                    ),
                   ),
                   DataColumn(
-                    label: Text('Qty', style: TextStyle(fontSize: isMobile ? 8 : 14)),
+                    label: Text(
+                      "Qty",
+                      style: TextStyle(fontSize: isMobile ? 8 : 14),
+                    ),
                   ),
                   DataColumn(
-                    label: Text('Price', style: TextStyle(fontSize: isMobile ? 8 : 14)),
+                    label: Text(
+                      "Price",
+                      style: TextStyle(fontSize: isMobile ? 8 : 14),
+                    ),
                   ),
                   DataColumn(
-                    label: Text('Total', style: TextStyle(fontSize: isMobile ? 8 : 14)),
+                    label: Text(
+                      "Total",
+                      style: TextStyle(fontSize: isMobile ? 8 : 14),
+                    ),
                   ),
                   DataColumn(
-                    label: Text('Action', style: TextStyle(fontSize: isMobile ? 8 : 14)),
+                    label: Text(
+                      "Action",
+                      style: TextStyle(fontSize: isMobile ? 8 : 14),
+                    ),
                   ),
                 ],
                 rows: cartItems.asMap().entries.map((entry) {
                   final index = entry.key;
                   final item = entry.value;
 
-                  double unitPrice = item['price'];
-                  final itemDiscount = item['itemDiscount'] ?? 0;
-                  unitPrice -= (item['isItemDiscountPercentage'] == true)
+                  double unitPrice = item["price"];
+                  final itemDiscount = item["itemDiscount"] ?? 0;
+                  unitPrice -= (item["isItemDiscountPercentage"] == true)
                       ? unitPrice * itemDiscount / 100
                       : itemDiscount;
-                  final totalPrice = unitPrice * item['quantity'];
+                  final totalPrice = unitPrice * item["quantity"];
 
                   return DataRow(
                     cells: [
-                      DataCell(Text(item['name'],
-                          style: TextStyle(fontSize: isMobile ? 8 : 14))),
-                      DataCell(Text('${item['quantity']}',
-                          style: TextStyle(fontSize: isMobile ? 8 : 14))),
-                      DataCell(Text('Rs. ${item['price']}',
-                          style: TextStyle(fontSize: isMobile ? 8 : 14))),
-                      DataCell(Text('Rs. ${totalPrice.toStringAsFixed(2)}',
-                          style: TextStyle(fontSize: isMobile ? 8 : 14))),
+                      DataCell(
+                        Text(
+                          item["name"],
+                          style: TextStyle(fontSize: isMobile ? 8 : 14),
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          '${item["quantity"]}',
+                          style: TextStyle(fontSize: isMobile ? 8 : 14),
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          'Rs. ${item["price"]}',
+                          style: TextStyle(fontSize: isMobile ? 8 : 14),
+                        ),
+                      ),
+                      DataCell(
+                        Text(
+                          'Rs. ${totalPrice.toStringAsFixed(2)}',
+                          style: TextStyle(fontSize: isMobile ? 8 : 14),
+                        ),
+                      ),
                       DataCell(
                         Row(
                           mainAxisSize: MainAxisSize.min,
@@ -82,7 +113,10 @@ class CartTable extends StatelessWidget {
                               constraints: const BoxConstraints(),
                             ),
                             IconButton(
-                              icon: Icon(Icons.delete, size: isMobile ? 16 : 18),
+                              icon: Icon(
+                                Icons.delete,
+                                size: isMobile ? 16 : 18,
+                              ),
                               onPressed: () => onRemove(index),
                               padding: EdgeInsets.all(isMobile ? 2 : 6),
                               constraints: const BoxConstraints(),

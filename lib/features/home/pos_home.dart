@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // + for DiagnosticPropertiesBuilder
 import '../auth/login_page.dart'; // Adjust the import path
 
 class POSHomePage extends StatelessWidget {
   const POSHomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(final BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0D1B2A),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Column(
-            children: [
+            children: <Widget>[
               const SizedBox(height: 30),
               Text(
                 'POS SYSTEM',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
               const SizedBox(height: 30),
               Expanded(
@@ -88,6 +89,16 @@ class RoleCard extends StatelessWidget {
     required this.icon,
     required this.color,
   });
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(StringProperty('title', title))
+      ..add(StringProperty('subtitle', subtitle))
+      ..add(DiagnosticsProperty<IconData>('icon', icon))
+      ..add(ColorProperty('color', color));
+  }
 
   @override
   Widget build(BuildContext context) {
