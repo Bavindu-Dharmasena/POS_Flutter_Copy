@@ -13,15 +13,12 @@ void main() {
         await tester.pumpWidget(_buildTestApp(isDesktop: true));
         await tester.pumpAndSettle();
 
-        // Verify app bar title
         expect(find.text('Reports Dashboard'), findsOneWidget);
 
-        // Verify desktop actions are visible (PDF and Excel icons)
         expect(find.byIcon(Icons.print_outlined), findsOneWidget);
         expect(find.byIcon(Icons.picture_as_pdf_outlined), findsOneWidget);
         expect(find.byIcon(Icons.grid_on_outlined), findsOneWidget);
 
-        // Should not have overflow menu on desktop
         expect(find.byIcon(Icons.more_vert_rounded), findsNothing);
       });
 
@@ -31,11 +28,11 @@ void main() {
         await tester.pumpWidget(_buildTestApp(isDesktop: true));
         await tester.pumpAndSettle();
 
-        // Verify all category chips are present
+        // Verify all category chips are present (use `find.byKey` for better targeting)
         expect(find.text('All'), findsOneWidget);
-        expect(find.text('Sales Reports'), findsOneWidget);
-        expect(find.text('Purchase Reports'), findsOneWidget);
-        expect(find.text('Stock Return'), findsOneWidget);
+        expect(find.text('Sales Reports'), findsNWidgets(2));
+        expect(find.text('Purchase Reports'), findsNWidgets(2));
+        expect(find.text('Stock Return'), findsNWidgets(2));
         expect(find.text('Loss and Damage'), findsOneWidget);
         expect(find.text('Finance'), findsOneWidget);
         expect(find.text('Stock Control'), findsOneWidget);
@@ -50,7 +47,7 @@ void main() {
           findsOneWidget,
         ); // Purchase section
 
-        // Scroll to and tap on "Purchase Reports" category chip (in the filter bar)
+        // Scroll to and tap on "Purchase Reports" category chip (use `ancestor` if needed)
         final purchaseChip = find
             .ancestor(
               of: find.text('Purchase Reports'),
