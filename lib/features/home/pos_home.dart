@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // + for DiagnosticPropertiesBuilder
 import '../auth/login_page.dart'; // Adjust the import path
 
 class POSHomePage extends StatelessWidget {
@@ -88,6 +89,16 @@ class RoleCard extends StatelessWidget {
     required this.icon,
     required this.color,
   });
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties
+      ..add(StringProperty('title', title))
+      ..add(StringProperty('subtitle', subtitle))
+      ..add(DiagnosticsProperty<IconData>('icon', icon))
+      ..add(ColorProperty('color', color));
+  }
 
   @override
   Widget build(BuildContext context) {
