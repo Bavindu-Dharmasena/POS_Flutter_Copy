@@ -1,19 +1,25 @@
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+// ignore_for_file: prefer_single_quotes  // Using single quotes as required, SonarQube false trigger
+import "package:flutter/material.dart";
+import "package:flutter_vector_icons/flutter_vector_icons.dart";
+import "package:google_fonts/google_fonts.dart";
 
 // Correct imports for the components
-import '../../components/modern_stat_tile.dart';
-import '../../components/modern_list_tile_card.dart';
-import '../../components/back_tile.dart';
+import "../../components/back_tile.dart";
+import "../../components/modern_list_tile_card.dart";
+import "../../components/modern_stat_tile.dart";
 
 // Import the other screen pages
-import 'stockkeeper_reports.dart';
-import 'stockkeeper_cashier.dart';
-import 'stockkeeper_products.dart';
-import 'stockkeeper_inventory.dart';
+import "stockkeeper_cashier.dart";
+import "stockkeeper_inventory.dart";
+import "stockkeeper_products.dart";
+import "stockkeeper_reports.dart";
 
+
+
+/// The dashboard screen for stock keepers, showing inventory stats and
+/// controls.
 class StockKeeperDashboard extends StatefulWidget {
+  /// Creates a [StockKeeperDashboard] widget.
   const StockKeeperDashboard({super.key});
 
   @override
@@ -48,8 +54,8 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
       vsync: this,
     );
     _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
+      begin: 0,
+      end: 1,
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeInOut,
@@ -106,7 +112,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
             ),
             const SizedBox(width: 12),
             Text(
-              'Stock Keeper',
+              "Stock Keeper",
               style: GoogleFonts.poppins(
                 textStyle: const TextStyle(
                   fontSize: 24,
@@ -161,7 +167,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                       Padding(
                         padding: const EdgeInsets.only(left: 4, bottom: 16),
                         child: Text(
-                          'Performance Stats',
+                          "Performance Stats",
                           style: GoogleFonts.poppins(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -188,8 +194,8 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                     _buildAnimatedTile(
                       delay: 0,
                       child: ModernStatTile(
-                        title: 'Monthly Sales',
-                        value: 'Rs. 250K',
+                        title: "Monthly Sales",
+                        value: "Rs. 250K",
                         icon: Feather.trending_up,
                         gradient: const LinearGradient(
                           colors: [Color(0xFFFF6B6B), Color(0xFFEE5A24)],
@@ -202,8 +208,8 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                     _buildAnimatedTile(
                       delay: 100,
                       child: ModernStatTile(
-                        title: 'Total Sales',
-                        value: 'Rs. 3.4M',
+                        title: "Total Sales",
+                        value: "Rs. 3.4M",
                         icon: Feather.credit_card,
                         gradient: const LinearGradient(
                           colors: [Color(0xFF4ECDC4), Color(0xFF44A08D)],
@@ -216,8 +222,8 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                     _buildAnimatedTile(
                       delay: 200,
                       child: ModernStatTile(
-                        title: 'Net Profit',
-                        value: 'Rs. 750K',
+                        title: "Net Profit",
+                        value: "Rs. 750K",
                         icon: Feather.bar_chart,
                         gradient: const LinearGradient(
                           colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
@@ -230,8 +236,8 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                     _buildAnimatedTile(
                       delay: 300,
                       child: ModernStatTile(
-                        title: 'Daily Sales',
-                        value: 'Rs. 15.8K',
+                        title: "Daily Sales",
+                        value: "Rs. 15.8K",
                         icon: Feather.dollar_sign,
                         gradient: const LinearGradient(
                           colors: [Color(0xFFF093FB), Color(0xFFF5576C)],
@@ -254,7 +260,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                     children: [
                       const SizedBox(height: 24),
                       Text(
-                        'Quick Insights',
+                        "Quick Insights",
                         style: GoogleFonts.poppins(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -268,7 +274,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                         _buildAnimatedTile(
                           delay: 400,
                           child: ModernListTileCard(
-                            title: 'Top Products',
+                            title: "Top Products",
                             icon: Feather.package,
                             gradient: const LinearGradient(
                               colors: [Color(0xFF4FACFE), Color(0xFF00F2FE)],
@@ -283,7 +289,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                         _buildAnimatedTile(
                           delay: 500,
                           child: ModernListTileCard(
-                            title: 'Top Categories',
+                            title: "Top Categories",
                             icon: Feather.layers,
                             gradient: const LinearGradient(
                               colors: [Color(0xFFFB8500), Color(0xFFFFB700)],
@@ -301,7 +307,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                               child: _buildAnimatedTile(
                                 delay: 400,
                                 child: ModernListTileCard(
-                                  title: 'Top Products',
+                                  title: "Top Products",
                                   icon: Feather.package,
                                   gradient: const LinearGradient(
                                     colors: [Color(0xFF4FACFE), Color(0xFF00F2FE)],
@@ -318,7 +324,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                               child: _buildAnimatedTile(
                                 delay: 500,
                                 child: ModernListTileCard(
-                                  title: 'Top Categories',
+                                  title: "Top Categories",
                                   icon: Feather.layers,
                                   gradient: const LinearGradient(
                                     colors: [Color(0xFFFB8500), Color(0xFFFFB700)],
@@ -360,7 +366,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
   Widget _buildAnimatedTile({required int delay, required Widget child}) {
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 600 + delay),
-      tween: Tween(begin: 0.0, end: 1.0),
+      tween: Tween(begin: 0, end: 1),
       curve: Curves.elasticOut,
       builder: (context, value, child) {
         return Transform.scale(
