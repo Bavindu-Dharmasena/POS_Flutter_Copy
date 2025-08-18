@@ -8,13 +8,18 @@ import 'routes/app_routes.dart';
 import 'features/stockkeeper/settings/settings_provider.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ✅ Load settings BEFORE runApp — no theme flash; default dark applies.
+  final settings = SettingsController();
+  await settings.load();
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()),
-        ChangeNotifierProvider(create: (_) => SettingsController()),
+        ChangeNotifierProvider<SettingsController>.value(value: settings),
       ],
       child: const MyApp(),
     ),
@@ -28,28 +33,26 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsController>();
 
-    // While SharedPreferences loads, we can still render with a sensible default.
-    // The app will rebuild automatically when settings finish loading.
     return MaterialApp(
       title: 'AASA POS System',
       debugShowCheckedModeBanner: false,
 
-      // ✅ Use centralized themes that respect the chosen base font size
+      // ✅ Centralized themes (font size handled via MediaQuery scaling)
       theme: buildLightTheme(settings.fontSize),
       darkTheme: buildDarkTheme(settings.fontSize),
-      themeMode: settings.themeMode,
+      themeMode: settings.themeMode, // defaults to DARK on first launch
 
-      // ✅ Optional: ensure consistent scaling across all widgets
+      // ✅ Uniform scaling across widgets based on settings.fontSize
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            textScaleFactor: settings.textScaleFactor, // derived from font size
+            textScaleFactor: settings.textScaleFactor,
           ),
           child: child!,
         );
       },
 
-      // ✅ Your existing routing stays the same
+      // ✅ Your existing routing
       initialRoute: '/',
       onGenerateRoute: (routeSettings) =>
           AppRoutes.generateRoute(routeSettings, context),
