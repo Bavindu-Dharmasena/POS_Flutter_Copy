@@ -37,10 +37,7 @@ class _ModernListTileCardState extends State<ModernListTileCard>
     _scaleAnimation = Tween<double>(
       begin: 1.0,
       end: 0.98,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -52,7 +49,7 @@ class _ModernListTileCardState extends State<ModernListTileCard>
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
-    
+
     return GestureDetector(
       onTap: widget.onActivate,
       onTapDown: (_) => _controller.forward(),
@@ -95,8 +92,8 @@ class _ModernListTileCardState extends State<ModernListTileCard>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
-                          widget.icon, 
-                          size: isMobile ? 20 : 24, 
+                          widget.icon,
+                          size: isMobile ? 20 : 24,
                           color: Colors.white,
                         ),
                       ),
@@ -116,7 +113,7 @@ class _ModernListTileCardState extends State<ModernListTileCard>
                       // View all indicator
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 8, 
+                          horizontal: 8,
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
@@ -131,19 +128,22 @@ class _ModernListTileCardState extends State<ModernListTileCard>
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Items list
                   Expanded(
                     child: ListView.separated(
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: widget.items.length > 4 ? 4 : widget.items.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 8),
+                      itemCount: widget.items.length > 4
+                          ? 4
+                          : widget.items.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         return Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12, 
+                            horizontal: 12,
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
@@ -201,7 +201,7 @@ class _ModernListTileCardState extends State<ModernListTileCard>
                       },
                     ),
                   ),
-                  
+
                   // Show more indicator if there are more items
                   if (widget.items.length > 4) ...[
                     const SizedBox(height: 8),

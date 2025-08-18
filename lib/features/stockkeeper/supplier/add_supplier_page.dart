@@ -1,15 +1,18 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import "package:flutter/material.dart";
+import "package:flutter/services.dart";
+import "package:flutter_vector_icons/flutter_vector_icons.dart";
 
 class AddSupplierPage extends StatefulWidget {
-  const AddSupplierPage({Key? key, required Map supplierData}) : super(key: key);
+  const AddSupplierPage({super.key, required this.supplierData});
+
+  final Map supplierData;
 
   @override
   State<AddSupplierPage> createState() => _AddSupplierPageState();
 }
 
-class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderStateMixin {
+class _AddSupplierPageState extends State<AddSupplierPage>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -31,19 +34,33 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
 
   // Color palette matching your project's style
   final List<LinearGradient> _gradientPalette = const [
-    LinearGradient(colors: [Color(0xFF60A5FA), Color(0xFFA855F7)]), // Blue-Purple
-    LinearGradient(colors: [Color(0xFFF97316), Color(0xFFEAB308)]), // Orange-Yellow
+    LinearGradient(
+      colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
+    ), // Blue-Purple
+    LinearGradient(
+      colors: [Color(0xFFF97316), Color(0xFFEAB308)],
+    ), // Orange-Yellow
     LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]), // Green
     LinearGradient(colors: [Color(0xFFEC4899), Color(0xFFF43F5E)]), // Pink-Red
     LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFEC4899)]), // Red-Pink
     LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)]), // Purple
     LinearGradient(colors: [Color(0xFF06B6D4), Color(0xFF0EA5E9)]), // Cyan-Blue
-    LinearGradient(colors: [Color(0xFF84CC16), Color(0xFF65A30D)]), // Lime-Green
-    LinearGradient(colors: [Color(0xFF475569), Color(0xFF334155)]), // Gray-Slate
+    LinearGradient(
+      colors: [Color(0xFF84CC16), Color(0xFF65A30D)],
+    ), // Lime-Green
+    LinearGradient(
+      colors: [Color(0xFF475569), Color(0xFF334155)],
+    ), // Gray-Slate
   ];
 
   LinearGradient? _selectedGradient;
-  final List<String> _paymentOptions = const ['Cash', 'Credit 7 Days', 'Credit 15 Days', 'Credit 30 Days', 'Credit 60 Days'];
+  final List<String> _paymentOptions = const [
+    'Cash',
+    'Credit 7 Days',
+    'Credit 15 Days',
+    'Credit 30 Days',
+    'Credit 60 Days',
+  ];
 
   @override
   void initState() {
@@ -52,11 +69,11 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _animationController.forward();
-    
+
     // Set default gradient
     _selectedGradient = _gradientPalette[0];
   }
@@ -97,18 +114,18 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
       return;
     }
 
-    final payload = {
-      'id': _idCtrl.text.trim(),
-      'name': _nameCtrl.text.trim(),
-      'contact': _contactCtrl.text.trim(),
-      'email': _emailCtrl.text.trim(),
-      'brand': _brandCtrl.text.trim(),
-      'locations': _locations,
-      'paymentTerms': _paymentTerms,
-      'active': _active,
-      'preferredSupplier': _preferredSupplier,
-      'colorGradient': _selectedGradient,
-      'remarks': _remarkCtrl.text.trim(),
+    var payload = {
+      "id": _idCtrl.text.trim(),
+      "name": _nameCtrl.text.trim(),
+      "contact": _contactCtrl.text.trim(),
+      "email": _emailCtrl.text.trim(),
+      "brand": _brandCtrl.text.trim(),
+      "locations": _locations,
+      "paymentTerms": _paymentTerms,
+      "active": _active,
+      "preferredSupplier": _preferredSupplier,
+      "colorGradient": _selectedGradient,
+      "remarks": _remarkCtrl.text.trim(),
     };
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -141,8 +158,13 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
             children: [
               const Icon(Feather.check_circle, color: Colors.white, size: 20),
               const SizedBox(width: 12),
-              Text('✨ Supplier saved: ${payload['name']}', 
-                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              Text(
+                '✨ Supplier saved: ${payload['name']}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),
@@ -170,7 +192,11 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
 
   final _scrollCtrl = ScrollController();
   void _scrollToFirstError() {
-    _scrollCtrl.animateTo(0, duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+    _scrollCtrl.animateTo(
+      0,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
@@ -178,20 +204,21 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
     return KeyboardListener(
       focusNode: FocusNode(),
       autofocus: true,
-      onKeyEvent: (KeyEvent event) {
+      onKeyEvent: (event) {
         if (event is KeyDownEvent) {
           if (event.logicalKey == LogicalKeyboardKey.escape) {
             Navigator.pop(context);
-          }
-          else if (event.logicalKey == LogicalKeyboardKey.enter || 
-                   event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-            final currentFocus = FocusScope.of(context);
-            if (!currentFocus.hasPrimaryFocus || currentFocus.focusedChild == null) {
+          } else if (event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+            var currentFocus = FocusScope.of(context);
+            if (!currentFocus.hasPrimaryFocus ||
+                currentFocus.focusedChild == null) {
               _submitForm();
             }
           }
         }
       },
+
       child: Scaffold(
         backgroundColor: const Color(0xFF0B1623),
         body: Container(
@@ -199,11 +226,7 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF0F172A),
-                Color(0xFF1E3A8A),
-                Color(0xFF0F172A),
-              ],
+              colors: [Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF0F172A)],
             ),
           ),
           child: CustomScrollView(
@@ -211,7 +234,6 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
             slivers: [
               SliverAppBar(
                 expandedHeight: 120,
-                floating: false,
                 pinned: true,
                 backgroundColor: Colors.transparent,
                 leading: Container(
@@ -233,7 +255,11 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                   ),
                   child: IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Feather.arrow_left, color: Colors.white, size: 20),
+                    icon: const Icon(
+                      Feather.arrow_left,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ),
                 flexibleSpace: FlexibleSpaceBar(
@@ -242,7 +268,7 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                       colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
                     ).createShader(bounds),
                     child: const Text(
-                      'Add Supplier',
+                      "Add Supplier",
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -266,7 +292,7 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                           // Basic Information Section
                           _dashboardCard(
                             icon: Feather.info,
-                            title: 'Basic Information',
+                            title: "Basic Information",
                             gradient: const LinearGradient(
                               colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
                               begin: Alignment.topLeft,
@@ -276,50 +302,63 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                               _buildRow([
                                 _dashboardTextField(
                                   controller: _idCtrl,
-                                  label: 'Supplier ID',
-                                  hint: 'Ex: SUP001',
-                                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                                  label: "Supplier ID",
+                                  hint: "Ex: SUP001",
+                                  validator: (v) =>
+                                      (v == null || v.trim().isEmpty)
+                                      ? 'Required'
+                                      : null,
                                 ),
                                 _dashboardTextField(
                                   controller: _nameCtrl,
-                                  label: 'Supplier Name',
-                                  hint: 'Ex: ABC Traders',
-                                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                                  label: "Supplier Name",
+                                  hint: "Ex: ABC Traders",
+                                  validator: (v) =>
+                                      (v == null || v.trim().isEmpty)
+                                      ? 'Required'
+                                      : null,
                                 ),
                               ]),
                               const SizedBox(height: 12),
                               _buildRow([
                                 _dashboardTextField(
                                   controller: _contactCtrl,
-                                  label: 'Contact Number',
-                                  hint: '071-2345678',
-                                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                                  label: "Contact Number",
+                                  hint: "071-2345678",
+                                  validator: (v) =>
+                                      (v == null || v.trim().isEmpty)
+                                      ? 'Required'
+                                      : null,
                                 ),
                                 _dashboardTextField(
                                   controller: _emailCtrl,
-                                  label: 'Email (Optional)',
-                                  hint: 'supplier@email.com',
+                                  label: "Email (Optional)",
+                                  hint: "supplier@email.com",
                                 ),
                               ]),
                               const SizedBox(height: 12),
                               _dashboardTextField(
                                 controller: _brandCtrl,
-                                label: 'Brand/Company',
-                                hint: 'Associated brand or company name',
-                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                                label: "Brand/Company",
+                                hint: "Associated brand or company name",
+                                validator: (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                    ? 'Required'
+                                    : null,
                                 fullWidth: true,
                               ),
                               const SizedBox(height: 12),
                               _buildRow([
                                 _dashboardSwitch(
-                                  label: 'Active Status',
+                                  label: "Active Status",
                                   value: _active,
                                   onChanged: (v) => setState(() => _active = v),
                                 ),
                                 _dashboardSwitch(
-                                  label: 'Preferred Supplier',
+                                  label: "Preferred Supplier",
                                   value: _preferredSupplier,
-                                  onChanged: (v) => setState(() => _preferredSupplier = v),
+                                  onChanged: (v) =>
+                                      setState(() => _preferredSupplier = v),
                                   compact: true,
                                 ),
                               ]),
@@ -331,7 +370,7 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                           // Payment & Terms Section
                           _dashboardCard(
                             icon: Feather.credit_card,
-                            title: 'Payment & Terms',
+                            title: "Payment & Terms",
                             gradient: const LinearGradient(
                               colors: [Color(0xFF10B981), Color(0xFF059669)],
                               begin: Alignment.topLeft,
@@ -339,11 +378,13 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                             ),
                             children: [
                               _dashboardDropdown(
-                                label: 'Payment Terms',
+                                label: "Payment Terms",
                                 value: _paymentTerms,
                                 items: _paymentOptions,
-                                onChanged: (v) => setState(() => _paymentTerms = v),
-                                validator: (v) => v == null ? 'Select payment terms' : null,
+                                onChanged: (v) =>
+                                    setState(() => _paymentTerms = v),
+                                validator: (v) =>
+                                    v == null ? 'Select payment terms' : null,
                               ),
                             ],
                           ),
@@ -353,7 +394,7 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                           // Locations Section
                           _dashboardCard(
                             icon: Feather.map_pin,
-                            title: 'Locations',
+                            title: "Locations",
                             gradient: const LinearGradient(
                               colors: [Color(0xFFF97316), Color(0xFFEAB308)],
                               begin: Alignment.topLeft,
@@ -365,8 +406,8 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                                   Expanded(
                                     child: _dashboardTextField(
                                       controller: _locationCtrl,
-                                      label: 'Add Location',
-                                      hint: 'Ex: Colombo, Kandy',
+                                      label: "Add Location",
+                                      hint: "Ex: Colombo, Kandy",
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -374,14 +415,19 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                                     height: 56,
                                     decoration: BoxDecoration(
                                       gradient: const LinearGradient(
-                                        colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
+                                        colors: [
+                                          Color(0xFF60A5FA),
+                                          Color(0xFFA855F7),
+                                        ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                       ),
                                       borderRadius: BorderRadius.circular(16),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: const Color(0xFF60A5FA).withOpacity(0.3),
+                                          color: const Color(
+                                            0xFF60A5FA,
+                                          ).withOpacity(0.3),
                                           blurRadius: 8,
                                           offset: const Offset(0, 2),
                                         ),
@@ -392,9 +438,17 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.transparent,
                                         shadowColor: Colors.transparent,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                        ),
                                       ),
-                                      child: const Icon(Feather.plus, color: Colors.white, size: 20),
+                                      child: const Icon(
+                                        Feather.plus,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -406,13 +460,16 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                                   decoration: BoxDecoration(
                                     color: Colors.white.withOpacity(0.05),
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.1),
+                                    ),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
-                                        'Added Locations:',
+                                        "Added Locations:",
                                         style: TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.bold,
@@ -423,35 +480,63 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                                       Wrap(
                                         spacing: 8,
                                         runSpacing: 8,
-                                        children: _locations.asMap().entries.map((entry) {
-                                          int index = entry.key;
-                                          String location = entry.value;
-                                          return Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                            decoration: BoxDecoration(
-                                              gradient: const LinearGradient(
-                                                colors: [Color(0xFF475569), Color(0xFF334155)],
-                                              ),
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(Feather.map_pin, color: Colors.white70, size: 14),
-                                                const SizedBox(width: 6),
-                                                Text(
-                                                  location,
-                                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                        children: _locations
+                                            .asMap()
+                                            .entries
+                                            .map((entry) {
+                                              int index = entry.key;
+                                              String location = entry.value;
+                                              return Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 8,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  gradient:
+                                                      const LinearGradient(
+                                                        colors: [
+                                                          Color(0xFF475569),
+                                                          Color(0xFF334155),
+                                                        ],
+                                                      ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
                                                 ),
-                                                const SizedBox(width: 6),
-                                                GestureDetector(
-                                                  onTap: () => _removeLocation(index),
-                                                  child: const Icon(Feather.x, color: Colors.red, size: 16),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Feather.map_pin,
+                                                      color: Colors.white70,
+                                                      size: 14,
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      location,
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    GestureDetector(
+                                                      onTap: () =>
+                                                          _removeLocation(
+                                                            index,
+                                                          ),
+                                                      child: const Icon(
+                                                        Feather.x,
+                                                        color: Colors.red,
+                                                        size: 16,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
-                                              ],
-                                            ),
-                                          );
-                                        }).toList(),
+                                              );
+                                            })
+                                            .toList(),
                                       ),
                                     ],
                                   ),
@@ -465,7 +550,7 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                           // Appearance & Notes Section
                           _dashboardCard(
                             icon: Feather.layers,
-                            title: 'Appearance & Notes',
+                            title: "Appearance & Notes",
                             gradient: const LinearGradient(
                               colors: [Color(0xFFEC4899), Color(0xFFF43F5E)],
                               begin: Alignment.topLeft,
@@ -476,8 +561,8 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                               const SizedBox(height: 16),
                               _dashboardTextField(
                                 controller: _remarkCtrl,
-                                label: 'Remarks/Notes',
-                                hint: 'Optional notes about the supplier',
+                                label: "Remarks/Notes",
+                                hint: "Optional notes about the supplier",
                                 maxLines: 3,
                                 fullWidth: true,
                               ),
@@ -497,26 +582,45 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [
-                                        const Color(0xFF475569).withOpacity(0.8),
-                                        const Color(0xFF334155).withOpacity(0.8),
+                                        const Color(
+                                          0xFF475569,
+                                        ).withOpacity(0.8),
+                                        const Color(
+                                          0xFF334155,
+                                        ).withOpacity(0.8),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.1),
+                                    ),
                                   ),
                                   child: ElevatedButton(
                                     onPressed: _resetForm,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.transparent,
                                       shadowColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
                                     ),
                                     child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        Icon(Feather.refresh_cw, color: Colors.white70, size: 18),
+                                        Icon(
+                                          Feather.refresh_cw,
+                                          color: Colors.white70,
+                                          size: 18,
+                                        ),
                                         SizedBox(width: 8),
-                                        Text('Reset', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+                                        Text(
+                                          "Reset",
+                                          style: TextStyle(
+                                            color: Colors.white70,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -529,14 +633,19 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                                   height: 56,
                                   decoration: BoxDecoration(
                                     gradient: const LinearGradient(
-                                      colors: [Color(0xFF10B981), Color(0xFF059669)],
+                                      colors: [
+                                        Color(0xFF10B981),
+                                        Color(0xFF059669),
+                                      ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
                                     borderRadius: BorderRadius.circular(16),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF10B981).withOpacity(0.3),
+                                        color: const Color(
+                                          0xFF10B981,
+                                        ).withOpacity(0.3),
                                         blurRadius: 12,
                                         offset: const Offset(0, 4),
                                       ),
@@ -547,14 +656,28 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.transparent,
                                       shadowColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
                                     ),
                                     child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        Icon(Feather.check_circle, color: Colors.white, size: 20),
+                                        Icon(
+                                          Feather.check_circle,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
                                         SizedBox(width: 8),
-                                        Text('Save Supplier', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                                        Text(
+                                          "Save Supplier",
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -587,7 +710,9 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: gradient.colors.map((color) => color.withOpacity(0.1)).toList(),
+          colors: gradient.colors
+              .map((color) => color.withOpacity(0.1))
+              .toList(),
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -646,26 +771,35 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
   Widget _buildRow(List<Widget> children) {
     if (children.length == 1) return children.first;
     return Row(
-      children: children
-          .map((child) => Expanded(child: child))
-          .expand((widget) sync* {
-            yield widget;
-            if (widget != children.map((child) => Expanded(child: child)).last) {
-              yield const SizedBox(width: 12);
-            }
-          })
-          .toList(),
+      children: children.map((child) => Expanded(child: child)).expand((
+        widget,
+      ) sync* {
+        yield widget;
+        if (widget != children.map((child) => Expanded(child: child)).last) {
+          yield const SizedBox(width: 12);
+        }
+      }).toList(),
     );
   }
 
-  InputDecoration _dashboardDecoration(String label, {String? hint, Widget? suffixIcon, String? prefixText, String? suffixText}) {
+  InputDecoration _dashboardDecoration(
+    String label, {
+    String? hint,
+    Widget? suffixIcon,
+    String? prefixText,
+    String? suffixText,
+  }) {
     return InputDecoration(
       labelText: label,
       hintText: hint,
       prefixText: prefixText,
       suffixText: suffixText,
       suffixIcon: suffixIcon,
-      labelStyle: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500),
+      labelStyle: const TextStyle(
+        color: Colors.white70,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+      ),
       hintStyle: const TextStyle(color: Colors.white38),
       filled: true,
       fillColor: Colors.white.withOpacity(0.08),
@@ -700,7 +834,11 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
-      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+      ),
       decoration: _dashboardDecoration(label, hint: hint),
       validator: validator,
     );
@@ -716,16 +854,25 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
     return DropdownButtonFormField<T>(
       value: value,
       items: items
-          .map((e) => DropdownMenuItem<T>(
-                value: e,
-                child: Text(e.toString(), style: const TextStyle(color: Colors.white)),
-              ))
+          .map(
+            (e) => DropdownMenuItem<T>(
+              value: e,
+              child: Text(
+                e.toString(),
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+          )
           .toList(),
       onChanged: onChanged,
       validator: validator,
       dropdownColor: const Color(0xFF1E293B),
       decoration: _dashboardDecoration(label),
-      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+      ),
       icon: const Icon(Feather.chevron_down, color: Colors.white70, size: 20),
     );
   }
@@ -748,11 +895,11 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
         children: [
           Flexible(
             child: Text(
-              label, 
+              label,
               style: const TextStyle(
-                color: Colors.white, 
-                fontSize: 14, 
-                fontWeight: FontWeight.w500
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -765,7 +912,9 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
               onChanged: onChanged,
               activeColor: Colors.white,
               inactiveThumbColor: Colors.white70,
-              activeTrackColor: value ? const Color(0xFF10B981) : const Color(0xFF475569),
+              activeTrackColor: value
+                  ? const Color(0xFF10B981)
+                  : const Color(0xFF475569),
               inactiveTrackColor: const Color(0xFF475569),
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               splashRadius: 0,
@@ -782,9 +931,16 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
       children: [
         Row(
           children: [
-            const Text('Color Theme', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+            const Text(
+              "Color Theme",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             const SizedBox(width: 12),
-                          if (_selectedGradient != null)
+            if (_selectedGradient != null)
               Container(
                 width: 24,
                 height: 24,
@@ -809,11 +965,22 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                 borderRadius: BorderRadius.circular(8),
               ),
               child: TextButton.icon(
-                onPressed: () => setState(() => _selectedGradient = _gradientPalette[0]),
-                icon: const Icon(Feather.refresh_cw, color: Colors.white70, size: 14),
-                label: const Text('Reset', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                onPressed: () =>
+                    setState(() => _selectedGradient = _gradientPalette[0]),
+                icon: const Icon(
+                  Feather.refresh_cw,
+                  color: Colors.white70,
+                  size: 14,
+                ),
+                label: const Text(
+                  "Reset",
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                 ),
               ),
             ),
@@ -835,12 +1002,16 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                   gradient: gradient,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isSelected ? Colors.white : Colors.white.withOpacity(0.1),
+                    color: isSelected
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.1),
                     width: isSelected ? 3 : 1,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: gradient.colors.first.withOpacity(isSelected ? 0.6 : 0.3),
+                      color: gradient.colors.first.withOpacity(
+                        isSelected ? 0.6 : 0.3,
+                      ),
                       blurRadius: isSelected ? 16 : 8,
                       offset: Offset(0, isSelected ? 4 : 2),
                     ),
@@ -871,17 +1042,21 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              gradient: _selectedGradient ?? const LinearGradient(
-                colors: [Color(0xFF475569), Color(0xFF334155)],
-              ),
+              gradient:
+                  _selectedGradient ??
+                  const LinearGradient(
+                    colors: [Color(0xFF475569), Color(0xFF334155)],
+                  ),
               borderRadius: BorderRadius.circular(12),
-              boxShadow: _selectedGradient != null ? [
-                BoxShadow(
-                  color: _selectedGradient!.colors.first.withOpacity(0.4),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ] : null,
+              boxShadow: _selectedGradient != null
+                  ? [
+                      BoxShadow(
+                        color: _selectedGradient!.colors.first.withOpacity(0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
             ),
             child: const Icon(Feather.truck, color: Colors.white, size: 20),
           ),
@@ -891,7 +1066,7 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _nameCtrl.text.isEmpty ? 'Supplier Preview' : _nameCtrl.text,
+                  _nameCtrl.text.isEmpty ? "Supplier Preview" : _nameCtrl.text,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -900,7 +1075,7 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${_brandCtrl.text.isEmpty ? 'Brand' : _brandCtrl.text} • ${_contactCtrl.text.isEmpty ? 'No Contact' : _contactCtrl.text}',
+                  '${_brandCtrl.text.isEmpty ? "Brand" : _brandCtrl.text} • ${_contactCtrl.text.isEmpty ? "No Contact" : _contactCtrl.text}',
                   style: const TextStyle(color: Colors.white60, fontSize: 13),
                 ),
                 if (_locations.isNotEmpty) ...[
@@ -919,20 +1094,28 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  gradient: _active 
-                      ? const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)])
-                      : const LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFDC2626)]),
+                  gradient: _active
+                      ? const LinearGradient(
+                          colors: [Color(0xFF10B981), Color(0xFF059669)],
+                        )
+                      : const LinearGradient(
+                          colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                        ),
                   borderRadius: BorderRadius.circular(6),
                   boxShadow: [
                     BoxShadow(
-                      color: (_active ? const Color(0xFF10B981) : const Color(0xFFEF4444)).withOpacity(0.3),
+                      color:
+                          (_active
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFEF4444))
+                              .withOpacity(0.3),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
                   ],
                 ),
                 child: Text(
-                  _active ? 'Active' : 'Inactive',
+                  _active ? "Active" : "Inactive",
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
@@ -943,9 +1126,14 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
               if (_preferredSupplier) ...[
                 const SizedBox(height: 4),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [Color(0xFFEAB308), Color(0xFFF97316)]),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFEAB308), Color(0xFFF97316)],
+                    ),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(

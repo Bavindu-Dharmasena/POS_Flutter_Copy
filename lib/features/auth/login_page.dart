@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../core/services/auth_service.dart';
+import "package:flutter/material.dart";
+import "package:provider/provider.dart";
+import "package:pos_system/core/services/auth_service.dart";
 
 class LoginPage extends StatefulWidget {
-  final String role; // The role passed from POSHomePage
+  final String role;
 
-  const LoginPage({super.key, required this.role});
+  const LoginPage({required this.role, super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -28,7 +28,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _animationController.forward();
@@ -37,13 +37,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   // Role-specific colors and gradients
   List<Color> get _roleGradient {
     switch (widget.role) {
-      case 'Admin':
+      case "Admin":
         return [
           Colors.red.shade400,
           Colors.pink.shade600,
           Colors.purple.shade400,
         ];
-      case 'Manager':
+      case "Manager":
         return [
           Colors.purple.shade400,
           Colors.indigo.shade500,
@@ -55,7 +55,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           Colors.teal.shade500,
           Colors.cyan.shade400,
         ];
-      case 'StockKeeper':
+      case "StockKeeper":
         return [
           Colors.yellow.shade400,
           Colors.amber.shade500,
@@ -72,13 +72,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   Color get _primaryColor {
     switch (widget.role) {
-      case 'Admin':
+      case "Admin":
         return Colors.red.shade600;
-      case 'Manager':
+      case "Manager":
         return Colors.purple.shade600;
-      case 'Cashier':
+      case "Cashier":
         return Colors.green.shade600;
-      case 'StockKeeper':
+      case "StockKeeper":
         return Colors.amber.shade600;
       default:
         return Colors.indigo.shade600;
@@ -116,23 +116,25 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   }
 
   // Submit login credentials
-  void _submitLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _submitLogin() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
-    final username = _usernameController.text.trim();
-    final password = _passwordController.text.trim();
-    final auth = Provider.of<AuthService>(context, listen: false);
+    var username = _usernameController.text.trim();
+    var password = _passwordController.text.trim();
+    var auth = Provider.of<AuthService>(context, listen: false);
 
     try {
-      bool success = await auth.login(username, password);
+      var success = await auth.login(username, password);
 
       if (success) {
-        final loggedInRole = auth.currentUser!.role;
+        var loggedInRole = auth.currentUser!.role;
 
         // Only allow login if the role matches
         if (loggedInRole != widget.role) {
@@ -146,28 +148,32 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
         // Navigate to the correct dashboard
         switch (loggedInRole) {
-          case 'StockKeeper':
-            Navigator.pushReplacementNamed(context, '/stockkeeper');
+          case "StockKeeper":
+            if (!mounted) return;
+            Navigator.pushReplacementNamed(context, "/stockkeeper");
             break;
-          case 'Cashier':
-            Navigator.pushReplacementNamed(context, '/cashier');
+          case "Cashier":
+            if (!mounted) return;
+            Navigator.pushReplacementNamed(context, "/cashier");
             break;
-          case 'Admin':
-            Navigator.pushReplacementNamed(context, '/admin');
+          case "Admin":
+            if (!mounted) return;
+            Navigator.pushReplacementNamed(context, "/admin");
             break;
-          case 'Manager':
-            Navigator.pushReplacementNamed(context, '/manager');
+          case "Manager":
+            if (!mounted) return;
+            Navigator.pushReplacementNamed(context, "/manager");
             break;
         }
       } else {
         setState(
-          () => _error = 'Incorrect username or password. Please try again.',
+          () => _error = "Incorrect username or password. Please try again.",
         );
       }
     } catch (e) {
       setState(
         () => _error =
-            'Login failed. Please check your connection and try again.',
+            "Login failed. Please check your connection and try again.",
       );
     } finally {
       setState(() => _isLoading = false);
@@ -176,14 +182,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width > 600;
-    final screenHeight = MediaQuery.of(context).size.height;
+    var isWide = MediaQuery.of(context).size.width > 600;
+    var screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
+            begin: Alignment.topLeft, 
             end: Alignment.bottomRight,
             colors: [
               _roleGradient[0].withOpacity(0.8),
@@ -246,7 +252,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
-                                      '${widget.role} Login',
+                                      "${widget.role} Login",
                                       style: const TextStyle(
                                         fontSize: 28,
                                         fontWeight: FontWeight.bold,
@@ -255,7 +261,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      'Welcome back! Please sign in.',
+                                      "Welcome back! Please sign in.",
                                       style: TextStyle(
                                         fontSize: 16,
                                         color: Colors.white.withOpacity(0.9),
@@ -282,7 +288,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 child: TextFormField(
                                   controller: _usernameController,
                                   decoration: InputDecoration(
-                                    labelText: 'Username',
+                                    labelText: "Username",
                                     prefixIcon: Icon(
                                       Icons.person,
                                       color: _primaryColor,
@@ -304,7 +310,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'Please enter your username';
+                                      return "Please enter your username";
                                     }
                                     return null;
                                   },
@@ -329,7 +335,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   controller: _passwordController,
                                   obscureText: _obscurePassword,
                                   decoration: InputDecoration(
-                                    labelText: 'Password',
+                                    labelText: "Password",
                                     prefixIcon: Icon(
                                       Icons.lock,
                                       color: _primaryColor,
@@ -364,7 +370,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                   ),
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
-                                      return 'Please enter your password';
+                                      return "Please enter your password";
                                     }
                                     return null;
                                   },
@@ -439,7 +445,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                           color: Colors.white,
                                         )
                                       : const Text(
-                                          'Sign In',
+                                          "Sign In",
                                           style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.bold,
@@ -468,7 +474,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     ),
                                   ),
                                   child: Text(
-                                    'Back to Home',
+                                    "Back to Home",
                                     style: TextStyle(
                                       fontSize: 16,
                                       color: _primaryColor,
@@ -500,7 +506,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     Expanded(
                                       // This prevents overflow
                                       child: Text(
-                                        'Use your assigned credentials to access the system',
+                                        "Use your assigned credentials to access the system",
                                         style: TextStyle(
                                           color: Colors.blue.shade700,
                                           fontSize: 13,
