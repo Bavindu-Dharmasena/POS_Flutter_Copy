@@ -1,11 +1,7 @@
-import 'package:flutter/material.dart';
+import "package:flutter/material.dart";
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-/// A page that opens the camera and scans QR codes / barcodes using
-/// `mobile_scanner`. When a code is detected, it returns the value to
-/// the previous route via `Navigator.pop(context, code)`.
 class BarcodeScannerPage extends StatefulWidget {
-  /// Creates a barcode/QR scanner page.
   const BarcodeScannerPage({super.key});
 
   @override
@@ -13,12 +9,10 @@ class BarcodeScannerPage extends StatefulWidget {
 }
 
 class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
-  /// Controller for the mobile scanner. Kept as a field so it can be disposed.
   final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.normal,
   );
 
-  /// Guards against multiple pops if the callback fires more than once.
   bool _handled = false;
 
   @override
