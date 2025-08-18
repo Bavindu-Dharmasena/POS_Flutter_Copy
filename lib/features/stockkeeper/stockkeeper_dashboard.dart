@@ -14,8 +14,6 @@ import "stockkeeper_inventory.dart";
 import "stockkeeper_products.dart";
 import "stockkeeper_reports.dart";
 
-
-
 /// The dashboard screen for stock keepers, showing inventory stats and
 /// controls.
 class StockKeeperDashboard extends StatefulWidget {
@@ -29,18 +27,18 @@ class StockKeeperDashboard extends StatefulWidget {
 class _StockKeeperDashboardState extends State<StockKeeperDashboard>
     with TickerProviderStateMixin {
   final List<String> topProducts = [
-    "Product A", 
-    "Product B", 
-    "Product C", 
-    "Product D", 
-    "Product E"
+    "Product A",
+    "Product B",
+    "Product C",
+    "Product D",
+    "Product E",
   ];
   final List<String> topCategories = [
-    "Beverages", 
-    "Snacks", 
-    "Dairy", 
-    "Bakery", 
-    "Fruits"
+    "Beverages",
+    "Snacks",
+    "Dairy",
+    "Bakery",
+    "Fruits",
   ];
 
   late AnimationController _animationController;
@@ -53,13 +51,9 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
     _animationController.forward();
   }
 
@@ -76,8 +70,10 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
         pageBuilder: (_, a, __) => page,
         transitionsBuilder: (_, a, __, child) {
           const begin = Offset(1, 0), end = Offset.zero;
-          final tween = Tween(begin: begin, end: end)
-              .chain(CurveTween(curve: Curves.elasticOut));
+          final tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: Curves.elasticOut));
           return SlideTransition(position: a.drive(tween), child: child);
         },
         transitionDuration: const Duration(milliseconds: 600),
@@ -104,11 +100,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Feather.package,
-                color: Colors.white,
-                size: 24,
-              ),
+              child: const Icon(Feather.package, color: Colors.white, size: 24),
             ),
             const SizedBox(width: 12),
             Text(
@@ -131,11 +123,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF0A0E1A),
-                Color(0xFF1E1B4B),
-                Color(0xFF0A0E1A),
-              ],
+              colors: [Color(0xFF0A0E1A), Color(0xFF1E1B4B), Color(0xFF0A0E1A)],
             ),
           ),
         ),
@@ -145,11 +133,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
           gradient: RadialGradient(
             center: Alignment.topCenter,
             radius: 1.5,
-            colors: [
-              Color(0xFF1E1B4B),
-              Color(0xFF0F172A),
-              Color(0xFF0A0E1A),
-            ],
+            colors: [Color(0xFF1E1B4B), Color(0xFF0F172A), Color(0xFF0A0E1A)],
           ),
         ),
         child: FadeTransition(
@@ -179,7 +163,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                   ),
                 ),
               ),
-              
+
               // Stats Grid
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -199,10 +183,11 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                         icon: Feather.trending_up,
                         gradient: const LinearGradient(
                           colors: [Color(0xFFFF6B6B), Color(0xFFEE5A24)],
-                          begin: Alignment.topLeft, 
+                          begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        onActivate: () => _navigateTo(const StockKeeperReports()),
+                        onActivate: () =>
+                            _navigateTo(const StockKeeperReports()),
                       ),
                     ),
                     _buildAnimatedTile(
@@ -213,10 +198,11 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                         icon: Feather.credit_card,
                         gradient: const LinearGradient(
                           colors: [Color(0xFF4ECDC4), Color(0xFF44A08D)],
-                          begin: Alignment.topLeft, 
+                          begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        onActivate: () => _navigateTo(const StockKeeperReports()),
+                        onActivate: () =>
+                            _navigateTo(const StockKeeperReports()),
                       ),
                     ),
                     _buildAnimatedTile(
@@ -227,10 +213,11 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                         icon: Feather.bar_chart,
                         gradient: const LinearGradient(
                           colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-                          begin: Alignment.topLeft, 
+                          begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        onActivate: () => _navigateTo(const StockKeeperReports()),
+                        onActivate: () =>
+                            _navigateTo(const StockKeeperReports()),
                       ),
                     ),
                     _buildAnimatedTile(
@@ -241,16 +228,17 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                         icon: Feather.dollar_sign,
                         gradient: const LinearGradient(
                           colors: [Color(0xFFF093FB), Color(0xFFF5576C)],
-                          begin: Alignment.topLeft, 
+                          begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
-                        onActivate: () => _navigateTo(const StockKeeperCashier()),
+                        onActivate: () =>
+                            _navigateTo(const StockKeeperCashier()),
                       ),
                     ),
                   ]),
                 ),
               ),
-              
+
               // Lists Section
               SliverPadding(
                 padding: const EdgeInsets.all(16),
@@ -268,7 +256,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                         ),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Lists in a responsive layout
                       if (isMobile) ...[
                         _buildAnimatedTile(
@@ -278,11 +266,12 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                             icon: Feather.package,
                             gradient: const LinearGradient(
                               colors: [Color(0xFF4FACFE), Color(0xFF00F2FE)],
-                              begin: Alignment.topLeft, 
+                              begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             items: topProducts,
-                            onActivate: () => _navigateTo(const StockKeeperProducts()),
+                            onActivate: () =>
+                                _navigateTo(const StockKeeperProducts()),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -293,11 +282,12 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                             icon: Feather.layers,
                             gradient: const LinearGradient(
                               colors: [Color(0xFFFB8500), Color(0xFFFFB700)],
-                              begin: Alignment.topLeft, 
+                              begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             items: topCategories,
-                            onActivate: () => _navigateTo(const StockKeeperInventory()),
+                            onActivate: () =>
+                                _navigateTo(const StockKeeperInventory()),
                           ),
                         ),
                       ] else ...[
@@ -310,12 +300,16 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                                   title: "Top Products",
                                   icon: Feather.package,
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFF4FACFE), Color(0xFF00F2FE)],
-                                    begin: Alignment.topLeft, 
+                                    colors: [
+                                      Color(0xFF4FACFE),
+                                      Color(0xFF00F2FE),
+                                    ],
+                                    begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
                                   items: topProducts,
-                                  onActivate: () => _navigateTo(const StockKeeperProducts()),
+                                  onActivate: () =>
+                                      _navigateTo(const StockKeeperProducts()),
                                 ),
                               ),
                             ),
@@ -327,21 +321,25 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                                   title: "Top Categories",
                                   icon: Feather.layers,
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFFFB8500), Color(0xFFFFB700)],
-                                    begin: Alignment.topLeft, 
+                                    colors: [
+                                      Color(0xFFFB8500),
+                                      Color(0xFFFFB700),
+                                    ],
+                                    begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
                                   items: topCategories,
-                                  onActivate: () => _navigateTo(const StockKeeperInventory()),
+                                  onActivate: () =>
+                                      _navigateTo(const StockKeeperInventory()),
                                 ),
                               ),
                             ),
                           ],
                         ),
                       ],
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       // Back Button
                       _buildAnimatedTile(
                         delay: 600,
@@ -349,7 +347,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                           onActivate: () => Navigator.pop(context),
                         ),
                       ),
-                      
+
                       // Bottom spacing
                       const SizedBox(height: 20),
                     ],
@@ -369,12 +367,14 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
       tween: Tween(begin: 0, end: 1),
       curve: Curves.elasticOut,
       builder: (context, value, child) {
+        // Clamp opacity to valid range to avoid assertion failures.
+        final visible = value.clamp(0.0, 1.0);
+        // Keep a subtle bounce on scale even if value overshoots.
+        final scale = 0.9 + 0.2 * value;
+
         return Transform.scale(
-          scale: value,
-          child: Opacity(
-            opacity: value,
-            child: child,
-          ),
+          scale: scale,
+          child: Opacity(opacity: visible, child: child),
         );
       },
       child: child,
