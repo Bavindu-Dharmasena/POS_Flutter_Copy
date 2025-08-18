@@ -15,6 +15,7 @@ import 'stockkeeper_products.dart';
 import 'stockkeeper_inventory.dart';
 
 /// Keyboard intents
+
 class BackIntent extends Intent { const BackIntent(); }
 class JumpToTopIntent extends Intent { const JumpToTopIntent(); }
 class JumpToBottomIntent extends Intent { const JumpToBottomIntent(); }
@@ -34,6 +35,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
     "Product C",
     "Product D",
     "Product E"
+
   ];
   final List<String> topCategories = [
     "Beverages",
@@ -41,6 +43,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
     "Dairy",
     "Bakery",
     "Fruits"
+
   ];
 
   late final AnimationController _animationController;
@@ -77,8 +80,10 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
         pageBuilder: (_, a, __) => page,
         transitionsBuilder: (_, a, __, child) {
           const begin = Offset(1, 0), end = Offset.zero;
+
           final tween = Tween(begin: begin, end: end)
               .chain(CurveTween(curve: Curves.easeOutCubic));
+
           return SlideTransition(position: a.drive(tween), child: child);
         },
         transitionDuration: const Duration(milliseconds: 380),
@@ -88,6 +93,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
 
   /// Theme-aware extras
   LinearGradient _chipGradient(ColorScheme cs) => LinearGradient(
+
         colors: [cs.primary, cs.tertiary],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
@@ -115,12 +121,50 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
         ],
       );
 
+
   // ---------------------------
   // 🎨 VIBRANT, FIXED GRADIENTS
   // ---------------------------
 
   // Stats
   LinearGradient _gMonthlySales() => const LinearGradient(
+
+    colors: [Color(0xFFFF6B6B), Color(0xFFEE5A24)], // red → orange
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  LinearGradient _gTotalSales() => const LinearGradient(
+    colors: [Color(0xFF4ECDC4), Color(0xFF44A08D)], // teal → green
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  LinearGradient _gNetProfit() => const LinearGradient(
+    colors: [Color(0xFF667EEA), Color(0xFF764BA2)], // indigo → purple
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  LinearGradient _gDailySales() => const LinearGradient(
+    colors: [Color(0xFFF093FB), Color(0xFFF5576C)], // pink → red
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  // Lists
+  LinearGradient _gListTopProducts() => const LinearGradient(
+    colors: [Color(0xFF4FACFE), Color(0xFF00F2FE)], // blue → cyan
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  LinearGradient _gListTopCategories() => const LinearGradient(
+    colors: [Color(0xFFFB8500), Color(0xFFFFB700)], // orange → yellow
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
         colors: [Color(0xFFFF6B6B), Color(0xFFEE5A24)], // red → orange
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
@@ -157,6 +201,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
         end: Alignment.bottomRight,
       );
 
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -176,11 +221,13 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                 gradient: _chipGradient(cs),
                 borderRadius: BorderRadius.circular(12),
               ),
+
               child: Icon(
                 Feather.package,
                 color: cs.onPrimary,
                 size: 24,
               ),
+
             ),
             const SizedBox(width: 12),
             Text(
@@ -196,7 +243,9 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
           ],
         ),
         centerTitle: true,
+
         flexibleSpace: Container(decoration: BoxDecoration(gradient: _bgSweep(cs))),
+
       ),
 
       // 🔑 Keyboard: Focus + Shortcuts + Actions wrapping the scroll view
@@ -240,6 +289,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
             SingleActivator(LogicalKeyboardKey.escape): BackIntent(),
 
             // Arrows => line scrolls
+
             SingleActivator(LogicalKeyboardKey.arrowDown):
                 ScrollIntent(direction: AxisDirection.down),
             SingleActivator(LogicalKeyboardKey.arrowUp):
@@ -254,6 +304,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
             // Home/End => jump to top/bottom
             SingleActivator(LogicalKeyboardKey.home): JumpToTopIntent(),
             SingleActivator(LogicalKeyboardKey.end):  JumpToBottomIntent(),
+
           },
           child: Focus(
             autofocus: true,
@@ -286,12 +337,14 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         sliver: SliverGrid(
+
                           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: isMobile ? 2 : (screenWidth < 1000 ? 2 : 4),
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
                             childAspectRatio: isMobile ? 1.1 : 1.2,
                           ),
+
                           delegate: SliverChildListDelegate.fixed([
                             _buildAnimatedTile(
                               delay: 0,
@@ -300,6 +353,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                                 value: 'Rs. 250K',
                                 icon: Feather.trending_up,
                                 gradient: _gMonthlySales(),
+
                                 onActivate: () => _navigateTo(const StockKeeperReports()),
                               ),
                             ),
@@ -314,13 +368,16 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                               ),
                             ),
                             _buildAnimatedTile(
+
                               delay: 160,
                               child: ModernStatTile(
                                 title: 'Net Profit',
                                 value: 'Rs. 750K',
                                 icon: Feather.bar_chart,
                                 gradient: _gNetProfit(),
+
                                 onActivate: () => _navigateTo(const StockKeeperReports()),
+
                               ),
                             ),
                             _buildAnimatedTile(
@@ -330,7 +387,9 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                                 value: 'Rs. 15.8K',
                                 icon: Feather.dollar_sign,
                                 gradient: _gDailySales(),
+
                                 onActivate: () => _navigateTo(const StockKeeperCashier()),
+
                               ),
                             ),
                           ]),
@@ -362,7 +421,9 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                                     icon: Feather.package,
                                     gradient: _gListTopProducts(),
                                     items: topProducts,
+
                                     onActivate: () => _navigateTo(const StockKeeperProducts()),
+
                                   ),
                                 ),
                                 const SizedBox(height: 12),
@@ -373,7 +434,9 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                                     icon: Feather.layers,
                                     gradient: _gListTopCategories(),
                                     items: topCategories,
+
                                     onActivate: () => _navigateTo(const StockKeeperInventory()),
+
                                   ),
                                 ),
                               ] else ...[
@@ -387,7 +450,9 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                                           icon: Feather.package,
                                           gradient: _gListTopProducts(),
                                           items: topProducts,
+
                                           onActivate: () => _navigateTo(const StockKeeperProducts()),
+
                                         ),
                                       ),
                                     ),
@@ -400,7 +465,9 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                                           icon: Feather.layers,
                                           gradient: _gListTopCategories(),
                                           items: topCategories,
+
                                           onActivate: () => _navigateTo(const StockKeeperInventory()),
+
                                         ),
                                       ),
                                     ),
@@ -442,7 +509,9 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
       builder: (context, value, child) {
         return Transform.scale(
           scale: value,
+
           child: Opacity(opacity: ((value - 0.9) / 0.1).clamp(0, 1), child: child),
+
         );
       },
       child: child,
