@@ -1,25 +1,30 @@
-import "package:flutter/material.dart";
-import "package:provider/provider.dart";
-import "settings_provider.dart";
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'settings_provider.dart';
 
 class StockKeeperSetting extends StatelessWidget {
-  const StockKeeperSetting({super.key});
+  const StockKeeperSetting({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = context.select<SettingsController, bool>(
-      (c) => c.isDarkMode,
-    );
-    final fontSize = context.select<SettingsController, double>(
-      (c) => c.fontSize,
-    );
+    final settings = context.watch<SettingsController>();
+
+    // While prefs load, show a spinner (ensures labels/switch match persisted state)
+    if (!settings.isLoaded) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("System Settings")),
+      appBar: AppBar(
+        title: const Text('System Settings'),
+        centerTitle: true,
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Appearance / Dark Mode
+          // Theme section
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -33,28 +38,21 @@ class StockKeeperSetting extends StatelessWidget {
                       children: [
                         const Text(
                           'Appearance',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          isDarkMode ? 'Dark mode' : 'Light mode',
+                          settings.isDarkMode ? 'Dark mode' : 'Light mode',
                           style: TextStyle(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withOpacity(.7),
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(.7),
                           ),
                         ),
                       ],
                     ),
                   ),
                   Switch(
-                    key: const Key('darkModeSwitch'),
-                    value: isDarkMode,
-                    onChanged: (v) =>
-                        context.read<SettingsController>().setDark(v),
+                    value: settings.isDarkMode,
+                    onChanged: (v) => settings.setDark(v),
                   ),
                 ],
               ),
@@ -63,7 +61,7 @@ class StockKeeperSetting extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // Font Size
+          // Font size section
           Card(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -74,13 +72,7 @@ class StockKeeperSetting extends StatelessWidget {
                     children: [
                       Icon(Icons.text_fields, size: 28),
                       SizedBox(width: 12),
-                      Text(
-                        'Font Size',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      Text('Font Size', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -89,21 +81,19 @@ class StockKeeperSetting extends StatelessWidget {
                       const Text('Small'),
                       Expanded(
                         child: Slider(
-                          key: const Key('fontSizeSlider'),
-                          value: fontSize,
+                          value: settings.fontSize,
                           min: 10,
                           max: 30,
                           divisions: 20,
-                          label: '${fontSize.toStringAsFixed(0)} pt',
-                          onChanged: (v) =>
-                              context.read<SettingsController>().setFontSize(v),
+                          label: '${settings.fontSize.toStringAsFixed(0)} pt',
+                          onChanged: (v) => settings.setFontSize(v),
                         ),
                       ),
                       const Text('Large'),
                     ],
                   ),
                   const SizedBox(height: 8),
-                  _PreviewBlock(fontSize: fontSize),
+                  _PreviewBlock(fontSize: settings.fontSize),
                 ],
               ),
             ),
@@ -116,16 +106,14 @@ class StockKeeperSetting extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  key: const Key('resetButton'),
                   icon: const Icon(Icons.refresh),
                   label: const Text('Reset to Defaults'),
-                  onPressed: () => context.read<SettingsController>().reset(),
+                  onPressed: () => settings.reset(),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: FilledButton.icon(
-                  key: const Key('applyCloseButton'),
                   icon: const Icon(Icons.check_circle_outline),
                   label: const Text('Apply & Close'),
                   onPressed: () => Navigator.of(context).maybePop(),
@@ -160,10 +148,7 @@ class _PreviewBlock extends StatelessWidget {
         children: [
           Text(
             'Preview Heading',
-            style: TextStyle(
-              fontSize: fontSize + 6,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(fontSize: fontSize + 6, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 6),
           Text(
@@ -174,10 +159,7 @@ class _PreviewBlock extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             'Secondary text looks like this.',
-            style: TextStyle(
-              fontSize: fontSize - 2,
-              color: scheme.onSurface.withOpacity(.7),
-            ),
+            style: TextStyle(fontSize: fontSize - 2, color: scheme.onSurface.withOpacity(.7)),
           ),
         ],
       ),

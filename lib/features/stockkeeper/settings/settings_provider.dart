@@ -2,70 +2,83 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsController extends ChangeNotifier {
-  static const double _defaultFontSize = 16.0; // Default font size
-  static const bool _defaultDark = false; // Default theme
+  /// Whether SharedPreferences finished loading.
+  bool isLoaded = false;
 
-  static const _kIsDark = 'isDarkMode';
-  static const _kFontSize = 'fontSize';
+  /// ✅ Default to DARK immediately (preference fallback is also dark).
+  ThemeMode _themeMode = ThemeMode.dark;
 
-  ThemeMode _themeMode = _defaultDark ? ThemeMode.dark : ThemeMode.light;
-  double _fontSize = _defaultFontSize;
+  /// Base font size in points used for global scaling (16 => 1.0x).
+  double _fontSize = 16;
 
-  bool _loaded = false;
-  bool get isLoaded => _loaded;
-
+  // Getters
   ThemeMode get themeMode => _themeMode;
-  double get fontSize => _fontSize;
   bool get isDarkMode => _themeMode == ThemeMode.dark;
+  double get fontSize => _fontSize;
 
-  double get textScaleFactor => (_fontSize / 16.0).clamp(0.7, 1.7);
+  /// Derive a safe text scale (used in MaterialApp.builder).
+  double get textScaleFactor => (_fontSize / 16).clamp(0.85, 1.40);
 
-  SettingsController() {
-    _load();
-  }
-
-  Future<void> _load() async {
+  /// Load persisted settings.
+  Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final isDark = prefs.getBool(_kIsDark);
-    final size = prefs.getDouble(_kFontSize);
 
-    if (isDark != null) {
-      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+    // Prefer string 'themeMode'; fall back to legacy 'isDarkMode'.
+    if (prefs.containsKey('themeMode')) {
+      _themeMode = _fromString(prefs.getString('themeMode') ?? 'dark');
+    } else {
+      final legacy = prefs.getBool('isDarkMode');
+      _themeMode = (legacy == null || legacy) ? ThemeMode.dark : ThemeMode.light;
     }
-    if (size != null && size >= 10.0 && size <= 30.0) {
-      _fontSize = size;
-    }
-    _loaded = true;
+
+    _fontSize = prefs.getDouble('fontSize') ?? 16;
+
+    isLoaded = true;
     notifyListeners();
   }
 
-  Future<void> toggleTheme() async {
-    _themeMode = isDarkMode ? ThemeMode.light : ThemeMode.dark;
-    notifyListeners();
+  Future<void> setDark(bool v) => setThemeMode(v ? ThemeMode.dark : ThemeMode.light);
+
+  Future<void> setThemeMode(ThemeMode m) async {
+    _themeMode = m;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_kIsDark, isDarkMode);
+    await prefs.setString('themeMode', _toString(m));
+    await prefs.setBool('isDarkMode', m == ThemeMode.dark); // keep legacy in sync
+    notifyListeners();
   }
 
-  Future<void> setDark(bool value) async {
-    _themeMode = value ? ThemeMode.dark : ThemeMode.light;
-    notifyListeners();
+  Future<void> setFontSize(double v) async {
+    _fontSize = v.clamp(10, 30);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_kIsDark, value);
-  }
-
-  Future<void> setFontSize(double size) async {
-    _fontSize = size.clamp(10.0, 30.0);
+    await prefs.setDouble('fontSize', _fontSize);
     notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_kFontSize, _fontSize);
   }
 
   Future<void> reset() async {
-    _themeMode = _defaultDark ? ThemeMode.dark : ThemeMode.light;
-    _fontSize = _defaultFontSize;
-    notifyListeners();
+    _themeMode = ThemeMode.dark;
+    _fontSize = 16;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_kIsDark, _defaultDark);
-    await prefs.setDouble(_kFontSize, _defaultFontSize);
+    await prefs.remove('themeMode');
+    await prefs.remove('isDarkMode');
+    await prefs.remove('fontSize');
+    notifyListeners();
+  }
+
+  // Helpers
+  static String _toString(ThemeMode m) {
+    switch (m) {
+      case ThemeMode.light: return 'light';
+      case ThemeMode.dark:  return 'dark';
+      case ThemeMode.system:return 'system';
+    }
+  }
+
+  static ThemeMode _fromString(String s) {
+    switch (s) {
+      case 'light':  return ThemeMode.light;
+      case 'system': return ThemeMode.system;
+      case 'dark':
+      default:       return ThemeMode.dark;
+    }
   }
 }
