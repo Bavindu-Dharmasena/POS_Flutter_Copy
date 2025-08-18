@@ -16,6 +16,7 @@ Future<void> main() async {
   final settings = SettingsController();
   await settings.load();
 
+  
   runApp(
     MultiProvider(
       providers: [
