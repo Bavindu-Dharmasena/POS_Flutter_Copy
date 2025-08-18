@@ -13,10 +13,10 @@ class AuthService with ChangeNotifier {
 
   // Seed data for local login
   final Map<String, Map<String, String>> _seedUsers = {
-    'cashier': {'password': 'cash123', 'role': 'CASHIER'},
-    'stock': {'password': 'stock123', 'role': 'STOCKKEEPER'},
-    'manager': {'password': 'manager123', 'role': 'MANAGER'},
-    'admin': {'password': 'admin123', 'role': 'ADMIN'},
+    'cashier': {'password': 'cash123', 'role': 'Cashier'},
+    'stock': {'password': 'stock123', 'role': 'StockKeeper'},
+    'manager': {'password': 'manager123', 'role': 'manager'},
+    'admin': {'password': 'admin123', 'role': 'admin'},
   };
 
   User? get currentUser => _currentUser;
