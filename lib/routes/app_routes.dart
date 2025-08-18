@@ -20,7 +20,6 @@ import '../features/cashier/cashier_dashboard.dart';
 // These two files both define a widget named `CashierViewPage`.
 // Use aliases to disambiguate which one you want in each route.
 import '../features/cashier/cashier_view_page.dart' as cashier_view;
-import '../features/cashier/billingview.dart' as billing_view;
 
 class AppRoutes {
   static Route<dynamic> generateRoute(
@@ -53,10 +52,10 @@ class AppRoutes {
       // Cashier: quick billing view (from billingview.dart)
       // NOTE: That file also exports a class named CashierViewPage.
       // If you later rename the class to BillingViewPage, update here too.
-      case '/cashier/billing':
-        return MaterialPageRoute(
-          builder: (_) => const billing_view.CashierViewPage(),
-        );
+      // case '/cashier/billing':
+      //   return MaterialPageRoute(
+      //     builder: (_) => const billing_view.CashierViewPage(),
+      //   );
 
       // Manager (stub until you add a real page)
       case '/manager':
