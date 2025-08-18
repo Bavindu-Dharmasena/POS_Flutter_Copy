@@ -7,6 +7,69 @@ import 'package:pos_system/widget/stock_keeper_inventory/product_actions_sheet.d
 import 'package:pos_system/widget/stock_keeper_inventory/product_card.dart';
 import 'package:pos_system/widget/stock_keeper_inventory/product_details_dialog.dart';
 import 'package:pos_system/widget/stock_keeper_inventory/search_and_filter_section.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/product_edit.dart';
+
+// ===== Edit Product Button Widget =====
+class EditProductButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const EditProductButton({super.key, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.blueAccent, // button color
+        foregroundColor: Colors.white, // text/icon color
+        minimumSize: const Size(150, 50), // button size
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12), // rounded corners
+        ),
+        elevation: 6, // shadow
+      ),
+      onPressed: onPressed,
+      icon: const Icon(Icons.edit, size: 22),
+      label: const Text(
+        "Edit Product",
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+// ===== Adjust Stock Button Widget =====
+class AdjustStockButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const AdjustStockButton({super.key, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton.icon(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green, // button color
+        foregroundColor: Colors.white, // text/icon color
+        minimumSize: const Size(150, 50), // button size
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12), // rounded corners
+        ),
+        elevation: 6, // shadow
+      ),
+      onPressed: onPressed,
+      icon: const Icon(Icons.trending_up, size: 22),
+      label: const Text(
+        "Adjust Stock",
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
 
 // ===== Product model =====
 class Product {
@@ -35,6 +98,10 @@ class Product {
   });
 
   bool get isLowStock => currentStock <= minStock && currentStock > 0;
+
+  get imageUrl => null;
+
+  get sku => null;
 }
 
 /// ===== Shared styles =====
@@ -573,7 +640,7 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
               Feather.search,
               size: 64,
               color: Colors.white.withOpacity(.5),
-              key: Key('no-products-search-icon'), // Add a Key
+              key: const Key('no-products-search-icon'),
             ),
             const SizedBox(height: 16),
             Text(
@@ -632,7 +699,192 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => ProductActionsSheet(product: product),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Product name
+            Center(
+              child: Text(
+                product.name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Action buttons row using your custom widgets
+            Row(
+              children: [
+                Expanded(
+                  child: EditProductButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showEditProductDialog(product);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: AdjustStockButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showAdjustStockDialog(product);
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Additional action buttons
+            _actionButton(
+              icon: Feather.eye,
+              label: 'View Details',
+              onTap: () {
+                Navigator.pop(context);
+                _showProductDetails(product);
+              },
+            ),
+            const SizedBox(height: 12),
+            _actionButton(
+              icon: Feather.copy,
+              label: 'Duplicate Product',
+              onTap: () {
+                Navigator.pop(context);
+                _duplicateProduct(product);
+              },
+            ),
+            const SizedBox(height: 12),
+            _actionButton(
+              icon: Feather.trash_2,
+              label: 'Delete Product',
+              color: Colors.redAccent,
+              onTap: () {
+                Navigator.pop(context);
+                _deleteProduct(product);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color color = Colors.white70,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            Icon(
+              Feather.chevron_right,
+              color: Colors.white.withOpacity(0.5),
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditProductDialog(Product product) {
+    // Navigate to edit product page or show edit dialog
+    print('Edit product: ${product.name}');
+    // You can implement your edit product logic here
+    // For example, navigate to edit page or show edit dialog
+  }
+
+  void _showAdjustStockDialog(Product product) {
+    // Show adjust stock dialog
+    print('Adjust stock for: ${product.name}');
+    // Implement stock adjustment logic here
+  }
+
+  void _duplicateProduct(Product product) {
+    // Duplicate product logic
+    print('Duplicate product: ${product.name}');
+    // Implement duplication logic here
+  }
+
+  void _deleteProduct(Product product) {
+    // Show confirmation dialog then delete
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: kPanelBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          'Delete Product',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Are you sure you want to delete "${product.name}"? This action cannot be undone.',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Implement delete logic here
+              print('Delete confirmed for: ${product.name}');
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
   }
 
