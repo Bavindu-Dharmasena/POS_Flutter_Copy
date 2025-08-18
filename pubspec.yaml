@@ -18,7 +18,7 @@ dependencies:
   flutter_colorpicker: ^1.0.3
   google_fonts: ^6.2.1
   flutter_vector_icons: ^2.0.0
-  mobile_scanner: ^7.0.1
+  mobile_scanner: ^7.0.0
   shared_preferences: ^2.0.15 # ✅ Needed for theme/font size persistence
   mocktail: ^1.0.4
 
