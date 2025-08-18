@@ -3,23 +3,46 @@ import 'package:provider/provider.dart';
 
 import 'core/services/auth_service.dart';
 import 'routes/app_routes.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; 
 
 // ✅ Settings + Theming
 import 'features/stockkeeper/settings/settings_provider.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthService()),
-        ChangeNotifierProvider(create: (_) => SettingsController()),
-      ],
-      child: const MyApp(),
-    ),
-  );
+
+  try{
+    // 1. First load environment variables
+    await dotenv.load(fileName: ".env");
+    
+    // 2. Then initialize services
+    final authService = AuthService();
+    await authService.autoLogin();
+
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: authService), // Use .value to avoid creating twice
+          ChangeNotifierProvider(create: (_) => SettingsController()),
+        ],
+        child: const MyApp(),
+      ),
+    );
+  }catch (e) {
+    // 3. Fallback error handling
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Text('Initialization failed: ${e.toString()}'),
+          ),
+        ),
+      ),
+    );
+  }
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

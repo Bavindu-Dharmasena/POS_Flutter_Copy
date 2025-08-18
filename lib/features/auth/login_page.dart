@@ -119,6 +119,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   void _submitLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (!mounted) return; // Early exit if widget is disposed
     setState(() {
       _isLoading = true;
       _error = null;
@@ -126,51 +127,62 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
+
     final auth = Provider.of<AuthService>(context, listen: false);
 
     try {
       bool success = await auth.login(username, password);
 
-      if (success) {
-        final loggedInRole = auth.currentUser!.role;
+      if (!mounted) return; // Check again after async operation
 
-        // Only allow login if the role matches
-        if (loggedInRole != widget.role) {
+      if (success) {
+        final user = auth.currentUser!;
+        final loggedInRole = user.role;
+
+        if (loggedInRole.toLowerCase() != widget.role.toLowerCase()) {
           setState(
             () => _error =
-                "Access denied: You are not authorized for the ${widget.role} role.",
+                "Access denied: This login is for ${widget.role}s only",
           );
           auth.logout();
           return;
         }
 
-        // Navigate to the correct dashboard
-        switch (loggedInRole) {
-          case 'StockKeeper':
-            Navigator.pushReplacementNamed(context, '/stockkeeper');
-            break;
-          case 'Cashier':
-            Navigator.pushReplacementNamed(context, '/cashier');
-            break;
-          case 'Admin':
-            Navigator.pushReplacementNamed(context, '/admin');
-            break;
-          case 'Manager':
-            Navigator.pushReplacementNamed(context, '/manager');
-            break;
-        }
+        // Navigation
+        _navigateBasedOnRole(loggedInRole);
       } else {
-        setState(
-          () => _error = 'Incorrect username or password. Please try again.',
-        );
+        setState(() => _error = 'Incorrect credentials');
       }
     } catch (e) {
-      setState(
-        () => _error =
-            'Login failed. Please check your connection and try again.',
-      );
+      if (!mounted) return;
+      setState(() => _error = 'Login error: ${e.toString()}');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _navigateBasedOnRole(String role) {
+    if (!mounted) return;
+
+    switch (role.toLowerCase()) {
+      case 'stockkeeper':
+        Navigator.pushReplacementNamed(context, '/stockkeeper');
+        break;
+      case 'cashier':
+        Navigator.pushReplacementNamed(context, '/cashier');
+        break;
+      case 'admin':
+        Navigator.pushReplacementNamed(context, '/admin');
+        break;
+      case 'manager':
+        Navigator.pushReplacementNamed(context, '/manager');
+        break;
+      default:
+        if (mounted) {
+          setState(() => _error = 'Unknown user role');
+        }
     }
   }
 
