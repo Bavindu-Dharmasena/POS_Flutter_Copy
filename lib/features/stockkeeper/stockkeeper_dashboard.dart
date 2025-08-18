@@ -128,7 +128,6 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
 
   // Stats
   LinearGradient _gMonthlySales() => const LinearGradient(
-
     colors: [Color(0xFFFF6B6B), Color(0xFFEE5A24)], // red → orange
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -164,42 +163,6 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
-
-        colors: [Color(0xFFFF6B6B), Color(0xFFEE5A24)], // red → orange
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-
-  LinearGradient _gTotalSales() => const LinearGradient(
-        colors: [Color(0xFF4ECDC4), Color(0xFF44A08D)], // teal → green
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-
-  LinearGradient _gNetProfit() => const LinearGradient(
-        colors: [Color(0xFF667EEA), Color(0xFF764BA2)], // indigo → purple
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-
-  LinearGradient _gDailySales() => const LinearGradient(
-        colors: [Color(0xFFF093FB), Color(0xFFF5576C)], // pink → red
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-
-  // Lists
-  LinearGradient _gListTopProducts() => const LinearGradient(
-        colors: [Color(0xFF4FACFE), Color(0xFF00F2FE)], // blue → cyan
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-
-  LinearGradient _gListTopCategories() => const LinearGradient(
-        colors: [Color(0xFFFB8500), Color(0xFFFFB700)], // orange → yellow
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
 
 
   @override
