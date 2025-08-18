@@ -153,7 +153,6 @@ class _ProductCardState extends State<ProductCard>
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 p.name,
@@ -161,6 +160,7 @@ class _ProductCardState extends State<ProductCard>
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
               Text(
                 p.category,
@@ -168,12 +168,13 @@ class _ProductCardState extends State<ProductCard>
                   color: Colors.white.withOpacity(.7),
                   fontSize: 12,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 6),
               Row(
                 children: [
-                  _stockBadge(p),
-                  const Spacer(),
+                  Flexible(child: _stockBadge(p)),
+                  const SizedBox(width: 8),
                   Text(
                     'Rs. ${p.price.toStringAsFixed(0)}',
                     style: const TextStyle(color: Colors.white),

@@ -569,7 +569,12 @@ class _StockKeeperInventoryState extends State<StockKeeperInventory> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Feather.search, size: 64, color: Colors.white.withOpacity(.5)),
+            Icon(
+              Feather.search,
+              size: 64,
+              color: Colors.white.withOpacity(.5),
+              key: Key('no-products-search-icon'), // Add a Key
+            ),
             const SizedBox(height: 16),
             Text(
               'No products found',
