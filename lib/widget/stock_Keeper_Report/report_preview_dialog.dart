@@ -34,21 +34,15 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog>
       vsync: this,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+        );
 
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    ));
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
 
     _slideController.forward();
     _fadeController.forward();
@@ -65,7 +59,7 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return SlideTransition(
       position: _slideAnimation,
       child: FadeTransition(
@@ -103,7 +97,10 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog>
                       children: [
                         _buildGlassFilters(isDark),
                         const SizedBox(height: 32),
-                        _buildSectionTitle('Analytics Overview', Icons.insights),
+                        _buildSectionTitle(
+                          'Analytics Overview',
+                          Icons.insights,
+                        ),
                         const SizedBox(height: 20),
                         _buildModernSummaryMetrics(),
                         const SizedBox(height: 32),
@@ -130,10 +127,7 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog>
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF667eea),
-            const Color(0xFF764ba2),
-          ],
+          colors: [const Color(0xFF667eea), const Color(0xFF764ba2)],
         ),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24),
@@ -213,12 +207,12 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: isDark 
+        color: isDark
             ? Colors.white.withOpacity(0.05)
             : const Color(0xFF667eea).withOpacity(0.08),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark 
+          color: isDark
               ? Colors.white.withOpacity(0.1)
               : const Color(0xFF667eea).withOpacity(0.2),
           width: 1,
@@ -237,10 +231,7 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog>
               const SizedBox(width: 8),
               const Text(
                 'Active Filters',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
               ),
             ],
           ),
@@ -250,7 +241,10 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog>
             runSpacing: 8,
             children: widget.filters.entries.map((entry) {
               return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF667eea).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -285,7 +279,9 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog>
                 SummaryCard(
                   isPaymentReport ? 'Total Payments' : 'Total Sales',
                   '\$${1000 + (widget.reportName.length * 100)}',
-                  isPaymentReport ? Icons.payment_rounded : Icons.attach_money_rounded,
+                  isPaymentReport
+                      ? Icons.payment_rounded
+                      : Icons.attach_money_rounded,
                   const Color(0xFF10b981),
                 ),
                 0,
@@ -296,8 +292,12 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog>
               child: _buildAnimatedCard(
                 SummaryCard(
                   isPaymentReport ? 'Payment Methods' : 'Items Sold',
-                  isPaymentReport ? '5' : '${50 + (widget.reportName.length * 5)}',
-                  isPaymentReport ? Icons.credit_card_rounded : Icons.shopping_cart_rounded,
+                  isPaymentReport
+                      ? '5'
+                      : '${50 + (widget.reportName.length * 5)}',
+                  isPaymentReport
+                      ? Icons.credit_card_rounded
+                      : Icons.shopping_cart_rounded,
                   const Color(0xFF3b82f6),
                 ),
                 100,
@@ -345,10 +345,7 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog>
       builder: (context, value, child) {
         return Transform.scale(
           scale: value,
-          child: Opacity(
-            opacity: value,
-            child: card,
-          ),
+          child: Opacity(opacity: value, child: card),
         );
       },
     );
@@ -466,7 +463,10 @@ class _ReportPreviewDialogState extends State<ReportPreviewDialog>
           FilledButton.icon(
             onPressed: () {
               Navigator.pop(context);
-              _showModernSnackBar(context, '${widget.reportName} exported successfully!');
+              _showModernSnackBar(
+                context,
+                '${widget.reportName} exported successfully!',
+              );
             },
             icon: const Icon(Icons.file_download_outlined),
             label: const Text('Export PDF'),
