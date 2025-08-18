@@ -1,5 +1,5 @@
-import "package:flutter/material.dart";
-import "package:mobile_scanner/mobile_scanner.dart";
+import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 class BarcodeScannerPage extends StatelessWidget {
   const BarcodeScannerPage({super.key});
@@ -8,7 +8,7 @@ class BarcodeScannerPage extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.black,
     appBar: AppBar(
-      title: const Text("Scan QR / Barcode"),
+      title: const Text('Scan QR / Barcode'),
       backgroundColor: Colors.black,
     ),
     body: MobileScanner(
