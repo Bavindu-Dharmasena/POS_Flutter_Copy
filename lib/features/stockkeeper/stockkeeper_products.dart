@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import 'package:provider/provider.dart';
+
+// Settings controller (for textScaleFactor etc.)
+import 'package:pos_system/features/stockkeeper/settings/settings_provider.dart';
 
 // Navigate to these pages
 import '../stockkeeper/products/add_item_page.dart';
 import '../stockkeeper/products/supplier_page.dart';
 
-/* ---- Custom intents ---- */
+/* ---- Custom intents (keyboard) ---- */
 class JumpToFirstIntent extends Intent { const JumpToFirstIntent(); }
 class JumpToLastIntent extends Intent { const JumpToLastIntent(); }
 class BackIntent extends Intent { const BackIntent(); }
@@ -76,6 +80,7 @@ class _StockKeeperProductsState extends State<StockKeeperProducts> {
     required int count,
     required LogicalKeyboardKey key,
   }) {
+    if (count == 0) return 0;
     if (key == LogicalKeyboardKey.arrowRight) return (current + 1) % count;
     if (key == LogicalKeyboardKey.arrowLeft)  return (current - 1 + count) % count;
     if (key == LogicalKeyboardKey.arrowDown) {
@@ -111,171 +116,168 @@ class _StockKeeperProductsState extends State<StockKeeperProducts> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = Provider.of<SettingsController>(context, listen: false);
+    final cs = Theme.of(context).colorScheme;
     final media = MediaQuery.of(context);
-    final textScale = media.textScaleFactor.clamp(1.0, 1.10);
 
-    // The 3 tiles you're using now
+    final textScale = settings.textScaleFactor.clamp(0.9, 1.3);
+
+    // Tiles — gradients are theme-aware (ColorScheme)
     final tiles = <_TileSpec>[
       _TileSpec(
         title: 'Add Item',
         subtitle: 'Create New Item',
         icon: Feather.plus_circle,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF10B981), Color(0xFF059669)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
+        gradientBuilder: (cs) => LinearGradient(
+        colors: [Color(0xFF11998E), Color(0xFF38EF7D)], // Teal to Green
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
         onTap: () => _navigateTo(const AddItemPage()),
       ),
       _TileSpec(
         title: 'Suppliers',
         subtitle: 'Manage Vendors',
         icon: Feather.truck,
-        gradient: const LinearGradient(
-          colors: [Color(0xFFF97316), Color(0xFFEAB308)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-        ),
+         gradientBuilder: (cs) => LinearGradient(
+        colors: [Color.fromARGB(255, 232, 228, 6), Color.fromARGB(255, 176, 162, 9)], // Teal to Green
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
         onTap: () => _navigateTo(const SupplierPage()),
       ),
       _TileSpec(
         title: 'Back',
         subtitle: 'Go Back',
         icon: Feather.arrow_left,
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEAB308), Color(0xFFF97316)],
+        gradientBuilder: (cs) => LinearGradient(
+          colors: [cs.errorContainer, cs.secondaryContainer],
           begin: Alignment.topLeft, end: Alignment.bottomRight,
         ),
-        onTap: () => Navigator.pop(context),
+        onTap: () => Navigator.maybePop(context),
       ),
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0B1623),
       appBar: AppBar(
-        title: ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
-          ).createShader(bounds),
-          child: const Text(
-            'Stock Keeper Products',
-            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+        title: Text(
+          'Stock Keeper Products',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            fontSize: 20 * textScale,
           ),
         ),
-        backgroundColor: const Color(0xFF0B1623),
-        elevation: 0,
         centerTitle: true,
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft, end: Alignment.bottomRight,
-            colors: [Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF0F172A)],
+      body: MediaQuery(
+        data: media.copyWith(textScaleFactor: textScale),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft, end: Alignment.bottomRight,
+              colors: [cs.surface, cs.surfaceVariant.withOpacity(.4), cs.background],
+            ),
           ),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final cols = _calcColumns(constraints.maxWidth);
-            final ratio = _calcAspectRatio(cols);
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final cols = _calcColumns(constraints.maxWidth);
+              final ratio = _calcAspectRatio(cols);
 
-            // Keep the whole grid compact and centered horizontally
-            const crossSpacing = 16.0;
-            const gridHPadding = 8.0 * 2; // GridView horizontal padding
-            const desiredTileWidth = 200.0; // target smaller tile width
-            final maxGridWidth = cols * desiredTileWidth + (cols - 1) * crossSpacing + gridHPadding;
-            final gridWidth = constraints.maxWidth < maxGridWidth ? constraints.maxWidth : maxGridWidth;
+              const crossSpacing = 16.0;
+              const gridHPadding = 8.0 * 2;
+              const desiredTileWidth = 200.0;
+              final maxGridWidth = cols * desiredTileWidth + (cols - 1) * crossSpacing + gridHPadding;
+              final gridWidth = constraints.maxWidth < maxGridWidth ? constraints.maxWidth : maxGridWidth;
 
-            // Compute actual tile width we’ll get, then scale contents smaller
-            final tileWidth = (gridWidth - gridHPadding - (cols - 1) * crossSpacing) / cols;
-            final sizeScale = (tileWidth / 260.0).clamp(0.70, 0.95) * textScale;
+              final tileWidth = (gridWidth - gridHPadding - (cols - 1) * crossSpacing) / cols;
+              final sizeScale = (tileWidth / 260.0).clamp(0.70, 0.95) * textScale;
 
-            _ensureNodes(tiles.length);
+              _ensureNodes(tiles.length);
 
-            final grid = SizedBox(
-              width: gridWidth, // centers horizontally via surrounding Center
-              child: Focus(
-                autofocus: true,
-                child: Shortcuts(
-                  shortcuts: const <ShortcutActivator, Intent>{
-                    SingleActivator(LogicalKeyboardKey.arrowLeft):  DirectionalFocusIntent(TraversalDirection.left),
-                    SingleActivator(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(TraversalDirection.right),
-                    SingleActivator(LogicalKeyboardKey.arrowUp):    DirectionalFocusIntent(TraversalDirection.up),
-                    SingleActivator(LogicalKeyboardKey.arrowDown):  DirectionalFocusIntent(TraversalDirection.down),
-                    SingleActivator(LogicalKeyboardKey.home):       JumpToFirstIntent(),
-                    SingleActivator(LogicalKeyboardKey.end):        JumpToLastIntent(),
-                    SingleActivator(LogicalKeyboardKey.escape):     BackIntent(),
-                  },
-                  child: Actions(
-                    actions: <Type, Action<Intent>>{
-                      DirectionalFocusIntent: CallbackAction<DirectionalFocusIntent>(
-                        onInvoke: (intent) {
-                          final key = switch (intent.direction) {
-                            TraversalDirection.left  => LogicalKeyboardKey.arrowLeft,
-                            TraversalDirection.right => LogicalKeyboardKey.arrowRight,
-                            TraversalDirection.up    => LogicalKeyboardKey.arrowUp,
-                            TraversalDirection.down  => LogicalKeyboardKey.arrowDown,
-                            _ => LogicalKeyboardKey.arrowRight,
-                          };
-                          final next = _nextIndex(
-                            current: _focusedIndex,
-                            cols: cols,
-                            count: tiles.length,
-                            key: key,
-                          );
-                          _focusAt(next);
-                          return null;
-                        },
-                      ),
-                      JumpToFirstIntent: CallbackAction<JumpToFirstIntent>(
-                        onInvoke: (_) { _focusAt(0); return null; },
-                      ),
-                      JumpToLastIntent: CallbackAction<JumpToLastIntent>(
-                        onInvoke: (_) { _focusAt(tiles.length - 1); return null; },
-                      ),
-                      BackIntent: CallbackAction<BackIntent>(
-                        onInvoke: (_) { Navigator.maybePop(context); return null; },
-                      ),
+              final grid = SizedBox(
+                width: gridWidth,
+                child: Focus(
+                  autofocus: true,
+                  child: Shortcuts(
+                    shortcuts: const <ShortcutActivator, Intent>{
+                      SingleActivator(LogicalKeyboardKey.arrowLeft):  DirectionalFocusIntent(TraversalDirection.left),
+                      SingleActivator(LogicalKeyboardKey.arrowRight): DirectionalFocusIntent(TraversalDirection.right),
+                      SingleActivator(LogicalKeyboardKey.arrowUp):    DirectionalFocusIntent(TraversalDirection.up),
+                      SingleActivator(LogicalKeyboardKey.arrowDown):  DirectionalFocusIntent(TraversalDirection.down),
+                      SingleActivator(LogicalKeyboardKey.home):       JumpToFirstIntent(),
+                      SingleActivator(LogicalKeyboardKey.end):        JumpToLastIntent(),
+                      SingleActivator(LogicalKeyboardKey.escape):     BackIntent(),
                     },
-                    child: FocusTraversalGroup(
-                      policy: ReadingOrderTraversalPolicy(),
-                      child: GridView.builder(
-                        padding: const EdgeInsets.all(8),
-                        // Let outer scroll view handle scrolling / vertical centering
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: cols,
-                          crossAxisSpacing: crossSpacing,
-                          mainAxisSpacing: 16,
-                          childAspectRatio: ratio,
+                    child: Actions(
+                      actions: <Type, Action<Intent>>{
+                        DirectionalFocusIntent: CallbackAction<DirectionalFocusIntent>(
+                          onInvoke: (intent) {
+                            LogicalKeyboardKey key;
+                            switch (intent.direction) {
+                              case TraversalDirection.left:  key = LogicalKeyboardKey.arrowLeft;  break;
+                              case TraversalDirection.right: key = LogicalKeyboardKey.arrowRight; break;
+                              case TraversalDirection.up:    key = LogicalKeyboardKey.arrowUp;    break;
+                              case TraversalDirection.down:  key = LogicalKeyboardKey.arrowDown;  break;
+                            }
+                            final next = _nextIndex(
+                              current: _focusedIndex,
+                              cols: cols,
+                              count: tiles.length,
+                              key: key,
+                            );
+                            _focusAt(next);
+                            return null;
+                          },
                         ),
-                        itemCount: tiles.length,
-                        itemBuilder: (context, index) {
-                          final t = tiles[index];
-                          return ModernProductTile(
-                            focusNode: _nodes[index],
-                            title: t.title,
-                            subtitle: t.subtitle,
-                            icon: t.icon,
-                            gradient: t.gradient,
-                            onTap: t.onTap,
-                            sizeScale: sizeScale,
-                          );
-                        },
+                        JumpToFirstIntent: CallbackAction<JumpToFirstIntent>(
+                          onInvoke: (_) { _focusAt(0); return null; },
+                        ),
+                        JumpToLastIntent: CallbackAction<JumpToLastIntent>(
+                          onInvoke: (_) { _focusAt(tiles.length - 1); return null; },
+                        ),
+                        BackIntent: CallbackAction<BackIntent>(
+                          onInvoke: (_) { Navigator.maybePop(context); return null; },
+                        ),
+                      },
+                      child: FocusTraversalGroup(
+                        policy: ReadingOrderTraversalPolicy(),
+                        child: GridView.builder(
+                          padding: const EdgeInsets.all(8),
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: cols,
+                            crossAxisSpacing: crossSpacing,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: ratio,
+                          ),
+                          itemCount: tiles.length,
+                          itemBuilder: (context, index) {
+                            final t = tiles[index];
+                            return _ProductTile(
+                              focusNode: _nodes[index],
+                              title: t.title,
+                              subtitle: t.subtitle,
+                              icon: t.icon,
+                              gradient: t.gradientBuilder(cs),
+                              onTap: t.onTap,
+                              sizeScale: sizeScale,
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            );
+              );
 
-            // Center vertically when short; scroll when tall
-            return SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Center(child: Padding(padding: const EdgeInsets.all(16), child: grid)),
-              ),
-            );
-          },
+              return SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Center(child: Padding(padding: const EdgeInsets.all(16), child: grid)),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -283,24 +285,26 @@ class _StockKeeperProductsState extends State<StockKeeperProducts> {
 }
 
 /* -------------------- Model -------------------- */
+typedef GradientBuilder = LinearGradient Function(ColorScheme cs);
+
 class _TileSpec {
   final String title;
   final String subtitle;
   final IconData icon;
-  final LinearGradient gradient;
+  final GradientBuilder gradientBuilder;
   final VoidCallback onTap;
 
   _TileSpec({
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.gradient,
+    required this.gradientBuilder,
     required this.onTap,
   });
 }
 
-/* -------------------- Tile widget with saved styling -------------------- */
-class ModernProductTile extends StatefulWidget {
+/* -------------------- Tile widget (theme + font-scale aware) -------------------- */
+class _ProductTile extends StatefulWidget {
   final String title;
   final String subtitle;
   final IconData icon;
@@ -309,7 +313,7 @@ class ModernProductTile extends StatefulWidget {
   final FocusNode? focusNode;
   final double sizeScale; // scales paddings/icon/fonts to tile width
 
-  const ModernProductTile({
+  const _ProductTile({
     super.key,
     required this.title,
     required this.subtitle,
@@ -321,10 +325,10 @@ class ModernProductTile extends StatefulWidget {
   });
 
   @override
-  State<ModernProductTile> createState() => _ModernProductTileState();
+  State<_ProductTile> createState() => _ProductTileState();
 }
 
-class _ModernProductTileState extends State<ModernProductTile>
+class _ProductTileState extends State<_ProductTile>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -343,7 +347,9 @@ class _ModernProductTileState extends State<ModernProductTile>
 
   @override
   Widget build(BuildContext context) {
-    final s = widget.sizeScale;
+    final cs = Theme.of(context).colorScheme;
+    final settings = Provider.of<SettingsController>(context, listen: false);
+    final s = widget.sizeScale; // tile size scaler
 
     return FocusableActionDetector(
       focusNode: widget.focusNode,
@@ -393,13 +399,13 @@ class _ModernProductTileState extends State<ModernProductTile>
                         ),
                         if (_focused)
                           BoxShadow(
-                            color: Colors.white.withOpacity(0.20),
-                            blurRadius: 16,
+                            color: cs.primary.withOpacity(0.30),
+                            blurRadius: 18,
                             spreadRadius: 1,
                           ),
                       ],
                       border: Border.all(
-                        color: _focused ? Colors.white.withOpacity(0.9) : Colors.white.withOpacity(0.1),
+                        color: _focused ? cs.primary.withOpacity(0.9) : cs.outlineVariant.withOpacity(0.35),
                         width: _focused ? 2 : 1,
                       ),
                     ),
@@ -407,7 +413,7 @@ class _ModernProductTileState extends State<ModernProductTile>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular((20 * s).clamp(14, 20)),
                         gradient: LinearGradient(
-                          colors: [Colors.white.withOpacity(0.10), Colors.white.withOpacity(0.0)],
+                          colors: [cs.onSurface.withOpacity(0.10), cs.onSurface.withOpacity(0.02)],
                           begin: Alignment.topLeft, end: Alignment.bottomRight,
                         ),
                       ),
@@ -422,33 +428,43 @@ class _ModernProductTileState extends State<ModernProductTile>
                               Container(
                                 padding: EdgeInsets.all((9 * s).clamp(7, 11)),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: cs.onSurface.withOpacity(0.10),
                                   borderRadius: BorderRadius.circular((16 * s).clamp(12, 18)),
                                   border: _focused
-                                      ? Border.all(color: Colors.white.withOpacity(0.7), width: 1)
+                                      ? Border.all(color: cs.primary.withOpacity(0.7), width: 1)
                                       : null,
                                 ),
-                                child: Icon(widget.icon, size: (26 * s).clamp(20, 30), color: Colors.white),
+                                child: Icon(widget.icon, size: (26 * s).clamp(20, 30), color: cs.onSurface),
                               ),
                               SizedBox(height: (10 * s).clamp(8, 14)),
-                              Text(
-                                widget.title,
-                                style: TextStyle(
-                                  fontSize: (15 * s).clamp(13, 17),
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 160),
+                                child: Text(
+                                  widget.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: cs.onSurface,
+                                    fontSize: (15 * s * settings.textScaleFactor).clamp(13, 18),
+                                  ),
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                               SizedBox(height: (3 * s).clamp(2, 6)),
-                              Text(
-                                widget.subtitle,
-                                style: TextStyle(
-                                  fontSize: (11.5 * s).clamp(10.5, 12.5),
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.w500,
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 160),
+                                child: Text(
+                                  widget.subtitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: cs.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: (12 * s * settings.textScaleFactor).clamp(11, 14),
+                                  ),
                                 ),
-                                textAlign: TextAlign.center,
                               ),
                             ],
                           ),

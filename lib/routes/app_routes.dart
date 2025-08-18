@@ -6,6 +6,11 @@ import '../features/auth/two_step_login_page.dart';
 // Splash
 import '../features/splashscreen.dart';
 
+// import '../features/cashier/billingview.dart';
+import '../features/cashier/cashier_view_page.dart';
+
+
+
 // Stockkeeper
 import '../features/stockkeeper/stockkeeper_home.dart';
 

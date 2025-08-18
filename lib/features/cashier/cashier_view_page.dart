@@ -9,6 +9,27 @@ import '../../widget/primary_actions_row.dart';
 import 'category_items_page.dart';
 import 'cashier_insights_page.dart';
 
+// ---- Keyboard Intents ----
+class ActivateSearchIntent extends Intent {
+  const ActivateSearchIntent();
+}
+
+class QuickSaleIntent extends Intent {
+  const QuickSaleIntent();
+}
+
+class PauseBillIntent extends Intent {
+  const PauseBillIntent();
+}
+
+class ResumeBillIntent extends Intent {
+  const ResumeBillIntent();
+}
+
+class PayIntent extends Intent {
+  const PayIntent();
+} // open payment dialog
+
 class CashierViewPage extends StatefulWidget {
   const CashierViewPage({super.key});
 
@@ -169,19 +190,6 @@ class _CashierViewPageState extends State<CashierViewPage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text("Bill paused successfully")));
-  }
-
-  // Auto resume (no button)
-  void _autoResumeNextPausedBill() {
-    if (pausedBills.isEmpty) return;
-    final next = pausedBills.removeAt(0);
-    setState(() {
-      cartItems.clear();
-      cartItems.addAll(next);
-    });
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("Resumed paused bill")));
   }
 
   void _showPaymentMethodDialog() {
@@ -370,26 +378,31 @@ class _CashierViewPageState extends State<CashierViewPage> {
       }
     });
 
-    if (!fromSearch) {
-      Navigator.popUntil(context, (route) => route.isFirst);
-    }
+    // ❌ Removed: Navigator.popUntil(context, (route) => route.isFirst);
+    // We already navigate back from CategoryItemsPage; no extra pops here.
   }
 
+  // ===== Batch selection + quantity for SEARCH flow (stays on this page) =====
   void _showBatchSelectionDialog(
     Map<String, dynamic> item, {
     bool fromSearch = false,
-  }) {
+  }) async {
     final List<Map<String, dynamic>> batchList =
         List<Map<String, dynamic>>.from(item['batches'] ?? []);
     if (batchList.isEmpty) return;
 
+    // Single batch -> ask quantity and add
     if (batchList.length == 1) {
-      final selectedBatch = batchList[0];
+      final selectedBatch = Map<String, dynamic>.from(batchList[0]);
       selectedBatch['name'] = item['name'];
-      _showQuantityInputDialog(selectedBatch);
+      final qty = await _showQuantityInputDialog(selectedBatch);
+      if (qty != null) {
+        _addToCart(selectedBatch, quantity: qty, fromSearch: fromSearch);
+      }
       return;
     }
 
+    // Multiple batches -> pick batch, then ask qty, then add
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -405,10 +418,18 @@ class _CashierViewPageState extends State<CashierViewPage> {
                 title: Text(
                   'Batch: ${batch['batchID']} - Price: Rs. ${batch['price']}',
                 ),
-                onTap: () {
-                  batch['name'] = item['name'];
-                  Navigator.pop(context);
-                  _showQuantityInputDialog(batch);
+                onTap: () async {
+                  Navigator.pop(context); // close the batch list first
+                  final selectedBatch = Map<String, dynamic>.from(batch);
+                  selectedBatch['name'] = item['name'];
+                  final qty = await _showQuantityInputDialog(selectedBatch);
+                  if (qty != null) {
+                    _addToCart(
+                      selectedBatch,
+                      quantity: qty,
+                      fromSearch: fromSearch,
+                    );
+                  }
                 },
               );
             },
@@ -418,11 +439,12 @@ class _CashierViewPageState extends State<CashierViewPage> {
     );
   }
 
-  void _showQuantityInputDialog(Map<String, dynamic> batch) {
+  Future<int?> _showQuantityInputDialog(Map<String, dynamic> batch) {
     int quantity = 1;
-    showDialog(
+
+    return showDialog<int>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: Text(
           'Enter quantity for ${batch['name']} (Batch: ${batch['batchID']})',
         ),
@@ -432,16 +454,14 @@ class _CashierViewPageState extends State<CashierViewPage> {
           onChanged: (value) => quantity = int.tryParse(value) ?? 1,
           onSubmitted: (value) {
             quantity = int.tryParse(value) ?? 1;
-            Navigator.pop(context);
-            _addToCart(batch, quantity: quantity);
+            Navigator.of(dialogCtx).pop(quantity); // ✅ return qty
           },
           decoration: const InputDecoration(hintText: 'Quantity'),
         ),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              _addToCart(batch, quantity: quantity);
+              Navigator.of(dialogCtx).pop(quantity); // ✅ return qty
             },
             child: const Text('Add'),
           ),
@@ -743,66 +763,64 @@ class _CashierViewPageState extends State<CashierViewPage> {
   Widget _buildPauseOnlyRow({
     required VoidCallback? onPause,
     double horizontalPadding = 0,
+    bool isWideScreen =
+        false, // Make sure to pass this in or determine it dynamically
   }) {
     return Padding(
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 20),
-      child: Center(
-        child: ElevatedButton.icon(
-          onPressed: onPause,
-          icon: const Icon(Icons.pause_circle_filled),
-          label: const Text('Pause Bill'),
-          style: ElevatedButton.styleFrom(
-            disabledForegroundColor: Colors.white54,
-            disabledBackgroundColor: Colors.white12,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      child: ElevatedButton.icon(
+        onPressed: onPause,
+        icon: Icon(Icons.attach_money, size: isWideScreen ? 30 : 20),
+        label: Text(
+          'New Sale',
+          style: TextStyle(
+            fontSize: isWideScreen ? 30 : 22,
+            fontWeight: FontWeight.bold,
           ),
+        ),
+        style: ElevatedButton.styleFrom(
+          disabledForegroundColor: Colors.white54,
+          disabledBackgroundColor: Colors.white12,
+          padding: EdgeInsets.symmetric(
+            horizontal: isWideScreen ? 40 : 20,
+            vertical: isWideScreen ? 20 : 14,
+          ),
+          minimumSize: isWideScreen ? const Size(200, 60) : null,
         ),
       ),
     );
   }
 
-  // ===================== QUICK SALE: NEW CODE =====================
-
-  /// Entry point for Quick Sale. If there is an active bill, pause it first.
   void _handleQuickSale() async {
-    // Pause current bill if needed
-    if (cartItems.isNotEmpty) {
-      _pauseCurrentBill();
-    }
-    // Collect quick sale details
     final item = await _showQuickSaleInputDialog();
-    if (item == null) return; // user cancelled
-
-    // Separate payment flow for quick sale
-    _showQuickSalePaymentMethodDialog(item);
+    if (item == null) return;
+    _addToCart(item, quantity: item['quantity']);
   }
 
   /// Dialog to collect: Name, Quantity, Unit Cost, Price.
   /// Returns a map or null if cancelled.
   Future<Map<String, dynamic>?> _showQuickSaleInputDialog() async {
-    String name = '';
+    String name = 'Item';
     int qty = 1;
     double unitCost = 0.0;
     double price = 0.0;
 
-    final nameCtrl = TextEditingController();
+    final nameCtrl = TextEditingController(text: 'Item');
     final qtyCtrl = TextEditingController(text: '1');
     final costCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
 
     return showDialog<Map<String, dynamic>>(
       context: context,
-      barrierDismissible:
-          true, // Allows closing the dialog when tapping outside
+      barrierDismissible: true,
       builder: (_) => StatefulBuilder(
         builder: (context, setSB) {
           String? errorText;
 
           void validate() {
             final q = int.tryParse(qtyCtrl.text.trim()) ?? 0;
-            final uc = double.tryParse(costCtrl.text.trim()) ?? -1;
             final pr = double.tryParse(priceCtrl.text.trim()) ?? -1;
-            if (nameCtrl.text.trim().isEmpty || q <= 0 || uc < 0 || pr <= 0) {
+            if (q <= 0 || pr <= 0) {
               errorText =
                   'Please enter a name and positive values for quantity and price.';
             } else {
@@ -820,7 +838,6 @@ class _CashierViewPageState extends State<CashierViewPage> {
                   TextField(
                     controller: nameCtrl,
                     decoration: const InputDecoration(labelText: 'Name'),
-                    onChanged: (_) => validate(),
                   ),
                   TextField(
                     controller: qtyCtrl,
@@ -836,7 +853,6 @@ class _CashierViewPageState extends State<CashierViewPage> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
-                    onChanged: (_) => validate(),
                   ),
                   TextField(
                     controller: priceCtrl,
@@ -865,8 +881,8 @@ class _CashierViewPageState extends State<CashierViewPage> {
                   unitCost = double.tryParse(costCtrl.text.trim()) ?? -1;
                   price = double.tryParse(priceCtrl.text.trim()) ?? -1;
 
-                  if (name.isEmpty || qty <= 0 || price <= 0 || unitCost < 0) {
-                    return; // validation message shown above
+                  if (qty <= 0 || price <= 0) {
+                    return;
                   }
 
                   Navigator.pop(context, {
@@ -874,6 +890,8 @@ class _CashierViewPageState extends State<CashierViewPage> {
                     'quantity': qty,
                     'unitCost': unitCost,
                     'price': price,
+                    // Minimal fields to work with _addToCart:
+                    'batchID': 'QUICK-${DateTime.now().millisecondsSinceEpoch}',
                   });
                 },
               ),
@@ -884,162 +902,30 @@ class _CashierViewPageState extends State<CashierViewPage> {
     );
   }
 
-  /// Separate payment chooser for quick sale.
-  void _showQuickSalePaymentMethodDialog(Map<String, dynamic> quickItem) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Select Payment Method'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('Card'),
-              onTap: () {
-                Navigator.pop(context);
-                _printQuickSaleBill(item: quickItem, paymentMethod: 'Card');
-              },
-            ),
-            ListTile(
-              title: const Text('Cash'),
-              onTap: () {
-                Navigator.pop(context);
-                _showQuickSaleCashDialog(quickItem);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Cash flow for quick sale only.
-  void _showQuickSaleCashDialog(Map<String, dynamic> quickItem) {
-    final total =
-        (quickItem['price'] as double) * (quickItem['quantity'] as int);
-
-    final cashCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Enter Cash Amount'),
-        content: TextField(
-          autofocus: true,
-          controller: cashCtrl,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(hintText: 'Enter cash amount'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              final cash = double.tryParse(cashCtrl.text.trim()) ?? 0;
-              if (cash < total) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Cash amount is less than total'),
-                  ),
-                );
-                return;
-              }
-              Navigator.pop(context);
-              _printQuickSaleBill(
-                item: quickItem,
-                paymentMethod: 'Cash',
-                cashGiven: cash,
-                balance: cash - total,
-              );
-            },
-            child: const Text('Pay'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Prints a bill specifically for a single quick-sale item.
-  void _printQuickSaleBill({
-    required Map<String, dynamic> item,
-    required String paymentMethod,
-    double cashGiven = 0,
-    double balance = 0,
-  }) {
-    final now = DateTime.now();
-    final formattedDateTime = DateFormat('yyyy-MM-dd – hh:mm a').format(now);
-
-    final name = item['name'] as String;
-    final qty = item['quantity'] as int;
-    final unitCost = (item['unitCost'] as num).toDouble();
-    final price = (item['price'] as num).toDouble();
-    final total = price * qty;
-
-    final bill = StringBuffer();
-    bill.writeln('------- AASA POS QUICK SALE -------\n');
-    bill.writeln('Date: $formattedDateTime');
-    bill.writeln('------------------------------');
-    bill.writeln('Item: $name');
-    bill.writeln('Qty: $qty');
-    bill.writeln('Unit Cost: Rs. ${unitCost.toStringAsFixed(2)}');
-    bill.writeln('Price (per unit): Rs. ${price.toStringAsFixed(2)}');
-    bill.writeln('------------------------------');
-    bill.writeln('Total: Rs. ${total.toStringAsFixed(2)}');
-    bill.writeln('Payment Method: $paymentMethod');
-    if (paymentMethod == 'Cash') {
-      bill.writeln('Cash Given: Rs. ${cashGiven.toStringAsFixed(2)}');
-      bill.writeln('Balance: Rs. ${balance.toStringAsFixed(2)}');
-    }
-    bill.writeln('\nThank you for your purchase!');
-    bill.writeln('------------------------------');
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Quick Sale Bill Printed'),
-        content: SingleChildScrollView(child: Text(bill.toString())),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // After quick sale, if there are paused bills, offer to resume
-              if (pausedBills.isNotEmpty) {
-                _promptSelectPausedBill();
-              }
-            },
-            child: const Text('Done'),
-          ),
-        ],
-      ),
-    );
-  }
-
   // Reusable Quick Sale button (for both layouts)
   Widget _buildQuickSaleButton({
     double horizontalPadding = 0,
-    bool isWideScreen = false, // <— NEW PARAM
+    bool isWideScreen = false,
   }) {
     return Padding(
       padding: EdgeInsets.fromLTRB(horizontalPadding, 0, horizontalPadding, 16),
       child: Center(
         child: ElevatedButton.icon(
           onPressed: _handleQuickSale,
-          icon: Icon(
-            Icons.flash_on,
-            size: isWideScreen ? 30 : 20, // bigger icon on wide screens
-          ),
+          icon: Icon(Icons.flash_on, size: isWideScreen ? 30 : 20),
           label: Text(
             'Quick Sale',
             style: TextStyle(
-              fontSize: isWideScreen ? 22 : 16, // bigger text on wide screens
+              fontSize: isWideScreen ? 22 : 16,
               fontWeight: FontWeight.bold,
             ),
           ),
           style: ElevatedButton.styleFrom(
             padding: EdgeInsets.symmetric(
-              horizontal: isWideScreen ? 40 : 22, // bigger horizontal padding
-              vertical: isWideScreen ? 20 : 14, // bigger vertical padding
+              horizontal: isWideScreen ? 40 : 22,
+              vertical: isWideScreen ? 20 : 14,
             ),
-            minimumSize: isWideScreen
-                ? const Size(200, 60)
-                : null, // fixed big size
+            minimumSize: isWideScreen ? const Size(200, 60) : null,
           ),
         ),
       ),
@@ -1118,19 +1004,41 @@ class _CashierViewPageState extends State<CashierViewPage> {
             itemsByCategory: itemsByCategory,
             categories: categories,
             searchedItems: searchedItems,
-            onCategoryTap: (cat) {
-              Navigator.push(
+            onCategoryTap: (cat) async {
+              // 👉 Await CategoryItemsPage result and add to cart when back
+              final categoryItems =
+                  (itemsByCategory.firstWhere(
+                            (c) => c['category'] == cat,
+                          )['items']
+                          as List)
+                      .cast<Map<String, dynamic>>();
+
+              final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => CategoryItemsPage(
                     category: cat,
-                    items: itemsByCategory.firstWhere(
-                      (c) => c['category'] == cat,
-                    )['items'],
-                    onItemSelected: _showBatchSelectionDialog,
+                    items: categoryItems,
+                    onItemSelected: (_) {}, // not used in this flow
                   ),
                 ),
               );
+
+              if (result != null && mounted) {
+                final item = result['item'] as Map<String, dynamic>;
+                final batch = Map<String, dynamic>.from(
+                  result['batch'] as Map<String, dynamic>,
+                );
+                final qty = result['quantity'] as int;
+
+                // Build the shape _addToCart expects
+                final batchForCart = {
+                  'name': item['name'],
+                  'price': batch['price'],
+                  'batchID': batch['batchID'],
+                };
+                _addToCart(batchForCart, quantity: qty);
+              }
             },
             onSearchedItemTap: (item) =>
                 _showBatchSelectionDialog(item, fromSearch: true),
@@ -1168,13 +1076,13 @@ class _CashierViewPageState extends State<CashierViewPage> {
                 ),
               ),
               PrimaryActionsRow(
-                onAddItem: _showAddItemDialog,
+                onQuickSale: _handleQuickSale,
                 onPay: cartItems.isEmpty ? null : _showPaymentMethodDialog,
                 payEnabled: cartItems.isNotEmpty,
               ),
 
               // NEW: Quick Sale button
-              _buildQuickSaleButton(isWideScreen: true),
+              // _buildQuickSaleButton(isWideScreen: true),
 
               // pause-only row (no resume button)
               _buildPauseOnlyRow(
@@ -1232,19 +1140,39 @@ class _CashierViewPageState extends State<CashierViewPage> {
               searchedItems: searchedItems,
               gridHeight: 300,
               gridCrossAxisCount: crossAxisCount,
-              onCategoryTap: (cat) {
-                Navigator.push(
+              onCategoryTap: (cat) async {
+                final categoryItems =
+                    (itemsByCategory.firstWhere(
+                              (c) => c['category'] == cat,
+                            )['items']
+                            as List)
+                        .cast<Map<String, dynamic>>();
+
+                final result = await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => CategoryItemsPage(
                       category: cat,
-                      items: itemsByCategory.firstWhere(
-                        (c) => c['category'] == cat,
-                      )['items'],
-                      onItemSelected: _showBatchSelectionDialog,
+                      items: categoryItems,
+                      onItemSelected: (_) {}, // not used in this flow
                     ),
                   ),
                 );
+
+                if (result != null && mounted) {
+                  final item = result['item'] as Map<String, dynamic>;
+                  final batch = Map<String, dynamic>.from(
+                    result['batch'] as Map<String, dynamic>,
+                  );
+                  final qty = result['quantity'] as int;
+
+                  final batchForCart = {
+                    'name': item['name'],
+                    'price': batch['price'],
+                    'batchID': batch['batchID'],
+                  };
+                  _addToCart(batchForCart, quantity: qty);
+                }
               },
               onSearchedItemTap: (item) =>
                   _showBatchSelectionDialog(item, fromSearch: true),
@@ -1277,14 +1205,14 @@ class _CashierViewPageState extends State<CashierViewPage> {
             ),
           ),
           PrimaryActionsRow(
-            onAddItem: _showAddItemDialog,
+            onQuickSale: _handleQuickSale,
             onPay: cartItems.isEmpty ? null : _showPaymentMethodDialog,
             payEnabled: cartItems.isNotEmpty,
             horizontalPadding: 40,
           ),
 
           // NEW: Quick Sale button
-          _buildQuickSaleButton(horizontalPadding: 40),
+          // _buildQuickSaleButton(horizontalPadding: 40),
 
           // pause-only row (no resume button)
           _buildPauseOnlyRow(
