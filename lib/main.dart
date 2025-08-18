@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'core/services/auth_service.dart';
 import 'routes/app_routes.dart';
+import 'features/auth/two_step_login_page.dart'; // <-- New login page
 
 void main() {
   runApp(
@@ -24,7 +26,8 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      initialRoute: '/',
+      // Start with the two-step login page
+      home: const TwoStepLoginPage(),
       onGenerateRoute: (settings) => AppRoutes.generateRoute(settings, context),
     );
   }
