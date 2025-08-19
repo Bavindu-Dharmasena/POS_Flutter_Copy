@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
-import 'package:pos_system/features/stockkeeper/products/add_item_page.dart';
+import 'package:pos_system/features/stockkeeper/add_item_page.dart';
 
 // Your widgets
 import 'package:pos_system/widget/stock_keeper_inventory/dashboard_summary_grid.dart';

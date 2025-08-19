@@ -11,7 +11,7 @@ import '../../components/back_tile.dart';
 // Import the other screen pages
 import 'stockkeeper_reports.dart';
 import 'stockkeeper_cashier.dart';
-import 'stockkeeper_products.dart';
+// import 'stockkeeper_products.dart';
 import 'stockkeeper_inventory.dart';
 
 /// Keyboard intents
@@ -385,7 +385,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                                     gradient: _gListTopProducts(),
                                     items: topProducts,
 
-                                    onActivate: () => _navigateTo(const StockKeeperProducts()),
+                                    onActivate: () => _navigateTo(const StockKeeperProducts() as Widget),
 
                                   ),
                                 ),
@@ -414,7 +414,7 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
                                           gradient: _gListTopProducts(),
                                           items: topProducts,
 
-                                          onActivate: () => _navigateTo(const StockKeeperProducts()),
+                                          onActivate: () => _navigateTo(const StockKeeperProducts() as Widget),
 
                                         ),
                                       ),
@@ -480,4 +480,8 @@ class _StockKeeperDashboardState extends State<StockKeeperDashboard>
       child: child,
     );
   }
+}
+
+class StockKeeperProducts {
+  const StockKeeperProducts();
 }
