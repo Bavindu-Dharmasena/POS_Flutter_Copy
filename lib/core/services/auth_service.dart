@@ -1,40 +1,47 @@
 import 'package:flutter/material.dart';
 
-// User model to store the logged-in user's details
 class User {
   final String username;
   final String role;
-  User(this.username, this.role);
-}
+  final String token;
 
+  User(this.username, this.role, this.token);
+}
 
 class AuthService with ChangeNotifier {
   User? _currentUser;
 
-  User? get currentUser => _currentUser;
-
-  // Hardcoded user credentials
-  final Map<String, Map<String, String>> _users = {
+  // Seed data for local login
+  final Map<String, Map<String, String>> _seedUsers = {
     'cashier': {'password': 'cash123', 'role': 'Cashier'},
     'stock': {'password': 'stock123', 'role': 'StockKeeper'},
-    'manager': {'password': 'manager123', 'role': 'Manager'},
-    'admin': {'password': 'admin123', 'role': 'Admin'},
+    'manager': {'password': 'manager123', 'role': 'manager'},
+    'admin': {'password': 'admin123', 'role': 'admin'},
   };
 
-  // Login method that checks credentials
-  Future<bool> login(String username, String password) async {
-    final user = _users[username];
+  User? get currentUser => _currentUser;
 
-    // Check if the username exists and the password matches
+  /// Step 1: Simulate username check
+  Future<List<String>> checkUsername(String username) async {
+    await Future.delayed(const Duration(milliseconds: 500)); // simulate network delay
+    if (_seedUsers.containsKey(username)) {
+      return [_seedUsers[username]!['role']!];
+    }
+    throw Exception("User not found");
+  }
+
+  /// Step 2: Simulate login
+  Future<bool> login(String username, String password, {String? role}) async {
+    await Future.delayed(const Duration(milliseconds: 500)); // simulate network delay
+    final user = _seedUsers[username];
     if (user != null && user['password'] == password) {
-      _currentUser = User(username, user['role']!);
+      _currentUser = User(username, user['role']!, 'fake-jwt-token');
       notifyListeners();
       return true;
     }
-    return false;
+    throw Exception("Invalid credentials");
   }
 
-  // Logout method to clear the user data
   void logout() {
     _currentUser = null;
     notifyListeners();
