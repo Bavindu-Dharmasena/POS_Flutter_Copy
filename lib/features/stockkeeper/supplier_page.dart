@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
-import '../supplier/add_supplier_page.dart';
+import 'supplier/add_supplier_page.dart';
 
 class SupplierPage extends StatefulWidget {
   const SupplierPage({Key? key}) : super(key: key);

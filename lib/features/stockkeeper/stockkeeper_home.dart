@@ -5,11 +5,11 @@ import 'package:pos_system/features/cashier/cashier_view_page.dart';
 import 'package:pos_system/features/stockkeeper/settings/settings_provider.dart';
 
 import '../stockkeeper/stockkeeper_dashboard.dart';
-import '../stockkeeper/stockkeeper_products.dart';
-import '../stockkeeper/stockkeeper_inventory.dart';
 import '../stockkeeper/stockkeeper_reports.dart';
-import '../stockkeeper/stockkeeper_cashier.dart';
 import 'settings/stockkeeper_setting.dart';
+import 'package:pos_system/features/stockkeeper/add_item_page.dart';
+import 'package:pos_system/features/stockkeeper/supplier_page.dart';
+
 
 /// Custom intents for extra keyboard actions
 class JumpToFirstIntent extends Intent { const JumpToFirstIntent(); }
@@ -63,7 +63,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
         colors: [Color(0xFF11998E), Color(0xFF38EF7D)], // Teal to Green
         begin: Alignment.topLeft, end: Alignment.bottomRight,
       ),
-      pageBuilder: () => const StockKeeperProducts(),
+      pageBuilder: () => const AddItemPage(),
     ),
     _TileSpec(
       id: 'supplier',
@@ -74,7 +74,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
         colors: [Color(0xFFFF416C), Color(0xFFFF4B2B)], // Pink to Orange
         begin: Alignment.topLeft, end: Alignment.bottomRight,
       ),
-      pageBuilder: () => const StockKeeperInventory(),
+      pageBuilder: () => const SupplierPage(),
     ),
     _TileSpec(
       id: 'reports',
