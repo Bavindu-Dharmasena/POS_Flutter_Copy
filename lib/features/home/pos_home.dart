@@ -5,6 +5,8 @@ import '../auth/login_page.dart'; // Adjust the import path
 class POSHomePage extends StatelessWidget {
   const POSHomePage({super.key});
 
+  static const String shopName = "Tharu Shop";
+
   @override
   Widget build(final BuildContext context) {
     return Scaffold(
@@ -16,7 +18,7 @@ class POSHomePage extends StatelessWidget {
             children: <Widget>[
               const SizedBox(height: 30),
               Text(
-                'POS SYSTEM',
+                shopName,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -111,7 +113,7 @@ class RoleCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => LoginPage(role: title), // Pass the role here
+              builder: (_) => LoginPage(), // Pass the role here
             ),
           );
         },
