@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 // Adjust the import to your project path:
-import 'package:pos_system/features/stockkeeper/products/add_item_page.dart';
+import 'package:pos_system/features/stockkeeper/add_item_page.dart';
 
 /// ---------- Helpers ----------
 Future<void> setLargeSurface(WidgetTester tester) async {
