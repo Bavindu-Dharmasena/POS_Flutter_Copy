@@ -44,8 +44,8 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
   void _initializeTiles() {
   _tiles = [
     _TileSpec(
-      id: 'dashboard',
-      title: 'Dashboard',
+      id: 'supplierrequest',
+      title: 'Supplier Request',
       subtitle: 'Overview & Analytics',
       icon: Icons.dashboard_outlined,
       gradientBuilder: (cs) => LinearGradient(
@@ -55,9 +55,9 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
       pageBuilder: () => const StockKeeperDashboard(),
     ),
     _TileSpec(
-      id: 'products',
-      title: 'Products',
-      subtitle: 'Manage Items',
+      id: 'addnewitem',
+      title: 'Add New Item',
+      subtitle: 'add newly Items',
       icon: Icons.category_outlined,
       gradientBuilder: (cs) => LinearGradient(
         colors: [Color(0xFF11998E), Color(0xFF38EF7D)], // Teal to Green
@@ -66,9 +66,9 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
       pageBuilder: () => const StockKeeperProducts(),
     ),
     _TileSpec(
-      id: 'inventory',
-      title: 'Inventory',
-      subtitle: 'Stock Management',
+      id: 'supplier',
+      title: 'Supplier',
+      subtitle: 'Supplier Management',
       icon: Icons.inventory_2_outlined,
       gradientBuilder: (cs) => LinearGradient(
         colors: [Color(0xFFFF416C), Color(0xFFFF4B2B)], // Pink to Orange
@@ -88,8 +88,8 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
       pageBuilder: () => const StockKeeperReports(),
     ),
     _TileSpec(
-      id: 'cashier',
-      title: 'Cashier',
+      id: 'inventory',
+      title: 'Inventory',
       subtitle: 'Billing & Payments',
       icon: Icons.receipt_long_outlined,
       gradientBuilder: (cs) => LinearGradient(
