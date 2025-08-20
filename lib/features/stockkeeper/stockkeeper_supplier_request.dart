@@ -116,7 +116,7 @@ class _stockkeeper_supplier_requestState
     ),
   ];
 
-  // Which request is selected
+  // Which request is selected (index in the *filtered* list)
   int? _selectedIndex;
 
   // quantity controllers per visible row (for the selected request only)
@@ -125,9 +125,9 @@ class _stockkeeper_supplier_requestState
   @override
   void initState() {
     super.initState();
-    // Select the first request by default
     if (_allRequests.isNotEmpty) {
-      _selectRequest(0);
+      _selectedIndex = 0;
+      _rebuildQtyControllers();
     }
   }
 
@@ -160,8 +160,12 @@ class _stockkeeper_supplier_requestState
     }).toList();
   }
 
-  SupplierRequest? get _selectedRequest =>
-      (_selectedIndex == null) ? null : _filteredRequests[_selectedIndex!];
+  SupplierRequest? get _selectedRequest {
+    final list = _filteredRequests;
+    if (_selectedIndex == null || list.isEmpty) return null;
+    if (_selectedIndex! < 0 || _selectedIndex! >= list.length) return null;
+    return list[_selectedIndex!];
+  }
 
   void _rebuildQtyControllers() {
     for (final c in _qtyCtrls.values) {
@@ -191,6 +195,23 @@ class _stockkeeper_supplier_requestState
     });
   }
 
+  /// Ensure selection is valid *immediately* after any filter change
+  void _fixSelectionAfterFilter() {
+    final filtered = _filteredRequests;
+    if (filtered.isEmpty) {
+      _selectedIndex = null;
+      for (final c in _qtyCtrls.values) {
+        c.dispose();
+      }
+      _qtyCtrls.clear();
+    } else {
+      if (_selectedIndex == null || _selectedIndex! >= filtered.length) {
+        _selectedIndex = 0;
+        _rebuildQtyControllers();
+      }
+    }
+  }
+
   Future<void> _pickDateRange() async {
     final now = DateTime.now();
     final picked = await showDateRangePicker(
@@ -206,13 +227,7 @@ class _stockkeeper_supplier_requestState
     if (picked != null) {
       setState(() {
         _dateRange = picked;
-        // When filter changes, keep a valid selection index
-        if (_filteredRequests.isEmpty) {
-          _selectedIndex = null;
-        } else {
-          _selectedIndex = 0;
-        }
-        _rebuildQtyControllers();
+        _fixSelectionAfterFilter();
       });
     }
   }
@@ -232,80 +247,107 @@ class _stockkeeper_supplier_requestState
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final width = MediaQuery.of(context).size.width;
-    final isWide = width >= 900; // master-detail on wide; stacked on narrow
+    final size = MediaQuery.of(context).size;
 
-    final filtered = _filteredRequests;
+    final isDesktop = size.width >= 1200;
+    final isTablet = size.width >= 800 && size.width < 1200;
+    final isMobile = size.width < 800;
+
     final selected = _selectedRequest;
-
-    // Make sure selected index stays valid after filtering
-    if (filtered.isEmpty && _selectedIndex != null) {
-      _selectedIndex = null;
-    } else if (_selectedIndex != null && _selectedIndex! >= filtered.length) {
-      _selectedIndex = 0;
-    }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Supplier Requests'),
         centerTitle: true,
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [cs.surface, cs.surfaceVariant.withOpacity(.35), cs.background],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+        actions: [
+          IconButton(
+            tooltip: 'Clear filters',
+            onPressed: () {
+              setState(() {
+                _searchCtrl.clear();
+                _dateRange = null;
+                _fixSelectionAfterFilter();
+              });
+            },
+            icon: const Icon(Icons.filter_alt_off_outlined),
           ),
-        ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1400),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: isWide
-                  ? Row(
-                      children: [
-                        // LEFT: list + search (master)
-                        Flexible(
-                          flex: 4,
-                          child: _buildMasterList(
-                            cs: cs,
-                            textTheme: textTheme,
-                            filtered: filtered,
-                          ),
+        ],
+      ),
+
+      // Mobile: actions move to FAB + bottom sheet
+      floatingActionButton: isMobile && selected != null
+          ? FloatingActionButton.extended(
+              onPressed: () => _showActionSheet(context),
+              icon: const Icon(Icons.tune),
+              label: const Text('Actions'),
+            )
+          : null,
+
+      body: SafeArea(
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [cs.surface, cs.surfaceVariant.withOpacity(.35), cs.background],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isDesktop ? 24 : 12,
+              vertical: isDesktop ? 16 : 8,
+            ),
+            child: isDesktop || isTablet
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // LEFT: master list (fixed nice width on desktop)
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minWidth: 320,
+                          maxWidth: isDesktop ? 420 : 360,
                         ),
-                        const SizedBox(width: 16),
-                        // RIGHT: details (detail)
-                        Flexible(
-                          flex: 7,
-                          child: _buildDetailCard(
-                            cs: cs,
-                            textTheme: textTheme,
-                            selected: selected,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Column(
-                      children: [
-                        _buildMasterList(
+                        child: _buildMasterList(
                           cs: cs,
                           textTheme: textTheme,
-                          filtered: filtered,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // RIGHT: detail fills remaining space fully
+                      Expanded(
+                        child: _buildDetailCard(
+                          cs: cs,
+                          textTheme: textTheme,
+                          selected: selected,
+                          showInlineButtons: true, // desktop/tablet show buttons inline
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      // ✅ Mobile: master list must expand to get height
+                      Expanded(
+                        child: _buildMasterList(
+                          cs: cs,
+                          textTheme: textTheme,
                           dense: true,
                         ),
-                        const SizedBox(height: 16),
-                        Expanded(
-                          child: _buildDetailCard(
-                            cs: cs,
-                            textTheme: textTheme,
-                            selected: selected,
-                          ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Mobile: details below, no inline buttons (use FAB)
+                      Expanded(
+                        child: _buildDetailCard(
+                          cs: cs,
+                          textTheme: textTheme,
+                          selected: selected,
+                          showInlineButtons: false,
                         ),
-                      ],
-                    ),
-            ),
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),
@@ -316,9 +358,10 @@ class _stockkeeper_supplier_requestState
   Widget _buildMasterList({
     required ColorScheme cs,
     required TextTheme textTheme,
-    required List<SupplierRequest> filtered,
     bool dense = false,
   }) {
+    final filtered = _filteredRequests;
+
     return Card(
       elevation: 2,
       child: Padding(
@@ -333,11 +376,11 @@ class _stockkeeper_supplier_requestState
                   child: TextField(
                     controller: _searchCtrl,
                     textInputAction: TextInputAction.search,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.search),
+                    onChanged: (_) => setState(_fixSelectionAfterFilter),
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
                       labelText: 'Search supplier or request ID',
-                      border: const OutlineInputBorder(),
+                      border: OutlineInputBorder(),
                       isDense: true,
                     ),
                   ),
@@ -353,6 +396,7 @@ class _stockkeeper_supplier_requestState
               ],
             ),
             const SizedBox(height: 12),
+            // The list itself expands within its parent (works in both layouts)
             Expanded(
               child: filtered.isEmpty
                   ? Center(
@@ -439,6 +483,7 @@ class _stockkeeper_supplier_requestState
     required ColorScheme cs,
     required TextTheme textTheme,
     required SupplierRequest? selected,
+    required bool showInlineButtons,
   }) {
     if (selected == null) {
       return Card(
@@ -572,42 +617,123 @@ class _stockkeeper_supplier_requestState
               ),
             ),
 
-            // Bottom buttons
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: cs.error,
-                      side: BorderSide(color: cs.error),
+            // Desktop/tablet: inline bottom buttons
+            if (showInlineButtons) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: cs.error,
+                        side: BorderSide(color: cs.error),
+                      ),
+                      onPressed: _onReject,
+                      icon: const Icon(Icons.close),
+                      label: const Text('Reject'),
                     ),
-                    onPressed: _onReject,
-                    icon: const Icon(Icons.close),
-                    label: const Text('Reject'),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _onResend,
-                    icon: const Icon(Icons.restart_alt),
-                    label: const Text('Resend'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _onResend,
+                      icon: const Icon(Icons.restart_alt),
+                      label: const Text('Resend'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _onAccept,
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Accept'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: _onAccept,
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: const Text('Accept'),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  /// Mobile actions bottom sheet
+  void _showActionSheet(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Actions'),
+                subtitle: const Text('Approve / reject / resend this request'),
+                leading: Icon(Icons.tune, color: cs.primary),
+                contentPadding: EdgeInsets.zero,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: cs.error,
+                        side: BorderSide(color: cs.error),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _onReject();
+                      },
+                      icon: const Icon(Icons.close),
+                      label: const Text('Reject'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _onResend();
+                      },
+                      icon: const Icon(Icons.restart_alt),
+                      label: const Text('Resend'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _onAccept();
+                  },
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('Accept'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
