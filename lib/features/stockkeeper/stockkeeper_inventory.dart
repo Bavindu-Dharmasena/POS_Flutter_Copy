@@ -3,6 +3,59 @@ import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 /// ---------- Demo product model (same shape you already use) ----------
+import 'package:pos_system/features/stockkeeper/add_item_page.dart';
+
+// Your widgets
+import 'package:pos_system/widget/stock_keeper_inventory/dashboard_summary_grid.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/product_actions_sheet.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/product_card.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/product_details_dialog.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/search_and_filter_section.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/product_edit.dart';
+
+/// ===== Small helpers: gradients derived from theme =====
+LinearGradient themedHeaderGradient(ColorScheme cs) => LinearGradient(
+  colors: [cs.primary, cs.tertiary],
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+);
+
+LinearGradient themedBackgroundSheen(ColorScheme cs) => LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [
+    cs.surface,
+    cs.surfaceVariant.withOpacity(.35),
+    cs.background,
+  ],
+);
+
+Gradient themedSweepOverlay(ColorScheme cs) => SweepGradient(
+  center: Alignment.topLeft,
+  startAngle: 0,
+  endAngle: 3.14 * 2,
+  colors: [
+    cs.primary.withOpacity(.08),
+    cs.secondary.withOpacity(.06),
+    cs.tertiary.withOpacity(.08),
+    cs.primary.withOpacity(.08),
+  ],
+);
+
+/// ===== Vibrant fixed gradients for action tiles (stay colorful in both modes) =====
+LinearGradient gEditButton() => const LinearGradient(
+  colors: [Color(0xFF60A5FA), Color(0xFFA855F7)], // blue → violet
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+);
+
+LinearGradient gAdjustButton() => const LinearGradient(
+  colors: [Color(0xFF34D399), Color(0xFF10B981)], // mint → green
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+);
+
+/// ===== Product model =====
 class Product {
   final String id;
   final String name;

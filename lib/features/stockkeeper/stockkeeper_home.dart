@@ -5,12 +5,14 @@ import 'package:provider/provider.dart';
 import 'package:pos_system/features/cashier/cashier_view_page.dart';
 import 'package:pos_system/features/stockkeeper/settings/settings_provider.dart';
 
-import 'stockkeeper_supplier_request.dart';
+import '../stockkeeper/stockkeeper_dashboard.dart';
 import '../stockkeeper/stockkeeper_products.dart';
 import '../stockkeeper/stockkeeper_inventory.dart';
 import '../stockkeeper/stockkeeper_reports.dart';
-import '../stockkeeper/stockkeeper_cashier.dart';
 import 'settings/stockkeeper_setting.dart';
+import 'package:pos_system/features/stockkeeper/add_item_page.dart';
+import 'package:pos_system/features/stockkeeper/supplier_page.dart';
+
 
 /// Custom intents for extra keyboard actions
 class JumpToFirstIntent extends Intent { const JumpToFirstIntent(); }
@@ -64,7 +66,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
         colors: [Color(0xFF11998E), Color(0xFF38EF7D)], // Teal to Green
         begin: Alignment.topLeft, end: Alignment.bottomRight,
       ),
-      pageBuilder: () => const StockKeeperProducts(),
+      pageBuilder: () => const AddItemPage(),
     ),
     _TileSpec(
       id: 'supplier',
@@ -281,10 +283,10 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Stock Keeper Home',
+          'Stock Keeper Dashboard',
           style: textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            fontSize: 20 * settings.textScaleFactor,
+            fontSize: 18 * settings.textScaleFactor,
           ),
         ),
         centerTitle: true,
