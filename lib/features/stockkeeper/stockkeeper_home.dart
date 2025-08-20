@@ -280,10 +280,10 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Stock Keeper Home',
+          'Stock Keeper Dashboard',
           style: textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            fontSize: 20 * settings.textScaleFactor,
+            fontSize: 18 * settings.textScaleFactor,
           ),
         ),
         centerTitle: true,
