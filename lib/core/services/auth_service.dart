@@ -15,8 +15,8 @@ class AuthService with ChangeNotifier {
   final Map<String, Map<String, String>> _seedUsers = {
     'cashier': {'password': 'cash123', 'role': 'Cashier'},
     'stock': {'password': 'stock123', 'role': 'StockKeeper'},
-    'manager': {'password': 'manager123', 'role': 'manager'},
-    'admin': {'password': 'admin123', 'role': 'admin'},
+    'manager': {'password': 'manager123', 'role': 'Manager'},
+    'admin': {'password': 'admin123', 'role': 'Admin'},
   };
 
   User? get currentUser => _currentUser;

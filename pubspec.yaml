@@ -5,12 +5,11 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.8.1
+  sdk: ">=3.8.1 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  provider: ^6.1.2 # Optional: upgrade, 6.1.1 still works
   cupertino_icons: ^1.0.8
   intl: ^0.20.2
   lottie: ^3.3.1
@@ -18,24 +17,29 @@ dependencies:
   flutter_colorpicker: ^1.0.3
   google_fonts: ^6.2.1
   fl_chart: ^0.66.2
-
-  flutter_vector_icons: ^2.0.0 # Add this line for vector icons (including Feather icons)
+  flutter_vector_icons: ^2.0.0
   mobile_scanner: ^3.5.5
   shared_preferences: ^2.2.3
-  mocktail: ^1.0.4
   url_launcher: ^6.3.2
-
-
+  path_provider: ^2.1.4
+  provider: ^6.1.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
   mockito: ^5.4.4
-  provider: ^6.1.0
-  build_runner:
+  mocktail: ^1.0.4
+  build_runner: ^2.4.11
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/pos_logo.png"
+  min_sdk_android: 21
