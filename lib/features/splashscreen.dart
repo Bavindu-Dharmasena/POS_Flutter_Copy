@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> {
     // Delay for 3 seconds before navigating to POSHomePage
     Timer(const Duration(seconds: 1), () {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginPage()),
+        
         MaterialPageRoute(builder: (context) => const StockKeeperHome()),
       );
     });

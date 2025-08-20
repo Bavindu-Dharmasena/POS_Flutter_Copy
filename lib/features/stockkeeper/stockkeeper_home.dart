@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pos_system/features/stockkeeper/products/supplier_page.dart';
+
 import 'package:provider/provider.dart';
 import 'package:pos_system/features/cashier/cashier_view_page.dart';
 import 'package:pos_system/features/stockkeeper/settings/settings_provider.dart';
 
-import '../stockkeeper/stockkeeper_dashboard.dart';
-import '../stockkeeper/stockkeeper_products.dart';
+
+
 import '../stockkeeper/stockkeeper_inventory.dart';
 import '../stockkeeper/stockkeeper_reports.dart';
 import 'settings/stockkeeper_setting.dart';
 import 'package:pos_system/features/stockkeeper/add_item_page.dart';
 import 'package:pos_system/features/stockkeeper/supplier_page.dart';
+import '../stockkeeper/stockkeeper_supplier_request.dart';
 
 
 /// Custom intents for extra keyboard actions
