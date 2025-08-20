@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pos_system/features/stockkeeper/products/supplier_page.dart';
 import 'package:provider/provider.dart';
 import 'package:pos_system/features/cashier/cashier_view_page.dart';
 import 'package:pos_system/features/stockkeeper/settings/settings_provider.dart';
@@ -74,7 +75,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
         colors: [Color(0xFFFF416C), Color(0xFFFF4B2B)], // Pink to Orange
         begin: Alignment.topLeft, end: Alignment.bottomRight,
       ),
-      pageBuilder: () => const StockKeeperInventory(),
+      pageBuilder: () => const SupplierPage(),
     ),
     _TileSpec(
       id: 'reports',
@@ -96,7 +97,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
         colors: [Color(0xFF43C6AC), Color(0xFF191654)], // Aqua to Navy
         begin: Alignment.topLeft, end: Alignment.bottomRight,
       ),
-      pageBuilder: () => const CashierViewPage(),
+      pageBuilder: () => const InventoryStatsOnly(),
     ),
     _TileSpec(
       id: 'settings',
