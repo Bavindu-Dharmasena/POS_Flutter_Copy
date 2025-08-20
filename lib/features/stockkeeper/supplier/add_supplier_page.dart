@@ -1,10 +1,11 @@
-import "package:flutter/material.dart";
-import "package:flutter/services.dart";
-import "package:flutter_vector_icons/flutter_vector_icons.dart";
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 class AddSupplierPage extends StatefulWidget {
   const AddSupplierPage({super.key, required this.supplierData});
 
+  /// Pass an empty map `{}` for "Add", or a filled map to "Edit"
   final Map supplierData;
 
   @override
@@ -17,7 +18,18 @@ class _AddSupplierPageState extends State<AddSupplierPage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  // Controllers
+  // ========= App Palette (same as AddItemPage) =========
+  static const Color kBg = Color(0xFF0B1623);
+  static const Color kSurface = Color(0xFF121A26);
+  static const Color kBorder = Color(0x1FFFFFFF);
+  static const Color kText = Colors.white;
+  static const Color kTextMuted = Colors.white70;
+  static const Color kHint = Colors.white38;
+  static const Color kInfo = Color(0xFF3B82F6);
+  static const Color kSuccess = Color(0xFF10B981);
+  static const Color kDanger = Color(0xFFEF4444);
+
+  // ========= Controllers =========
   final TextEditingController _idCtrl = TextEditingController();
   final TextEditingController _nameCtrl = TextEditingController();
   final TextEditingController _contactCtrl = TextEditingController();
@@ -26,34 +38,11 @@ class _AddSupplierPageState extends State<AddSupplierPage>
   final TextEditingController _locationCtrl = TextEditingController();
   final TextEditingController _remarkCtrl = TextEditingController();
 
-  // State variables
+  // ========= State =========
   bool _active = true;
-  bool _preferredSupplier = false;
   List<String> _locations = [];
   String? _paymentTerms;
 
-  // Color palette matching your project's style
-  final List<LinearGradient> _gradientPalette = const [
-    LinearGradient(
-      colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
-    ), // Blue-Purple
-    LinearGradient(
-      colors: [Color(0xFFF97316), Color(0xFFEAB308)],
-    ), // Orange-Yellow
-    LinearGradient(colors: [Color(0xFF10B981), Color(0xFF059669)]), // Green
-    LinearGradient(colors: [Color(0xFFEC4899), Color(0xFFF43F5E)]), // Pink-Red
-    LinearGradient(colors: [Color(0xFFEF4444), Color(0xFFEC4899)]), // Red-Pink
-    LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFFA855F7)]), // Purple
-    LinearGradient(colors: [Color(0xFF06B6D4), Color(0xFF0EA5E9)]), // Cyan-Blue
-    LinearGradient(
-      colors: [Color(0xFF84CC16), Color(0xFF65A30D)],
-    ), // Lime-Green
-    LinearGradient(
-      colors: [Color(0xFF475569), Color(0xFF334155)],
-    ), // Gray-Slate
-  ];
-
-  LinearGradient? _selectedGradient;
   final List<String> _paymentOptions = const [
     'Cash',
     'Credit 7 Days',
@@ -62,20 +51,93 @@ class _AddSupplierPageState extends State<AddSupplierPage>
     'Credit 60 Days',
   ];
 
+  // Accent gradients (subtle; align with your style)
+  static const _gradBluePurple = LinearGradient(
+    colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  static const _gradGreen = LinearGradient(
+    colors: [Color(0xFF10B981), Color(0xFF059669)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  static const _gradOrange = LinearGradient(
+    colors: [Color(0xFFF97316), Color(0xFFEAB308)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  static const _gradPink = LinearGradient(
+    colors: [Color(0xFFEC4899), Color(0xFFF43F5E)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+  static const _gradSlate = LinearGradient(
+    colors: [Color(0xFF475569), Color(0xFF334155)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  LinearGradient _selectedGradient = _gradBluePurple;
+
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 900),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
     );
     _animationController.forward();
 
-    // Set default gradient
-    _selectedGradient = _gradientPalette[0];
+    // Prefill if editing
+    final d = widget.supplierData;
+    if (d.isNotEmpty) {
+      _idCtrl.text = (d['id'] ?? '').toString();
+      _nameCtrl.text = (d['name'] ?? '').toString();
+      _contactCtrl.text = (d['contact'] ?? '').toString();
+      _emailCtrl.text = (d['email'] ?? '').toString();
+      _brandCtrl.text = (d['brand'] ?? '').toString();
+      _remarkCtrl.text = (d['remarks'] ?? '').toString();
+
+      final locs = (d['locations'] is List)
+          ? List<String>.from(d['locations'])
+          : <String>[];
+      _locations = locs;
+      _paymentTerms = d['paymentTerms']?.toString();
+      _active = d['active'] is bool ? d['active'] : true;
+
+      // Try to map any saved gradient name → a gradient (fallback to blue/purple)
+      final gname = d['gradientName']?.toString();
+      _selectedGradient = _nameToGradient(gname) ?? _gradBluePurple;
+    }
+  }
+
+  LinearGradient? _nameToGradient(String? name) {
+    switch (name) {
+      case 'bluePurple':
+        return _gradBluePurple;
+      case 'green':
+        return _gradGreen;
+      case 'orange':
+        return _gradOrange;
+      case 'pink':
+        return _gradPink;
+      case 'slate':
+        return _gradSlate;
+    }
+    return null;
+  }
+
+  String _gradientToName(LinearGradient g) {
+    if (g == _gradGreen) return 'green';
+    if (g == _gradOrange) return 'orange';
+    if (g == _gradPink) return 'pink';
+    if (g == _gradSlate) return 'slate';
+    return 'bluePurple';
   }
 
   @override
@@ -91,30 +153,28 @@ class _AddSupplierPageState extends State<AddSupplierPage>
     super.dispose();
   }
 
-  // Location management
+  // ========= Actions =========
   void _addLocation() {
-    if (_locationCtrl.text.trim().isNotEmpty) {
+    final t = _locationCtrl.text.trim();
+    if (t.isNotEmpty) {
       setState(() {
-        _locations.add(_locationCtrl.text.trim());
+        if (!_locations.contains(t)) _locations.add(t);
         _locationCtrl.clear();
       });
     }
   }
 
   void _removeLocation(int index) {
-    setState(() {
-      _locations.removeAt(index);
-    });
+    setState(() => _locations.removeAt(index));
   }
 
-  // Form submission
   void _submitForm() {
     if (!_formKey.currentState!.validate()) {
-      _scrollToFirstError();
+      _scrollToTop();
       return;
     }
 
-    var payload = {
+    final payload = {
       "id": _idCtrl.text.trim(),
       "name": _nameCtrl.text.trim(),
       "contact": _contactCtrl.text.trim(),
@@ -123,53 +183,54 @@ class _AddSupplierPageState extends State<AddSupplierPage>
       "locations": _locations,
       "paymentTerms": _paymentTerms,
       "active": _active,
-      "preferredSupplier": _preferredSupplier,
-      "colorGradient": _selectedGradient,
+      "gradientName": _gradientToName(_selectedGradient),
       "remarks": _remarkCtrl.text.trim(),
+      "isEdit": widget.supplierData.isNotEmpty,
     };
 
+    // Success toast
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         backgroundColor: Colors.transparent,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 0,
-        margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 3),
-        dismissDirection: DismissDirection.horizontal,
         content: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF10B981), Color(0xFF059669)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            color: kSuccess,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF10B981).withOpacity(0.3),
+                color: kSuccess.withOpacity(0.35),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Feather.check_circle, color: Colors.white, size: 20),
               const SizedBox(width: 12),
-              Text(
-                '✨ Supplier saved: ${payload['name']}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+              Flexible(
+                child: Text(
+                  '${widget.supplierData.isNotEmpty ? "Updated" : "Saved"}: ${payload['name']}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
         ),
+        duration: const Duration(seconds: 2),
       ),
     );
+
+    // Return payload to caller
+    Navigator.pop(context, payload);
   }
 
   void _resetForm() {
@@ -183,546 +244,371 @@ class _AddSupplierPageState extends State<AddSupplierPage>
     _remarkCtrl.clear();
     setState(() {
       _active = true;
-      _preferredSupplier = false;
       _locations.clear();
       _paymentTerms = null;
-      _selectedGradient = _gradientPalette[0];
+      _selectedGradient = _gradBluePurple;
     });
   }
 
   final _scrollCtrl = ScrollController();
-  void _scrollToFirstError() {
+  void _scrollToTop() {
     _scrollCtrl.animateTo(
       0,
-      duration: const Duration(milliseconds: 200),
+      duration: const Duration(milliseconds: 220),
       curve: Curves.easeOut,
     );
+    HapticFeedback.lightImpact();
   }
 
+  // ========= UI =========
   @override
   Widget build(BuildContext context) {
-    return KeyboardListener(
-      focusNode: FocusNode(),
-      autofocus: true,
-      onKeyEvent: (event) {
-        if (event is KeyDownEvent) {
-          if (event.logicalKey == LogicalKeyboardKey.escape) {
-            Navigator.pop(context);
-          } else if (event.logicalKey == LogicalKeyboardKey.enter ||
-              event.logicalKey == LogicalKeyboardKey.numpadEnter) {
-            var currentFocus = FocusScope.of(context);
-            if (!currentFocus.hasPrimaryFocus ||
-                currentFocus.focusedChild == null) {
-              _submitForm();
-            }
-          }
-        }
-      },
+    final isEdit = widget.supplierData.isNotEmpty;
 
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0B1623),
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF0F172A), Color(0xFF1E3A8A), Color(0xFF0F172A)],
-            ),
-          ),
-          child: CustomScrollView(
-            controller: _scrollCtrl,
-            slivers: [
-              SliverAppBar(
-                expandedHeight: 120,
-                pinned: true,
-                backgroundColor: Colors.transparent,
-                leading: Container(
-                  margin: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFEAB308), Color(0xFFF97316)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFEAB308).withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(
-                      Feather.arrow_left,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
+    return Scaffold(
+      backgroundColor: kBg,
+      body: SafeArea(
+        child: CustomScrollView(
+          controller: _scrollCtrl,
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 110,
+              pinned: true,
+              backgroundColor: kBg,
+              leading: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: kSurface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: kBorder),
                 ),
-                flexibleSpace: FlexibleSpaceBar(
-                  title: ShaderMask(
-                    shaderCallback: (bounds) => const LinearGradient(
-                      colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
-                    ).createShader(bounds),
-                    child: const Text(
-                      "Add Supplier",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
-                    ),
-                  ),
-                  centerTitle: false,
-                  titlePadding: const EdgeInsets.only(left: 72, bottom: 16),
+                child: IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Feather.arrow_left, color: kText, size: 20),
                 ),
               ),
-              SliverToBoxAdapter(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          // Basic Information Section
-                          _dashboardCard(
-                            icon: Feather.info,
-                            title: "Basic Information",
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF60A5FA), Color(0xFFA855F7)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            children: [
-                              _buildRow([
-                                _dashboardTextField(
-                                  controller: _idCtrl,
-                                  label: "Supplier ID",
-                                  hint: "Ex: SUP001",
-                                  validator: (v) =>
-                                      (v == null || v.trim().isEmpty)
-                                      ? 'Required'
-                                      : null,
-                                ),
-                                _dashboardTextField(
-                                  controller: _nameCtrl,
-                                  label: "Supplier Name",
-                                  hint: "Ex: ABC Traders",
-                                  validator: (v) =>
-                                      (v == null || v.trim().isEmpty)
-                                      ? 'Required'
-                                      : null,
-                                ),
-                              ]),
-                              const SizedBox(height: 12),
-                              _buildRow([
-                                _dashboardTextField(
-                                  controller: _contactCtrl,
-                                  label: "Contact Number",
-                                  hint: "071-2345678",
-                                  validator: (v) =>
-                                      (v == null || v.trim().isEmpty)
-                                      ? 'Required'
-                                      : null,
-                                ),
-                                _dashboardTextField(
-                                  controller: _emailCtrl,
-                                  label: "Email (Optional)",
-                                  hint: "supplier@email.com",
-                                ),
-                              ]),
-                              const SizedBox(height: 12),
-                              _dashboardTextField(
-                                controller: _brandCtrl,
-                                label: "Brand/Company",
-                                hint: "Associated brand or company name",
-                                validator: (v) =>
-                                    (v == null || v.trim().isEmpty)
-                                    ? 'Required'
-                                    : null,
-                                fullWidth: true,
+              flexibleSpace: FlexibleSpaceBar(
+                title: Text(
+                  isEdit ? 'Edit Supplier' : 'Add Supplier',
+                  style: const TextStyle(
+                    color: kText,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+                centerTitle: false,
+                titlePadding: const EdgeInsets.only(left: 72, bottom: 16),
+              ),
+            ),
+
+            SliverToBoxAdapter(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        // Basic Information
+                        _dashboardCard(
+                          icon: Feather.info,
+                          title: 'Basic Information',
+                          accent: _gradBluePurple,
+                          children: [
+                            _buildRow([
+                              _tf(
+                                _idCtrl,
+                                'Supplier ID',
+                                hint: 'Ex: SUP001',
+                                validator: _req,
                               ),
-                              const SizedBox(height: 12),
-                              _buildRow([
-                                _dashboardSwitch(
-                                  label: "Active Status",
-                                  value: _active,
-                                  onChanged: (v) => setState(() => _active = v),
-                                ),
-                                _dashboardSwitch(
-                                  label: "Preferred Supplier",
-                                  value: _preferredSupplier,
-                                  onChanged: (v) =>
-                                      setState(() => _preferredSupplier = v),
-                                  compact: true,
-                                ),
-                              ]),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Payment & Terms Section
-                          _dashboardCard(
-                            icon: Feather.credit_card,
-                            title: "Payment & Terms",
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF10B981), Color(0xFF059669)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            children: [
-                              _dashboardDropdown(
-                                label: "Payment Terms",
-                                value: _paymentTerms,
-                                items: _paymentOptions,
-                                onChanged: (v) =>
-                                    setState(() => _paymentTerms = v),
-                                validator: (v) =>
-                                    v == null ? 'Select payment terms' : null,
+                              _tf(
+                                _nameCtrl,
+                                'Supplier Name',
+                                hint: 'Ex: ABC Traders',
+                                validator: _req,
                               ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Locations Section
-                          _dashboardCard(
-                            icon: Feather.map_pin,
-                            title: "Locations",
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFF97316), Color(0xFFEAB308)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _dashboardTextField(
-                                      controller: _locationCtrl,
-                                      label: "Add Location",
-                                      hint: "Ex: Colombo, Kandy",
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Container(
-                                    height: 56,
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFF60A5FA),
-                                          Color(0xFFA855F7),
-                                        ],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      ),
-                                      borderRadius: BorderRadius.circular(16),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(
-                                            0xFF60A5FA,
-                                          ).withOpacity(0.3),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: ElevatedButton(
-                                      onPressed: _addLocation,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Feather.plus,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                            ]),
+                            const SizedBox(height: 12),
+                            _buildRow([
+                              _tf(
+                                _contactCtrl,
+                                'Contact Number',
+                                hint: '0771234567',
+                                validator: _reqPhone,
                               ),
-                              if (_locations.isNotEmpty) ...[
-                                const SizedBox(height: 16),
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.05),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.1),
-                                    ),
+                              _tf(
+                                _emailCtrl,
+                                'Email (Optional)',
+                                hint: 'supplier@email.com',
+                                validator: _optEmail,
+                              ),
+                            ]),
+                            const SizedBox(height: 12),
+                            _tf(
+                              _brandCtrl,
+                              'Brand / Company',
+                              hint: 'Associated brand or company name',
+                              validator: _req,
+                              fullWidth: true,
+                            ),
+                            const SizedBox(height: 12),
+                            _switchTile(
+                              'Active Status',
+                              _active,
+                              (v) => setState(() => _active = v),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Payment & Terms
+                        _dashboardCard(
+                          icon: Feather.credit_card,
+                          title: 'Payment & Terms',
+                          accent: _gradGreen,
+                          children: [
+                            _dropdown<String>(
+                              label: 'Payment Terms',
+                              value: _paymentTerms,
+                              items: _paymentOptions,
+                              onChanged: (v) =>
+                                  setState(() => _paymentTerms = v),
+                              validator: (v) =>
+                                  v == null ? 'Select payment terms' : null,
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Locations
+                        _dashboardCard(
+                          icon: Feather.map_pin,
+                          title: 'Locations',
+                          accent: _gradOrange,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _tf(
+                                    _locationCtrl,
+                                    'Add Location',
+                                    hint: 'Ex: Colombo, Kandy',
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        "Added Locations:",
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: _locations
-                                            .asMap()
-                                            .entries
-                                            .map((entry) {
-                                              int index = entry.key;
-                                              String location = entry.value;
-                                              return Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 8,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  gradient:
-                                                      const LinearGradient(
-                                                        colors: [
-                                                          Color(0xFF475569),
-                                                          Color(0xFF334155),
-                                                        ],
-                                                      ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Icon(
-                                                      Feather.map_pin,
-                                                      color: Colors.white70,
-                                                      size: 14,
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      location,
-                                                      style: const TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 13,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    GestureDetector(
-                                                      onTap: () =>
-                                                          _removeLocation(
-                                                            index,
-                                                          ),
-                                                      child: const Icon(
-                                                        Feather.x,
-                                                        color: Colors.red,
-                                                        size: 16,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            })
-                                            .toList(),
-                                      ),
-                                    ],
+                                ),
+                                const SizedBox(width: 12),
+                                SizedBox(
+                                  height: 56,
+                                  child: ElevatedButton(
+                                    onPressed: _addLocation,
+                                    style: _btnStyle(background: kInfo),
+                                    child: const Icon(
+                                      Feather.plus,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
                                   ),
                                 ),
                               ],
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Appearance & Notes Section
-                          _dashboardCard(
-                            icon: Feather.layers,
-                            title: "Appearance & Notes",
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFEC4899), Color(0xFFF43F5E)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
                             ),
-                            children: [
-                              _dashboardGradientPicker(),
-                              const SizedBox(height: 16),
-                              _dashboardTextField(
-                                controller: _remarkCtrl,
-                                label: "Remarks/Notes",
-                                hint: "Optional notes about the supplier",
-                                maxLines: 3,
-                                fullWidth: true,
-                              ),
-                              const SizedBox(height: 16),
-                              _dashboardPreview(),
-                            ],
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // Action Buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Container(
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        const Color(
-                                          0xFF475569,
-                                        ).withOpacity(0.8),
-                                        const Color(
-                                          0xFF334155,
-                                        ).withOpacity(0.8),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.1),
-                                    ),
-                                  ),
-                                  child: ElevatedButton(
-                                    onPressed: _resetForm,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
+                            if (_locations.isNotEmpty) ...[
+                              const SizedBox(height: 14),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.05),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: kBorder),
+                                ),
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: _locations.asMap().entries.map((e) {
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 8,
                                       ),
-                                    ),
-                                    child: const Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Feather.refresh_cw,
-                                          color: Colors.white70,
-                                          size: 18,
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          "Reset",
-                                          style: TextStyle(
+                                      decoration: BoxDecoration(
+                                        gradient: _gradSlate,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Feather.map_pin,
                                             color: Colors.white70,
-                                            fontWeight: FontWeight.w600,
+                                            size: 14,
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            e.value,
+                                            style: const TextStyle(
+                                              color: kText,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          GestureDetector(
+                                            onTap: () => _removeLocation(e.key),
+                                            child: const Icon(
+                                              Feather.x,
+                                              color: kDanger,
+                                              size: 16,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
                                 ),
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                flex: 2,
-                                child: Container(
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFF10B981),
-                                        Color(0xFF059669),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(
-                                          0xFF10B981,
-                                        ).withOpacity(0.3),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
+                            ],
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Appearance & Notes
+                        _dashboardCard(
+                          icon: Feather.layers,
+                          title: 'Appearance & Notes',
+                          accent: _gradPink,
+                          children: [
+                            _gradientPicker(),
+                            const SizedBox(height: 16),
+                            _tf(
+                              _remarkCtrl,
+                              'Remarks / Notes',
+                              hint: 'Optional notes about the supplier',
+                              maxLines: 3,
+                              fullWidth: true,
+                            ),
+                            const SizedBox(height: 16),
+                            _preview(),
+                          ],
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Actions
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 56,
+                                child: ElevatedButton(
+                                  onPressed: _resetForm,
+                                  style: _btnStyle(
+                                    background: const Color(0xFF334155),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Feather.refresh_cw,
+                                        color: Colors.white70,
+                                        size: 18,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Reset',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ],
                                   ),
-                                  child: ElevatedButton(
-                                    onPressed: _submitForm,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 2,
+                              child: SizedBox(
+                                height: 56,
+                                child: ElevatedButton(
+                                  onPressed: _submitForm,
+                                  style: _btnStyle(background: kSuccess),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Feather.check_circle,
+                                        color: Colors.white,
+                                        size: 20,
                                       ),
-                                    ),
-                                    child: const Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Feather.check_circle,
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        isEdit
+                                            ? 'Update Supplier'
+                                            : 'Save Supplier',
+                                        style: const TextStyle(
                                           color: Colors.white,
-                                          size: 20,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
                                         ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          "Save Supplier",
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
+                        ),
 
-                          const SizedBox(height: 32),
-                        ],
-                      ),
+                        const SizedBox(height: 32),
+                      ],
                     ),
                   ),
                 ),
               ),
-            ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ========= Reusable widgets/styles =========
+  ButtonStyle _btnStyle({required Color background}) {
+    return ElevatedButton.styleFrom(
+      backgroundColor: background,
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ).merge(
+      ButtonStyle(
+        overlayColor: WidgetStateProperty.resolveWith(
+          (states) => Colors.white.withOpacity(
+            states.contains(WidgetState.pressed) ? 0.08 : 0.04,
           ),
         ),
       ),
     );
   }
 
-  // ---------- Dashboard-Style Components ----------
   Widget _dashboardCard({
     required IconData icon,
     required String title,
-    required LinearGradient gradient,
+    required LinearGradient accent,
     required List<Widget> children,
   }) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: gradient.colors
-              .map((color) => color.withOpacity(0.1))
-              .toList(),
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: kSurface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: kBorder),
         boxShadow: [
           BoxShadow(
-            color: gradient.colors.first.withOpacity(0.2),
+            color: Colors.black.withOpacity(0.35),
             blurRadius: 16,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -737,11 +623,11 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    gradient: gradient,
+                    gradient: accent,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: gradient.colors.first.withOpacity(0.3),
+                        color: accent.colors.first.withOpacity(0.35),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -750,12 +636,15 @@ class _AddSupplierPageState extends State<AddSupplierPage>
                   child: Icon(icon, color: Colors.white, size: 24),
                 ),
                 const SizedBox(width: 16),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
+                Flexible(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      color: kText,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -770,81 +659,91 @@ class _AddSupplierPageState extends State<AddSupplierPage>
 
   Widget _buildRow(List<Widget> children) {
     if (children.length == 1) return children.first;
-    return Row(
-      children: children.map((child) => Expanded(child: child)).expand((
-        widget,
-      ) sync* {
-        yield widget;
-        if (widget != children.map((child) => Expanded(child: child)).last) {
-          yield const SizedBox(width: 12);
+    return LayoutBuilder(
+      builder: (context, c) {
+        if (c.maxWidth < 600) {
+          return Column(
+            children: children
+                .expand((w) => [w, const SizedBox(height: 12)])
+                .toList()
+                .sublist(0, children.length * 2 - 1),
+          );
         }
-      }).toList(),
+        return Row(
+          children: [
+            for (int i = 0; i < children.length; i++) ...[
+              Expanded(child: children[i]),
+              if (i != children.length - 1) const SizedBox(width: 12),
+            ],
+          ],
+        );
+      },
     );
   }
 
-  InputDecoration _dashboardDecoration(
+  InputDecoration _decoration(
     String label, {
     String? hint,
     Widget? suffixIcon,
-    String? prefixText,
-    String? suffixText,
   }) {
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      prefixText: prefixText,
-      suffixText: suffixText,
       suffixIcon: suffixIcon,
       labelStyle: const TextStyle(
-        color: Colors.white70,
+        color: kTextMuted,
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
-      hintStyle: const TextStyle(color: Colors.white38),
+      hintStyle: const TextStyle(color: kHint),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.08),
+      fillColor: Colors.white.withOpacity(0.06),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+        borderSide: const BorderSide(color: kBorder),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+        borderSide: const BorderSide(color: kBorder),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFF60A5FA), width: 2),
+        borderSide: const BorderSide(color: kInfo, width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1),
+        borderSide: const BorderSide(color: kDanger, width: 1),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: kDanger, width: 2),
       ),
     );
   }
 
-  Widget _dashboardTextField({
-    required TextEditingController controller,
-    required String label,
+  Widget _tf(
+    TextEditingController c,
+    String label, {
     String? hint,
     String? Function(String?)? validator,
     int maxLines = 1,
     bool fullWidth = false,
   }) {
     return TextFormField(
-      controller: controller,
+      controller: c,
       maxLines: maxLines,
       style: const TextStyle(
-        color: Colors.white,
+        color: kText,
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
-      decoration: _dashboardDecoration(label, hint: hint),
+      decoration: _decoration(label, hint: hint),
       validator: validator,
     );
   }
 
-  Widget _dashboardDropdown<T>({
+  Widget _dropdown<T>({
     required String label,
     required T? value,
     required List<T> items,
@@ -859,62 +758,55 @@ class _AddSupplierPageState extends State<AddSupplierPage>
               value: e,
               child: Text(
                 e.toString(),
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: kText),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           )
           .toList(),
       onChanged: onChanged,
       validator: validator,
-      dropdownColor: const Color(0xFF1E293B),
-      decoration: _dashboardDecoration(label),
+      dropdownColor: kSurface,
+      decoration: _decoration(label),
       style: const TextStyle(
-        color: Colors.white,
+        color: kText,
         fontSize: 14,
         fontWeight: FontWeight.w500,
       ),
-      icon: const Icon(Feather.chevron_down, color: Colors.white70, size: 20),
+      icon: const Icon(Feather.chevron_down, color: kTextMuted, size: 20),
+      isExpanded: true,
     );
   }
 
-  Widget _dashboardSwitch({
-    required String label,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    bool compact = false,
-  }) {
+  Widget _switchTile(String label, bool value, ValueChanged<bool> onChanged) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: Colors.white.withOpacity(0.06),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: kBorder),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Flexible(
+          Expanded(
             child: Text(
               label,
               style: const TextStyle(
-                color: Colors.white,
+                color: kText,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(width: 8),
           Transform.scale(
-            scale: 0.8,
+            scale: 0.9,
             child: Switch(
               value: value,
               onChanged: onChanged,
               activeColor: Colors.white,
               inactiveThumbColor: Colors.white70,
-              activeTrackColor: value
-                  ? const Color(0xFF10B981)
-                  : const Color(0xFF475569),
+              activeTrackColor: value ? kSuccess : const Color(0xFF475569),
               inactiveTrackColor: const Color(0xFF475569),
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               splashRadius: 0,
@@ -925,100 +817,95 @@ class _AddSupplierPageState extends State<AddSupplierPage>
     );
   }
 
-  Widget _dashboardGradientPicker() {
+  Widget _gradientPicker() {
+    final list = <LinearGradient>[
+      _gradBluePurple,
+      _gradGreen,
+      _gradOrange,
+      _gradPink,
+      _gradSlate,
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             const Text(
-              "Color Theme",
+              'Color Theme',
               style: TextStyle(
-                color: Colors.white,
+                color: kText,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(width: 12),
-            if (_selectedGradient != null)
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  gradient: _selectedGradient,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _selectedGradient!.colors.first.withOpacity(0.4),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-              ),
-            const Spacer(),
             Container(
+              width: 22,
+              height: 22,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF475569), Color(0xFF334155)],
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: TextButton.icon(
-                onPressed: () =>
-                    setState(() => _selectedGradient = _gradientPalette[0]),
-                icon: const Icon(
-                  Feather.refresh_cw,
-                  color: Colors.white70,
-                  size: 14,
-                ),
-                label: const Text(
-                  "Reset",
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                gradient: _selectedGradient,
+                borderRadius: BorderRadius.circular(6),
+                boxShadow: [
+                  BoxShadow(
+                    color: _selectedGradient.colors.first.withOpacity(0.45),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
+                ],
+              ),
+            ),
+            const Spacer(),
+            TextButton.icon(
+              onPressed: () =>
+                  setState(() => _selectedGradient = _gradBluePurple),
+              icon: const Icon(Feather.refresh_cw, color: kTextMuted, size: 14),
+              label: const Text(
+                'Reset',
+                style: TextStyle(color: kTextMuted, fontSize: 12),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
                 ),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 12,
           runSpacing: 12,
-          children: _gradientPalette.map((gradient) {
-            final isSelected = _selectedGradient == gradient;
+          children: list.map((g) {
+            final sel =
+                identical(g, _selectedGradient) ||
+                (g.colors.first == _selectedGradient.colors.first &&
+                    g.colors.last == _selectedGradient.colors.last);
             return GestureDetector(
-              onTap: () => setState(() => _selectedGradient = gradient),
+              onTap: () => setState(() => _selectedGradient = g),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                width: 44,
-                height: 44,
+                duration: const Duration(milliseconds: 160),
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  gradient: gradient,
-                  borderRadius: BorderRadius.circular(12),
+                  gradient: g,
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: isSelected
-                        ? Colors.white
-                        : Colors.white.withOpacity(0.1),
-                    width: isSelected ? 3 : 1,
+                    color: sel ? Colors.white : Colors.white.withOpacity(0.15),
+                    width: sel ? 3 : 1,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: gradient.colors.first.withOpacity(
-                        isSelected ? 0.6 : 0.3,
-                      ),
-                      blurRadius: isSelected ? 16 : 8,
-                      offset: Offset(0, isSelected ? 4 : 2),
+                      color: g.colors.first.withOpacity(sel ? 0.6 : 0.35),
+                      blurRadius: sel ? 14 : 8,
+                      offset: Offset(0, sel ? 4 : 2),
                     ),
                   ],
                 ),
-                child: isSelected
-                    ? const Icon(Feather.check, color: Colors.white, size: 20)
+                child: sel
+                    ? const Icon(Feather.check, color: Colors.white, size: 18)
                     : null,
               ),
             );
@@ -1028,13 +915,13 @@ class _AddSupplierPageState extends State<AddSupplierPage>
     );
   }
 
-  Widget _dashboardPreview() {
+  Widget _preview() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: const Border.fromBorderSide(BorderSide(color: kBorder)),
       ),
       child: Row(
         children: [
@@ -1042,21 +929,15 @@ class _AddSupplierPageState extends State<AddSupplierPage>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              gradient:
-                  _selectedGradient ??
-                  const LinearGradient(
-                    colors: [Color(0xFF475569), Color(0xFF334155)],
-                  ),
+              gradient: _selectedGradient,
               borderRadius: BorderRadius.circular(12),
-              boxShadow: _selectedGradient != null
-                  ? [
-                      BoxShadow(
-                        color: _selectedGradient!.colors.first.withOpacity(0.4),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                  : null,
+              boxShadow: [
+                BoxShadow(
+                  color: _selectedGradient.colors.first.withOpacity(0.4),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: const Icon(Feather.truck, color: Colors.white, size: 20),
           ),
@@ -1066,90 +947,74 @@ class _AddSupplierPageState extends State<AddSupplierPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _nameCtrl.text.isEmpty ? "Supplier Preview" : _nameCtrl.text,
+                  _nameCtrl.text.isEmpty ? 'Supplier Preview' : _nameCtrl.text,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: kText,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${_brandCtrl.text.isEmpty ? "Brand" : _brandCtrl.text} • ${_contactCtrl.text.isEmpty ? "No Contact" : _contactCtrl.text}',
-                  style: const TextStyle(color: Colors.white60, fontSize: 13),
+                  style: const TextStyle(color: kTextMuted, fontSize: 13),
+                  overflow: TextOverflow.ellipsis,
                 ),
                 if (_locations.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
-                    '📍 ${_locations.length} Location${_locations.length > 1 ? 's' : ''}',
-                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                    '📍 ${_locations.length} Location${_locations.length > 1 ? "s" : ""}',
+                    style: const TextStyle(color: kTextMuted, fontSize: 12),
                   ),
                 ],
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  gradient: _active
-                      ? const LinearGradient(
-                          colors: [Color(0xFF10B981), Color(0xFF059669)],
-                        )
-                      : const LinearGradient(
-                          colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
-                        ),
-                  borderRadius: BorderRadius.circular(6),
-                  boxShadow: [
-                    BoxShadow(
-                      color:
-                          (_active
-                                  ? const Color(0xFF10B981)
-                                  : const Color(0xFFEF4444))
-                              .withOpacity(0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  _active ? "Active" : "Inactive",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              if (_preferredSupplier) ...[
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFEAB308), Color(0xFFF97316)],
-                    ),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: const Text(
-                    '⭐ PREFERRED',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: _active ? kSuccess : kDanger,
+              borderRadius: BorderRadius.circular(6),
+              boxShadow: [
+                BoxShadow(
+                  color: (_active ? kSuccess : kDanger).withOpacity(0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
                 ),
               ],
-            ],
+            ),
+            child: Text(
+              _active ? 'Active' : 'Inactive',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  // ========= Validators =========
+  String? _req(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Required';
+    return null;
+  }
+
+  String? _optEmail(String? v) {
+    if (v == null || v.trim().isEmpty) return null;
+    final re = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+');
+    if (!re.hasMatch(v.trim())) return 'Invalid email';
+    return null;
+  }
+
+  String? _reqPhone(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Required';
+    final t = v.replaceAll(RegExp(r'[^0-9]'), '');
+    if (t.length < 9 || t.length > 12) return 'Invalid phone';
+    return null;
   }
 }
