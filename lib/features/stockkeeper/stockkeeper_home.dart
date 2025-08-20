@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:pos_system/features/cashier/cashier_view_page.dart';
 import 'package:pos_system/features/stockkeeper/settings/settings_provider.dart';
 
-import '../stockkeeper/stockkeeper_dashboard.dart';
+import 'stockkeeper_supplier_request.dart';
 import '../stockkeeper/stockkeeper_products.dart';
 import '../stockkeeper/stockkeeper_inventory.dart';
 import '../stockkeeper/stockkeeper_reports.dart';
@@ -52,7 +52,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
         colors: [Color(0xFF6A11CB), Color(0xFF2575FC)], // Purple to Blue
         begin: Alignment.topLeft, end: Alignment.bottomRight,
       ),
-      pageBuilder: () => const StockKeeperDashboard(),
+      pageBuilder: () => const stockkeeper_supplier_request(),
     ),
     _TileSpec(
       id: 'addnewitem',
