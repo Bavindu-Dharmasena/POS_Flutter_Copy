@@ -77,8 +77,8 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
       pageBuilder: () => const SupplierPage(),
     ),
     _TileSpec(
-      id: 'reports',
-      title: 'Reports',
+      id: 'insights',
+      title: 'Insights',
       subtitle: 'Charts & Analytics',
       icon: Icons.bar_chart_outlined,
       gradientBuilder: (cs) => LinearGradient(
