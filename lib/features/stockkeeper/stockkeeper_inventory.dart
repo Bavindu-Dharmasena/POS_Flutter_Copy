@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
+// ====== PAGES YOU NAVIGATE TO ======
 import 'package:pos_system/features/stockkeeper/inventory/total_items.dart';
+import 'package:pos_system/features/stockkeeper/inventory/low_stock_page.dart';
 
-// Your widgets (unused here but left in case you reference later)
-
-/// ===== Small helpers: gradients derived from theme =====
+// ===== Small helpers: gradients derived from theme =====
 LinearGradient themedHeaderGradient(ColorScheme cs) => LinearGradient(
   colors: [cs.primary, cs.tertiary],
   begin: Alignment.topLeft,
@@ -16,26 +15,10 @@ LinearGradient themedHeaderGradient(ColorScheme cs) => LinearGradient(
 LinearGradient themedBackgroundSheen(ColorScheme cs) => LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [
-    cs.surface,
-    cs.surfaceVariant.withOpacity(.35),
-    cs.background,
-  ],
+  colors: [cs.surface, cs.surfaceVariant.withOpacity(.35), cs.background],
 );
 
-Gradient themedSweepOverlay(ColorScheme cs) => SweepGradient(
-  center: Alignment.topLeft,
-  startAngle: 0,
-  endAngle: 3.14 * 2,
-  colors: [
-    cs.primary.withOpacity(.08),
-    cs.secondary.withOpacity(.06),
-    cs.tertiary.withOpacity(.08),
-    cs.primary.withOpacity(.08),
-  ],
-);
-
-/// ===== Product model =====
+// ===== Product model =====
 class Product {
   final String id;
   final String name;
@@ -65,7 +48,7 @@ class Product {
   bool get isOutOfStock => currentStock == 0;
 }
 
-/// ---------- Stats + Low Stock + Out-of-Stock screen ----------
+/// ---------- Stats screen (ONLY tiles + OUT-OF-STOCK red alert) ----------
 class InventoryStatsOnly extends StatefulWidget {
   const InventoryStatsOnly({super.key});
 
@@ -74,13 +57,13 @@ class InventoryStatsOnly extends StatefulWidget {
 }
 
 class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
-  // Example items – replace with your live data
+  // Dummy data so you can see the alert instantly. Replace with your live list.
   final List<Product> products = const [
     Product(
       id: '001',
       name: 'Cadbury Dairy Milk',
       category: 'Chocolates',
-      currentStock: 45,
+      currentStock: 6,
       minStock: 20,
       maxStock: 100,
       price: 250.00,
@@ -92,7 +75,7 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
       id: '002',
       name: 'Maliban Cream Crackers',
       category: 'Biscuits',
-      currentStock: 8,
+      currentStock: 10,
       minStock: 15,
       maxStock: 80,
       price: 180.00,
@@ -104,7 +87,7 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
       id: '003',
       name: 'Coca Cola 330ml',
       category: 'Beverages',
-      currentStock: 67,
+      currentStock: 0, // OUT OF STOCK
       minStock: 25,
       maxStock: 120,
       price: 150.00,
@@ -116,7 +99,7 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
       id: '004',
       name: 'Anchor Milk Powder 400g',
       category: 'Dairy',
-      currentStock: 12,
+      currentStock: 8,
       minStock: 10,
       maxStock: 50,
       price: 850.00,
@@ -124,118 +107,83 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
       image: null,
       supplier: 'Fonterra Lanka',
     ),
-    Product(
-      id: '005',
-      name: 'Sunquick Orange 700ml',
-      category: 'Beverages',
-      currentStock: 23,
-      minStock: 15,
-      maxStock: 60,
-      price: 420.00,
-      barcode: '321654987',
-      image: null,
-      supplier: 'Lanka Beverages',
-    ),
-    // Example out-of-stock to demonstrate the warning banner:
-    Product(
-      id: '006',
-      name: 'Sprite 1L',
-      category: 'Beverages',
-      currentStock: 0,
-      minStock: 10,
-      maxStock: 60,
-      price: 260.00,
-      barcode: '888888888',
-      image: null,
-      supplier: 'Coca Cola Lanka',
-    ),
   ];
 
-  // Selection state for Low Stock table
-  final Set<String> _selectedIds = <String>{};
-  final Map<String, TextEditingController> _qtyCtrls = <String, TextEditingController>{};
+  bool _mobileBannerShown = false;
 
-  @override
-  void initState() {
-    super.initState();
-    // Prepare default quantities for low stock items
-    for (final p in _lowStock) {
-      _qtyCtrls[p.id] = TextEditingController(text: _suggestQty(p).toString());
-    }
-  }
-
-  @override
-  void dispose() {
-    for (final c in _qtyCtrls.values) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  // ---------- Computed helpers ----------
-  List<Product> get _lowStock => products.where((p) => p.isLowStock).toList();
   List<Product> get _outOfStock => products.where((p) => p.isOutOfStock).toList();
+  List<Product> get _lowStock => products.where((p) => p.isLowStock).toList(); // still for tile
 
-  int _suggestQty(Product p) {
-    // simple heuristic: fill up to min(maxStock, minStock * 2)
-    final target = (p.minStock * 2).clamp(0, p.maxStock);
-    final need = target - p.currentStock;
-    return need > 0 ? need : (p.minStock - p.currentStock).clamp(1, p.maxStock);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _maybeShowMobileOutOfStockBanner();
   }
 
-  String _money(double v) => 'Rs. ${v.toStringAsFixed(0)}';
+  void _maybeShowMobileOutOfStockBanner() {
+    final width = MediaQuery.of(context).size.width;
+    final isDesktop = width >= 900;
+    final oosCount = _outOfStock.length;
 
-  // ---------- Actions ----------
-  void _requestToSupplier() {
-    final selectedProducts = _lowStock.where((p) => _selectedIds.contains(p.id)).toList();
-    if (selectedProducts.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select at least one item to request.')),
-      );
-      return;
-    }
-
-    // Build a simple summary
-    final lines = selectedProducts.map((p) {
-      final qty = int.tryParse(_qtyCtrls[p.id]?.text ?? '') ?? 0;
-      return '• ${p.name} — $qty pcs';
-    }).join('\n');
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Send request to supplier?'),
-        content: Text(lines),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: integrate your real flow here.
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Request sent for ${selectedProducts.length} item(s).')),
-              );
-              setState(() => _selectedIds.clear());
-            },
-            child: const Text('Send'),
+    // Show a top red banner on mobile only, once per visit
+    if (!isDesktop && oosCount > 0 && !_mobileBannerShown) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.clearMaterialBanners();
+        messenger.showMaterialBanner(
+          MaterialBanner(
+            elevation: 2,
+            backgroundColor: Theme.of(context).colorScheme.errorContainer,
+            leading: Icon(Icons.warning_amber_rounded,
+                color: Theme.of(context).colorScheme.onErrorContainer),
+            content: Text(
+              'Out of stock: $oosCount item(s) need immediate attention.',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onErrorContainer,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  messenger.hideCurrentMaterialBanner();
+                  setState(() => _mobileBannerShown = true);
+                },
+                child: const Text('DISMISS'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  messenger.hideCurrentMaterialBanner();
+                  setState(() => _mobileBannerShown = true);
+                  // Navigate to LOW STOCK page as requested
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const LowStockRequestPage()),
+                  );
+                },
+                child: const Text('VIEW'),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        );
+        _mobileBannerShown = true;
+      });
+    } else if (isDesktop) {
+      // Ensure banners are cleared on desktop
+      ScaffoldMessenger.of(context).clearMaterialBanners();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    // Stats
     final totalItems = products.length;
-    final lowStockCount = _lowStock.length;
-    final outOfStockCount = _outOfStock.length;
-    final totalValue = products.fold<double>(
-      0,
-      (sum, p) => sum + (p.price * p.currentStock),
-    );
+    final lowStockCount = _lowStock.length;      // tile
+    final outOfStockCount = _outOfStock.length;  // red warning
+
+    final width = MediaQuery.of(context).size.width;
+    final isDesktop = width >= 900;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -244,9 +192,7 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
         elevation: 0,
         centerTitle: true,
         title: ShaderMask(
-          shaderCallback: (r) => LinearGradient(
-            colors: [cs.primary, cs.tertiary],
-          ).createShader(r),
+          shaderCallback: (r) => themedHeaderGradient(cs).createShader(r),
           child: const Text(
             'Inventory Management',
             style: TextStyle(
@@ -264,27 +210,38 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
         ],
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [cs.surface, cs.surfaceVariant.withOpacity(.35), cs.background],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+        decoration: BoxDecoration(gradient: themedBackgroundSheen(cs)),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1400),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ===== Centered, responsive tiles =====
+                  // ---- Desktop-only: top-right OUT-OF-STOCK red pill ----
+                  if (isDesktop)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (outOfStockCount > 0)
+                          _OutOfStockPill(
+                            count: outOfStockCount,
+                            items: _outOfStock.map((e) => e.name).toList(),
+                          ),
+                      ],
+                    ),
+                  if (isDesktop) const SizedBox(height: 16),
+
+                  // ---- Centered, responsive tiles (Total Items + Low Stock) ----
                   LayoutBuilder(
                     builder: (context, constraints) {
                       const double minTileWidth = 300;
-                      final int cols = (constraints.maxWidth / minTileWidth).floor().clamp(1, 4);
+                      final int cols =
+                          (constraints.maxWidth / minTileWidth).floor().clamp(1, 4);
                       const double gap = 20;
-                      final double tileWidth = (constraints.maxWidth - (cols - 1) * gap) / cols;
+                      final double tileWidth =
+                          (constraints.maxWidth - (cols - 1) * gap) / cols;
 
                       final tiles = [
                         _StatTile(
@@ -314,37 +271,7 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
                           value: '$lowStockCount',
                           label: 'Low Stock',
                           onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const TotalItems()),
-                          ),
-                        ),
-                        _StatTile(
-                          width: tileWidth,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFFF5C8A), Color(0xFFFF4D73)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          iconBg: const Color(0xFFFFA7BE),
-                          icon: Feather.slash,
-                          value: '$outOfStockCount',
-                          label: 'Out of Stock',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const TotalItems()),
-                          ),
-                        ),
-                        _StatTile(
-                          width: tileWidth,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF16A085), Color(0xFF129277)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          iconBg: const Color(0xFF6FD3C1),
-                          icon: Feather.trending_up,
-                          value: _money(totalValue),
-                          label: 'Total Value',
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const TotalItems()),
+                            MaterialPageRoute(builder: (_) => const LowStockRequestPage()),
                           ),
                         ),
                       ];
@@ -357,73 +284,6 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
                         children: tiles,
                       );
                     },
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // ===== Out-of-Stock WARNING (not a card) =====
-                  if (outOfStockCount > 0)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: cs.errorContainer,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: cs.error.withOpacity(.5)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.warning_amber_rounded, color: cs.onErrorContainer),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Out of Stock',
-                                style: TextStyle(
-                                  color: cs.onErrorContainer,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '($outOfStockCount)',
-                                style: TextStyle(
-                                  color: cs.onErrorContainer.withOpacity(.9),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: _outOfStock
-                                .map((p) => Chip(
-                                      label: Text(p.name, overflow: TextOverflow.ellipsis),
-                                      backgroundColor:
-                                          cs.onErrorContainer.withOpacity(.08),
-                                      shape: StadiumBorder(
-                                        side: BorderSide(color: cs.onErrorContainer),
-                                      ),
-                                      labelStyle: TextStyle(color: cs.onErrorContainer),
-                                    ))
-                                .toList(),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  if (outOfStockCount > 0) const SizedBox(height: 24),
-
-                  // ===== Low Stock (select + request) =====
-                  _LowStockTable(
-                    products: _lowStock,
-                    selectedIds: _selectedIds,
-                    qtyCtrls: _qtyCtrls,
-                    onChanged: () => setState(() {}),
-                    onRequestToSupplier: _requestToSupplier,
                   ),
                 ],
               ),
@@ -525,138 +385,75 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-/// ---------- Low Stock table with selection + request button ----------
-class _LowStockTable extends StatelessWidget {
-  const _LowStockTable({
-    required this.products,
-    required this.selectedIds,
-    required this.qtyCtrls,
-    required this.onChanged,
-    required this.onRequestToSupplier,
+/// ---------- Compact OUT-OF-STOCK red pill (desktop, top-right) ----------
+class _OutOfStockPill extends StatelessWidget {
+  const _OutOfStockPill({
+    required this.count,
+    required this.items,
   });
 
-  final List<Product> products;
-  final Set<String> selectedIds;
-  final Map<String, TextEditingController> qtyCtrls;
-  final VoidCallback onChanged;
-  final VoidCallback onRequestToSupplier;
+  final int count;
+  final List<String> items;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final hasSelection = selectedIds.isNotEmpty;
 
-    return Card(
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header
-            Row(
-              children: [
-                Icon(Feather.alert_triangle, color: cs.primary),
-                const SizedBox(width: 8),
-                Text(
-                  'Low Stock',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                ),
-                const Spacer(),
-                FilledButton.icon(
-                  onPressed: hasSelection ? onRequestToSupplier : null,
-                  icon: const Icon(Icons.send),
-                  label: Text(
-                    hasSelection
-                        ? 'Request to Supplier (${selectedIds.length})'
-                        : 'Request to Supplier',
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Out of Stock'),
+            content: items.isEmpty
+                ? const Text('No items.')
+                : SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: items
+                          .map((n) => Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Text('• $n'),
+                              ))
+                          .toList(),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            if (products.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text(
-                  'No low-stock items.',
-                  style: TextStyle(color: cs.onSurface.withOpacity(.7)),
-                ),
-              )
-            else
-              // Responsive horizontally scrollable table
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minWidth: 920),
-                  child: DataTable(
-                    headingRowHeight: 44,
-                    dataRowMinHeight: 56,
-                    dataRowMaxHeight: 64,
-                    headingTextStyle: Theme.of(context)
-                        .textTheme
-                        .labelLarge
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                    columns: const [
-                      DataColumn(label: Text('Select')),
-                      DataColumn(label: Text('Item')),
-                      DataColumn(label: Text('Supplier')),
-                      DataColumn(label: Text('Curr.')),
-                      DataColumn(label: Text('Min')),
-                      DataColumn(label: Text('Max')),
-                      DataColumn(label: Text('Req. Qty')),
-                    ],
-                    rows: products.map((p) {
-                      qtyCtrls.putIfAbsent(p.id, () => TextEditingController(text: '1'));
-                      final selected = selectedIds.contains(p.id);
-                      return DataRow(
-                        selected: selected,
-                        cells: [
-                          DataCell(Checkbox(
-                            value: selected,
-                            onChanged: (_) {
-                              if (selected) {
-                                selectedIds.remove(p.id);
-                              } else {
-                                selectedIds.add(p.id);
-                              }
-                              onChanged();
-                            },
-                          )),
-                          DataCell(SizedBox(
-                            width: 300,
-                            child: Text(p.name, overflow: TextOverflow.ellipsis),
-                          )),
-                          DataCell(Text(p.supplier)),
-                          DataCell(Text('${p.currentStock}')),
-                          DataCell(Text('${p.minStock}')),
-                          DataCell(Text('${p.maxStock}')),
-                          DataCell(
-                            SizedBox(
-                              width: 110,
-                              child: TextField(
-                                controller: qtyCtrls[p.id],
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                decoration: const InputDecoration(
-                                  isDense: true,
-                                  border: OutlineInputBorder(),
-                                  contentPadding:
-                                      EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                ),
-                                onChanged: (_) => onChanged(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    }).toList(),
-                  ),
-                ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+              // Navigate to LOW STOCK page as requested
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const LowStockRequestPage()),
+                  );
+                },
+                child: const Text('Review & Restock'),
               ),
+            ],
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: cs.errorContainer,
+          border: Border.all(color: cs.error.withOpacity(.5)),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.warning_amber_rounded, color: cs.onErrorContainer, size: 18),
+            const SizedBox(width: 6),
+            Text(
+              'Out of Stock: $count',
+              style: TextStyle(
+                color: cs.onErrorContainer,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
         ),
       ),
