@@ -61,11 +61,33 @@ class _CategoryItemsPageState extends State<CategoryItemsPage> {
           decoration: const InputDecoration(hintText: 'Quantity'),
         ),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogCtx).pop(quantity); // return quantity
-            },
-            child: const Text('Add'),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // HOME (left)
+              TextButton(
+                onPressed: () {
+                  // 1) Close the dialog without adding anything
+                  Navigator.of(dialogCtx).pop(null);
+
+                  // 2) Go back to billing page WITHOUT refreshing state.
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(
+                      context,
+                    ).pop(); // pop CategoryItemsPage if present
+                  }
+                },
+                child: const Text('Home'),
+              ),
+
+              // ADD (right)
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogCtx).pop(quantity); // return quantity
+                },
+                child: const Text('Add'),
+              ),
+            ],
           ),
         ],
       ),
