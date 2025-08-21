@@ -4,8 +4,9 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 /// ---------- Demo product model (same shape you already use) ----------
 import 'package:pos_system/features/stockkeeper/add_item_page.dart';
+import 'package:pos_system/features/stockkeeper/inventory/total_items.dart';
 
-// Your widgets
+// Your widgets (unused here but left in case you reference later)
 import 'package:pos_system/widget/stock_keeper_inventory/dashboard_summary_grid.dart';
 import 'package:pos_system/widget/stock_keeper_inventory/product_actions_sheet.dart';
 import 'package:pos_system/widget/stock_keeper_inventory/product_card.dart';
@@ -40,19 +41,6 @@ Gradient themedSweepOverlay(ColorScheme cs) => SweepGradient(
     cs.tertiary.withOpacity(.08),
     cs.primary.withOpacity(.08),
   ],
-);
-
-/// ===== Vibrant fixed gradients for action tiles (stay colorful in both modes) =====
-LinearGradient gEditButton() => const LinearGradient(
-  colors: [Color(0xFF60A5FA), Color(0xFFA855F7)], // blue → violet
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-);
-
-LinearGradient gAdjustButton() => const LinearGradient(
-  colors: [Color(0xFF34D399), Color(0xFF10B981)], // mint → green
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
 );
 
 /// ===== Product model =====
@@ -318,6 +306,9 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
                           icon: Feather.archive,
                           value: '$totalItems',
                           label: 'Total Items',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const TotalItems()),
+                          ),
                         ),
                         _StatTile(
                           width: tileWidth,
@@ -330,6 +321,9 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
                           icon: Feather.alert_triangle,
                           value: '$lowStockCount',
                           label: 'Low Stock',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const TotalItems()),
+                          ),
                         ),
                         _StatTile(
                           width: tileWidth,
@@ -342,6 +336,9 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
                           icon: Feather.slash,
                           value: '$outOfStockCount',
                           label: 'Out of Stock',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const TotalItems()),
+                          ),
                         ),
                         _StatTile(
                           width: tileWidth,
@@ -354,6 +351,9 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
                           icon: Feather.trending_up,
                           value: _money(totalValue),
                           label: 'Total Value',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const TotalItems()),
+                          ),
                         ),
                       ];
 
@@ -443,7 +443,7 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
   }
 }
 
-/// ---------- Single tile ----------
+/// ---------- Single tile (tappable with ripple) ----------
 class _StatTile extends StatelessWidget {
   const _StatTile({
     required this.width,
@@ -452,6 +452,7 @@ class _StatTile extends StatelessWidget {
     required this.icon,
     required this.value,
     required this.label,
+    this.onTap,
   });
 
   final double width;
@@ -460,62 +461,70 @@ class _StatTile extends StatelessWidget {
   final IconData icon;
   final String value;
   final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final onCard = Colors.white;
     return SizedBox(
       width: width,
-      child: Container(
-        height: 180,
-        decoration: BoxDecoration(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(28),
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(28),
-          gradient: gradient,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(.25),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Icon bubble
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: iconBg.withOpacity(.35),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(icon, color: onCard.withOpacity(.9)),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: .2,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: onCard.withOpacity(.9),
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w600,
-                  ),
+          child: Ink(
+            height: 180,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              gradient: gradient,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(.25),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10),
                 ),
               ],
+            ),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Icon bubble
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: iconBg.withOpacity(.35),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(icon, color: Colors.white.withOpacity(.9)),
+                    ),
+                    const SizedBox(height: 18),
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: .2,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(.9),
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
