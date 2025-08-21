@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+/// ---- Dark table palette (extracted from your screenshot) ----
+const _kDarkCard     = Color(0xFF0F1318); // outer container / card
+const _kDarkHeader   = Color(0xFF1F2631); // header row
+const _kDarkRow      = Color(0xFF141A21); // body rows
+const _kDarkDivider  = Color(0xFF2A3240); // table grid lines
+const _kDarkTextMain = Color(0xFFE6EAF0); // main text
+const _kDarkTextMute = Color(0xFFB7C0CC); // secondary text
+
 /// If you already have a shared Product model, delete this one and import yours.
 class Product {
   final String id;
@@ -325,6 +333,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
     );
   }
 
+  /// ---- FULL-SCREEN DESKTOP TABLE + DARK PALETTE ----
   Widget _buildDesktopTable(ColorScheme cs, List<Product> visible) {
     // proper tri-state value for the master checkbox
     final selectedInView =
@@ -340,157 +349,198 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
       masterValue = null; // indeterminate
     }
 
-    return Card(
-      elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 980),
-            child: DataTable(
-              sortColumnIndex: _sortColumnIndex,
-              sortAscending: _sortAscending,
-              headingRowHeight: 44,
-              dataRowMinHeight: 56,
-              dataRowMaxHeight: 64,
-              columns: [
-                DataColumn(
-                  label: Row(
-                    children: [
-                      Checkbox(
-                        value: masterValue,
-                        tristate: true,
-                        onChanged: (value) =>
-                            _toggleSelectAll(value, visible),
-                      ),
-                      const SizedBox(width: 4),
-                      const Text('Select'),
-                    ],
-                  ),
-                ),
-                DataColumn(
-                  label: const Text('Item'),
-                  onSort: (i, asc) => setState(() {
-                    _sortColumnIndex = i;
-                    _sortAscending = asc;
-                  }),
-                ),
-                DataColumn(
-                  label: const Text('Supplier'),
-                  onSort: (i, asc) => setState(() {
-                    _sortColumnIndex = i;
-                    _sortAscending = asc;
-                  }),
-                ),
-                DataColumn(
-                  label: const Text('Curr.'),
-                  numeric: true,
-                  onSort: (i, asc) => setState(() {
-                    _sortColumnIndex = i;
-                    _sortAscending = asc;
-                  }),
-                ),
-                DataColumn(
-                  label: const Text('Min'),
-                  numeric: true,
-                  onSort: (i, asc) => setState(() {
-                    _sortColumnIndex = i;
-                    _sortAscending = asc;
-                  }),
-                ),
-                DataColumn(
-                  label: const Text('Max'),
-                  numeric: true,
-                  onSort: (i, asc) => setState(() {
-                    _sortColumnIndex = i;
-                    _sortAscending = asc;
-                  }),
-                ),
-                const DataColumn(label: Text('Req. Qty')),
-              ],
-              rows: visible.map((p) {
-                final selected = _selected.contains(p.id);
-                final ctrl = _qtyCtrls[p.id]!;
-                return DataRow(
-                  selected: selected,
-                  onSelectChanged: (_) {
-                    setState(() {
-                      if (selected) {
-                        _selected.remove(p.id);
-                      } else {
-                        _selected.add(p.id);
-                      }
-                    });
-                  },
-                  cells: [
-                    DataCell(Checkbox(
-                      value: selected,
-                      onChanged: (_) {
-                        setState(() {
-                          if (selected) {
-                            _selected.remove(p.id);
-                          } else {
-                            _selected.add(p.id);
-                          }
-                        });
-                      },
-                    )),
-                    DataCell(SizedBox(
-                      width: 300,
-                      child: Text(p.name, overflow: TextOverflow.ellipsis),
-                    )),
-                    DataCell(Text(p.supplier)),
-                    DataCell(Text('${p.currentStock}')),
-                    DataCell(Text('${p.minStock}')),
-                    DataCell(Text('${p.maxStock}')),
-                    DataCell(
-                      SizedBox(
-                        width: 120,
-                        child: Row(
-                          children: [
-                            _qtyBtn(icon: Icons.remove, onTap: () {
-                              final q =
-                                  (_qtyOf(p.id) - 1).clamp(0, p.maxStock);
-                              ctrl.text = '$q';
-                              setState(() {});
-                            }),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: TextField(
-                                controller: ctrl,
-                                textAlign: TextAlign.center,
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly
-                                ],
-                                decoration: const InputDecoration(
-                                  isDense: true,
-                                  border: OutlineInputBorder(),
-                                  contentPadding:
-                                      EdgeInsets.symmetric(vertical: 8),
-                                ),
-                                onChanged: (_) => setState(() {}),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            _qtyBtn(icon: Icons.add, onTap: () {
-                              final q =
-                                  (_qtyOf(p.id) + 1).clamp(0, p.maxStock);
-                              ctrl.text = '$q';
-                              setState(() {});
-                            }),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // DataTable theme (dark only). Light mode uses your defaults.
+    final themed = Theme.of(context).copyWith(
+      cardColor: isDark ? _kDarkCard : Theme.of(context).cardColor,
+      dataTableTheme: DataTableThemeData(
+        headingRowColor: MaterialStatePropertyAll(
+          isDark ? _kDarkHeader : cs.surfaceVariant,
+        ),
+        dataRowColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.hovered) && isDark) {
+            return _kDarkRow.withOpacity(.95);
+          }
+          return isDark ? _kDarkRow : cs.surface;
+        }),
+        dividerThickness: 1,
+        headingTextStyle: TextStyle(
+          color: isDark ? _kDarkTextMain : cs.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
+        dataTextStyle: TextStyle(
+          color: isDark ? _kDarkTextMute : cs.onSurface,
         ),
       ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, c) {
+        return Theme(
+          data: themed,
+          child: Card(
+            margin: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            color: isDark ? _kDarkCard : null,
+            child: SizedBox(
+              width: c.maxWidth,
+              height: c.maxHeight, // fill available height (full screen area)
+              child: Scrollbar(
+                thumbVisibility: true,
+                child: SingleChildScrollView( // vertical scroll
+                  child: SingleChildScrollView( // horizontal scroll
+                    scrollDirection: Axis.horizontal,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        // Stretch to full width; keep a sensible minimum of 980
+                        minWidth: c.maxWidth < 980 ? 980 : c.maxWidth,
+                      ),
+                      child: DataTable(
+                        sortColumnIndex: _sortColumnIndex,
+                        sortAscending: _sortAscending,
+                        headingRowHeight: 52,
+                        dataRowMinHeight: 56,
+                        dataRowMaxHeight: 64,
+                        columns: [
+                          DataColumn(
+                            label: Row(
+                              children: [
+                                Checkbox(
+                                  value: masterValue,
+                                  tristate: true,
+                                  onChanged: (value) =>
+                                      _toggleSelectAll(value, visible),
+                                ),
+                                const SizedBox(width: 4),
+                                const Text('Select'),
+                              ],
+                            ),
+                          ),
+                          DataColumn(
+                            label: const Text('Item'),
+                            onSort: (i, asc) => setState(() {
+                              _sortColumnIndex = i;
+                              _sortAscending = asc;
+                            }),
+                          ),
+                          DataColumn(
+                            label: const Text('Supplier'),
+                            onSort: (i, asc) => setState(() {
+                              _sortColumnIndex = i;
+                              _sortAscending = asc;
+                            }),
+                          ),
+                          DataColumn(
+                            label: const Text('Curr.'), numeric: true,
+                            onSort: (i, asc) => setState(() {
+                              _sortColumnIndex = i;
+                              _sortAscending = asc;
+                            }),
+                          ),
+                          DataColumn(
+                            label: const Text('Min'), numeric: true,
+                            onSort: (i, asc) => setState(() {
+                              _sortColumnIndex = i;
+                              _sortAscending = asc;
+                            }),
+                          ),
+                          DataColumn(
+                            label: const Text('Max'), numeric: true,
+                            onSort: (i, asc) => setState(() {
+                              _sortColumnIndex = i;
+                              _sortAscending = asc;
+                            }),
+                          ),
+                          const DataColumn(label: Text('Req. Qty')),
+                        ],
+                        rows: visible.map((p) {
+                          final selected = _selected.contains(p.id);
+                          final ctrl = _qtyCtrls[p.id]!;
+                          return DataRow(
+                            selected: selected,
+                            onSelectChanged: (_) {
+                              setState(() {
+                                if (selected) {
+                                  _selected.remove(p.id);
+                                } else {
+                                  _selected.add(p.id);
+                                }
+                              });
+                            },
+                            cells: [
+                              DataCell(Checkbox(
+                                value: selected,
+                                onChanged: (_) {
+                                  setState(() {
+                                    if (selected) {
+                                      _selected.remove(p.id);
+                                    } else {
+                                      _selected.add(p.id);
+                                    }
+                                  });
+                                },
+                              )),
+                              DataCell(SizedBox(
+                                width: 300,
+                                child: Text(p.name, overflow: TextOverflow.ellipsis),
+                              )),
+                              DataCell(Text(p.supplier)),
+                              DataCell(Text('${p.currentStock}')),
+                              DataCell(Text('${p.minStock}')),
+                              DataCell(Text('${p.maxStock}')),
+                              DataCell(
+                                SizedBox(
+                                  width: 120,
+                                  child: Row(
+                                    children: [
+                                      _qtyBtn(icon: Icons.remove, onTap: () {
+                                        final q =
+                                            (_qtyOf(p.id) - 1).clamp(0, p.maxStock);
+                                        ctrl.text = '$q';
+                                        setState(() {});
+                                      }),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: ctrl,
+                                          textAlign: TextAlign.center,
+                                          keyboardType: TextInputType.number,
+                                          inputFormatters: [
+                                            FilteringTextInputFormatter.digitsOnly
+                                          ],
+                                          decoration: const InputDecoration(
+                                            isDense: true,
+                                            border: OutlineInputBorder(),
+                                            contentPadding:
+                                                EdgeInsets.symmetric(vertical: 8),
+                                          ),
+                                          onChanged: (_) => setState(() {}),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      _qtyBtn(icon: Icons.add, onTap: () {
+                                        final q =
+                                            (_qtyOf(p.id) + 1).clamp(0, p.maxStock);
+                                        ctrl.text = '$q';
+                                        setState(() {});
+                                      }),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
