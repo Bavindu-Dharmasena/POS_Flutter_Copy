@@ -3,7 +3,7 @@ import 'package:pos_system/features/stockkeeper/stockkeeper_home.dart';
 
 import 'dart:async';
 // import './home/pos_home.dart';
-import './auth//login_page.dart';
+// import './auth//login_page.dart';
 // import './cashier/billingview.dart';
 // import './cashier/cashier_view_page.dart';
 
