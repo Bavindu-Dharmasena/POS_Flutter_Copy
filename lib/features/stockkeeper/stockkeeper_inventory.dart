@@ -2,17 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
-/// ---------- Demo product model (same shape you already use) ----------
-import 'package:pos_system/features/stockkeeper/add_item_page.dart';
 import 'package:pos_system/features/stockkeeper/inventory/total_items.dart';
 
 // Your widgets (unused here but left in case you reference later)
-import 'package:pos_system/widget/stock_keeper_inventory/dashboard_summary_grid.dart';
-import 'package:pos_system/widget/stock_keeper_inventory/product_actions_sheet.dart';
-import 'package:pos_system/widget/stock_keeper_inventory/product_card.dart';
-import 'package:pos_system/widget/stock_keeper_inventory/product_details_dialog.dart';
-import 'package:pos_system/widget/stock_keeper_inventory/search_and_filter_section.dart';
-import 'package:pos_system/widget/stock_keeper_inventory/product_edit.dart';
 
 /// ===== Small helpers: gradients derived from theme =====
 LinearGradient themedHeaderGradient(ColorScheme cs) => LinearGradient(
