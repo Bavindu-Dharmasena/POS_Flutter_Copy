@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
-import 'package:pos_system/features/stockkeeper/products/supplier_page.dart';
+import 'package:pos_system/features/stockkeeper/supplier_page.dart';
 import 'package:pos_system/features/stockkeeper/supplier/add_supplier_page.dart';
 
 // Helper class for testing navigation

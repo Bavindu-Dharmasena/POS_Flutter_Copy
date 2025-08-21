@@ -3,11 +3,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
 
-// User model to store the logged-in user's details
 class User {
   final int id;
   final String username;
   final String role;
+
   User({required this.id, required this.username, required this.role});
 }
 

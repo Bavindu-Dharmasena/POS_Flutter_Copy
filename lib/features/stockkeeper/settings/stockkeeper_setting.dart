@@ -9,7 +9,7 @@ class StockKeeperSetting extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsController>();
 
-    // Avoid flashing default theme while SharedPreferences loads
+    // While prefs load, show a spinner (ensures labels/switch match persisted state)
     if (!settings.isLoaded) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -19,6 +19,7 @@ class StockKeeperSetting extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('System Settings'),
+        centerTitle: true,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -35,12 +36,16 @@ class StockKeeperSetting extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Appearance',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Appearance',
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           settings.isDarkMode ? 'Dark mode' : 'Light mode',
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(.7)),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(.7),
+                          ),
                         ),
                       ],
                     ),
@@ -141,8 +146,10 @@ class _PreviewBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Preview Heading',
-              style: TextStyle(fontSize: fontSize + 6, fontWeight: FontWeight.w700)),
+          Text(
+            'Preview Heading',
+            style: TextStyle(fontSize: fontSize + 6, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 6),
           Text(
             'This is how your text will look across the app. '
