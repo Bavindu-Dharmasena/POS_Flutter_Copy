@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import "package:flutter/services.dart"; // 👈 for keyboard keys
+import 'package:flutter/services.dart'; // for ESC key
 
 class StockKeeperReports extends StatefulWidget {
   const StockKeeperReports({Key? key}) : super(key: key);
@@ -13,13 +13,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   String selectedPeriod = 'Today';
   late FocusNode _focusNode;
 
-  // ===== Dark App Palette (same names as AddItemPage) =====
-  static const Color kBg = Color(0xFF0B1623);
-  static const Color kSurface = Color(0xFF121A26);
-  static const Color kBorder = Color(0x1FFFFFFF);
-  static const Color kText = Colors.white;
-  static const Color kTextMuted = Colors.white70;
-
+  // ===== Accent colors (unchanged) =====
   static const Color kInfo = Color(0xFF3B82F6);
   static const Color kSuccess = Color(0xFF10B981);
   static const Color kWarn = Color(0xFFF59E0B);
@@ -28,7 +22,6 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   void initState() {
     super.initState();
     _focusNode = FocusNode();
-    // Request focus when the page loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
@@ -40,19 +33,40 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     super.dispose();
   }
 
-  // Handle key events
+  // Handle key events: ESC -> back
   void _handleKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
-      // Navigate back when ESC is pressed
       Navigator.of(context).pop();
     }
   }
 
-  // ====== CARD DECORATION (matches AddItemPage) ======
-  BoxDecoration get _cardBox => BoxDecoration(
-        color: kSurface,
+  // ===== Dynamic palette that follows light/dark theme =====
+  _Palette _palette(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (isDark) {
+      return const _Palette(
+        bg: Color(0xFF0B1623),
+        surface: Color(0xFF121A26),
+        border: Color(0x1FFFFFFF),
+        text: Colors.white,
+        textMuted: Colors.white70,
+      );
+    }
+    // Light equivalents chosen to preserve your look while being readable
+    return const _Palette(
+      bg: Color(0xFFF4F6FA),
+      surface: Colors.white,
+      border: Color(0x1A000000), // ~6% black
+      text: Color(0xFF0F172A),   // slate-900
+      textMuted: Colors.black54,
+    );
+  }
+
+  // Card decoration using palette (same shape/shadows)
+  BoxDecoration _cardBox(_Palette p) => BoxDecoration(
+        color: p.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kBorder),
+        border: Border.all(color: p.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.35),
@@ -64,24 +78,26 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
 
   @override
   Widget build(BuildContext context) {
+    final p = _palette(context);
+
     return KeyboardListener(
       focusNode: _focusNode,
       onKeyEvent: _handleKeyEvent,
       child: Scaffold(
-        backgroundColor: kBg,
+        backgroundColor: p.bg,
         appBar: AppBar(
           elevation: 0,
-          backgroundColor: kBg,
-          foregroundColor: kText,
+          backgroundColor: p.bg,
+          foregroundColor: p.text,
           titleSpacing: 12,
           title: Row(
             children: [
-              const Text(
+              Text(
                 'Insights & Analytics',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: kText,
+                  color: p.text,
                 ),
               ),
               const SizedBox(width: 8),
@@ -89,15 +105,15 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: p.text.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: kBorder),
+                  border: Border.all(color: p.border),
                 ),
-                child: const Text(
+                child: Text(
                   'ESC',
                   style: TextStyle(
                     fontSize: 10,
-                    color: kTextMuted,
+                    color: p.textMuted,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -109,16 +125,16 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
               margin: const EdgeInsets.only(right: 12),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.06),
+                color: p.text.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: kBorder),
+                border: Border.all(color: p.border),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: selectedPeriod,
-                  dropdownColor: kSurface,
-                  style: const TextStyle(color: kText, fontSize: 14),
-                  icon: const Icon(Icons.keyboard_arrow_down, color: kTextMuted),
+                  dropdownColor: p.surface,
+                  style: TextStyle(color: p.text, fontSize: 14),
+                  icon: Icon(Icons.keyboard_arrow_down, color: p.textMuted),
                   items: const [
                     'Today',
                     'This Week',
@@ -127,7 +143,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                   ].map((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
-                      child: Text(value, style: const TextStyle(color: kText)),
+                      child: Text(value),
                     );
                   }).toList(),
                   onChanged: (String? newValue) {
@@ -141,7 +157,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         body: SingleChildScrollView(
           child: Column(
             children: [
-              // Quick Stats - Made scrollable horizontally
+              // Quick Stats - horizontally scrollable
               Container(
                 height: 120,
                 margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -150,8 +166,9 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                   child: Row(
                     children: [
                       SizedBox(
-                        width: 160, // Fixed width for each card
+                        width: 160,
                         child: _buildStatCard(
+                          p: p,
                           title: 'Total Sales',
                           value: 'Rs. 12,450',
                           change: '+15%',
@@ -163,6 +180,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       SizedBox(
                         width: 160,
                         child: _buildStatCard(
+                          p: p,
                           title: 'Orders',
                           value: '348',
                           change: '+8%',
@@ -174,10 +192,11 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       SizedBox(
                         width: 160,
                         child: _buildStatCard(
+                          p: p,
                           title: 'Customers',
                           value: '156',
                           change: '+12%',
-                          color: const Color(0xFF6366F1), // Indigo from palette
+                          color: Color(0xFF6366F1), // Indigo
                           icon: Icons.people,
                         ),
                       ),
@@ -185,6 +204,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       SizedBox(
                         width: 160,
                         child: _buildStatCard(
+                          p: p,
                           title: 'Products',
                           value: '89',
                           change: '+3%',
@@ -192,7 +212,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           icon: Icons.inventory_2_outlined,
                         ),
                       ),
-                      const SizedBox(width: 12), // Extra padding at the end
+                      const SizedBox(width: 12),
                     ],
                   ),
                 ),
@@ -200,7 +220,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
 
               // Sales Content - Direct without tabs
               const SizedBox(height: 12),
-              _buildSalesContent(),
+              _buildSalesContent(p),
             ],
           ),
         ),
@@ -208,8 +228,9 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     );
   }
 
-  // ======= Reusable stat card matching dark theme =======
+  // ======= Reusable stat card (uses palette) =======
   Widget _buildStatCard({
+    required _Palette p,
     required String title,
     required String value,
     required String change,
@@ -218,7 +239,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: _cardBox,
+      decoration: _cardBox(p),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -255,18 +276,18 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
           const Spacer(),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
-              color: kText,
+              color: p.text,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: kTextMuted,
+              color: p.textMuted,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -276,7 +297,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   }
 
   // ================== SALES CONTENT (without tabs) ==================
-  Widget _buildSalesContent() {
+  Widget _buildSalesContent(_Palette p) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Column(
@@ -286,11 +307,11 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
             height: 300,
             padding: const EdgeInsets.all(16),
             margin: const EdgeInsets.only(bottom: 12),
-            decoration: _cardBox,
+            decoration: _cardBox(p),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _SectionHeader(title: 'Sales Overview', iconColor: kInfo),
+                _SectionHeader(title: 'Sales Overview', iconColor: kInfo, textColor: p.text),
                 const SizedBox(height: 16),
                 Expanded(
                   child: LineChart(
@@ -300,17 +321,14 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                         show: true,
                         drawVerticalLine: false,
                         getDrawingHorizontalLine: (value) => FlLine(
-                          color: Colors.white.withOpacity(0.06),
+                          color: p.text.withOpacity(0.08),
                           strokeWidth: 1,
                         ),
                       ),
                       titlesData: FlTitlesData(
-                        leftTitles:
-                            AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles:
-                            AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        rightTitles:
-                            AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
@@ -320,7 +338,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                                 padding: const EdgeInsets.only(top: 6),
                                 child: Text(
                                   days[value.toInt() % 7],
-                                  style: const TextStyle(color: kTextMuted, fontSize: 11),
+                                  style: TextStyle(color: p.textMuted, fontSize: 11),
                                 ),
                               );
                             },
@@ -344,7 +362,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                             FlSpot(6, 4),
                           ],
                           isCurved: true,
-                          color: kInfo, // flat color instead of gradient
+                          color: kInfo, // keep flat color
                           barWidth: 3,
                           belowBarData: BarAreaData(
                             show: true,
@@ -364,16 +382,16 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
           Container(
             padding: const EdgeInsets.all(16),
             margin: const EdgeInsets.only(bottom: 16),
-            decoration: _cardBox,
+            decoration: _cardBox(p),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _SectionHeader(title: 'Top Selling Items', iconColor: kSuccess),
+                _SectionHeader(title: 'Top Selling Items', iconColor: kSuccess, textColor: p.text),
                 const SizedBox(height: 12),
-                _buildTopSellingItem('Coffee Latte', 'Rs. 450.00', '234 sold'),
-                _buildTopSellingItem('Chicken Burger', 'Rs. 899.00', '189 sold'),
-                _buildTopSellingItem('Caesar Salad', 'Rs. 675.00', '156 sold'),
-                _buildTopSellingItem('Chocolate Cake', 'Rs. 525.00', '134 sold'),
+                _buildTopSellingItem(p, 'Coffee Latte', 'Rs. 450.00', '234 sold'),
+                _buildTopSellingItem(p, 'Chicken Burger', 'Rs. 899.00', '189 sold'),
+                _buildTopSellingItem(p, 'Caesar Salad', 'Rs. 675.00', '156 sold'),
+                _buildTopSellingItem(p, 'Chocolate Cake', 'Rs. 525.00', '134 sold'),
               ],
             ),
           ),
@@ -383,7 +401,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   }
 
   // ===== Helpers (list rows) =====
-  Widget _buildTopSellingItem(String name, String price, String sold) {
+  Widget _buildTopSellingItem(_Palette p, String name, String price, String sold) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -394,9 +412,9 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, color: kText)),
-                Text(sold, style: const TextStyle(fontSize: 12, color: kTextMuted)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700, color: p.text)),
+                Text(sold, style: TextStyle(fontSize: 12, color: p.textMuted)),
               ],
             ),
           ),
@@ -411,14 +429,32 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   }
 }
 
-class BackgroundBarChartRodData {
+// ===== Palette holder =====
+class _Palette {
+  final Color bg;
+  final Color surface;
+  final Color border;
+  final Color text;
+  final Color textMuted;
+  const _Palette({
+    required this.bg,
+    required this.surface,
+    required this.border,
+    required this.text,
+    required this.textMuted,
+  });
 }
 
 // ===== Small reusable header matching dark cards =====
 class _SectionHeader extends StatelessWidget {
   final String title;
   final Color iconColor;
-  const _SectionHeader({required this.title, required this.iconColor});
+  final Color textColor;
+  const _SectionHeader({
+    required this.title,
+    required this.iconColor,
+    required this.textColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -443,8 +479,8 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 12),
         Text(
           title,
-          style: const TextStyle(
-            color: _StockKeeperReportsState.kText,
+          style: TextStyle(
+            color: textColor,
             fontWeight: FontWeight.w800,
             fontSize: 16,
           ),
