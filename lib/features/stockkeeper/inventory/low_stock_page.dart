@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+/// Intent used by Shortcuts/Actions to go back on ESC.
+class BackIntent extends Intent {
+  const BackIntent();
+}
+
 /// ---- Dark table palette (extracted from your screenshot) ----
 const _kDarkCard     = Color(0xFF0F1318); // outer container / card
 const _kDarkHeader   = Color(0xFF1F2631); // header row
@@ -113,13 +118,11 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
   @override
   void initState() {
     super.initState();
-    _source =
-        (widget.allProducts ?? _demo).where((p) => p.isLowStock).toList();
+    _source = (widget.allProducts ?? _demo).where((p) => p.isLowStock).toList();
 
     // preload suggested quantities
     for (final p in _source) {
-      _qtyCtrls[p.id] =
-          TextEditingController(text: _suggestQty(p).toString());
+      _qtyCtrls[p.id] = TextEditingController(text: _suggestQty(p).toString());
     }
   }
 
@@ -145,8 +148,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
   List<Product> get _filtered {
     final q = _searchCtrl.text.trim().toLowerCase();
     return _source.where((p) {
-      final supplierOK =
-          _supplierFilter == 'All' || p.supplier == _supplierFilter;
+      final supplierOK = _supplierFilter == 'All' || p.supplier == _supplierFilter;
       final textOK = q.isEmpty ||
           p.name.toLowerCase().contains(q) ||
           p.category.toLowerCase().contains(q);
@@ -207,8 +209,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
   void _clearSelection() => setState(_selected.clear);
 
   void _requestToSupplier(List<Product> visible) {
-    final sel =
-        visible.where((p) => _selected.contains(p.id)).toList();
+    final sel = visible.where((p) => _selected.contains(p.id)).toList();
     if (sel.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Select at least one item.')),
@@ -235,20 +236,15 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Create supplier request?'),
-        content:
-            SingleChildScrollView(child: Text(summary.toString().trim())),
+        content: SingleChildScrollView(child: Text(summary.toString().trim())),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
               // TODO: Integrate real create-request behavior.
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text(
-                        'Request created for $_selectedCount item(s).')),
+                SnackBar(content: Text('Request created for $_selectedCount item(s).')),
               );
               _clearSelection();
             },
@@ -266,65 +262,78 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
     final isWide = MediaQuery.of(context).size.width >= 900;
     final visible = _filtered;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Low Stock — Request to Supplier'),
-        centerTitle: true,
-      ),
-      floatingActionButton: isWide
-          ? null
-          : FloatingActionButton.extended(
-              onPressed:
-                  visible.isEmpty ? null : () => _requestToSupplier(visible),
-              icon: const Icon(Icons.send),
-              label: Text(_selectedCount > 0
-                  ? 'Request (${_selectedCount})'
-                  : 'Request'),
-            ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [cs.surface, cs.surfaceVariant.withOpacity(.35), cs.background],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    // Wrap the whole page with Shortcuts/Actions so ESC triggers back anywhere.
+    return Shortcuts(
+      shortcuts: <LogicalKeySet, Intent>{
+        LogicalKeySet(LogicalKeyboardKey.escape): const BackIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          BackIntent: CallbackAction<BackIntent>(
+            onInvoke: (intent) {
+              Navigator.of(context).maybePop();
+              return null;
+            },
           ),
-        ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1400),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _FilterBar(
-                    suppliers: _suppliers,
-                    supplier: _supplierFilter,
-                    onSupplierChanged: (v) =>
-                        setState(() => _supplierFilter = v),
-                    searchCtrl: _searchCtrl,
-                    onSearchChanged: (_) => setState(() {}),
-                    onAutofill: () => _autoFillVisible(visible),
-                    onClearSelection:
-                        _selected.isEmpty ? null : _clearSelection,
-                    selectedCount: _selectedCount,
-                    onRequest: visible.isEmpty
-                        ? null
-                        : () => _requestToSupplier(visible),
+        },
+        // A Focus to ensure the Shortcuts are active immediately.
+        child: Focus(
+          autofocus: true,
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('Low Stock — Request to Supplier'),
+              centerTitle: true,
+            ),
+            floatingActionButton: isWide
+                ? null
+                : FloatingActionButton.extended(
+                    onPressed: visible.isEmpty ? null : () => _requestToSupplier(visible),
+                    icon: const Icon(Icons.send),
+                    label: Text(_selectedCount > 0 ? 'Request (${_selectedCount})' : 'Request'),
                   ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: visible.isEmpty
-                        ? _EmptyState(
-                            text: _source.isEmpty
-                                ? 'No low-stock items.'
-                                : 'No matches. Adjust filters.',
-                          )
-                        : isWide
-                            ? _buildDesktopTable(cs, visible)
-                            : _buildMobileList(cs, visible),
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [cs.surface, cs.surfaceVariant.withOpacity(.35), cs.background],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1400),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _FilterBar(
+                          suppliers: _suppliers,
+                          supplier: _supplierFilter,
+                          onSupplierChanged: (v) => setState(() => _supplierFilter = v),
+                          searchCtrl: _searchCtrl,
+                          onSearchChanged: (_) => setState(() {}),
+                          onAutofill: () => _autoFillVisible(visible),
+                          onClearSelection: _selected.isEmpty ? null : _clearSelection,
+                          selectedCount: _selectedCount,
+                          onRequest: visible.isEmpty ? null : () => _requestToSupplier(visible),
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: visible.isEmpty
+                              ? _EmptyState(
+                                  text: _source.isEmpty
+                                      ? 'No low-stock items.'
+                                      : 'No matches. Adjust filters.',
+                                )
+                              : isWide
+                                  ? _buildDesktopTable(cs, visible)
+                                  : _buildMobileList(cs, visible),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -336,8 +345,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
   /// ---- FULL-SCREEN DESKTOP TABLE + DARK PALETTE ----
   Widget _buildDesktopTable(ColorScheme cs, List<Product> visible) {
     // proper tri-state value for the master checkbox
-    final selectedInView =
-        visible.where((p) => _selected.contains(p.id)).length;
+    final selectedInView = visible.where((p) => _selected.contains(p.id)).length;
     bool? masterValue;
     if (visible.isEmpty) {
       masterValue = false;
@@ -355,9 +363,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
     final themed = Theme.of(context).copyWith(
       cardColor: isDark ? _kDarkCard : Theme.of(context).cardColor,
       dataTableTheme: DataTableThemeData(
-        headingRowColor: MaterialStatePropertyAll(
-          isDark ? _kDarkHeader : cs.surfaceVariant,
-        ),
+        headingRowColor: MaterialStatePropertyAll(isDark ? _kDarkHeader : cs.surfaceVariant),
         dataRowColor: MaterialStateProperty.resolveWith((states) {
           if (states.contains(MaterialState.hovered) && isDark) {
             return _kDarkRow.withOpacity(.95);
@@ -409,8 +415,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
                                 Checkbox(
                                   value: masterValue,
                                   tristate: true,
-                                  onChanged: (value) =>
-                                      _toggleSelectAll(value, visible),
+                                  onChanged: (value) => _toggleSelectAll(value, visible),
                                 ),
                                 const SizedBox(width: 4),
                                 const Text('Select'),
@@ -495,8 +500,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
                                   child: Row(
                                     children: [
                                       _qtyBtn(icon: Icons.remove, onTap: () {
-                                        final q =
-                                            (_qtyOf(p.id) - 1).clamp(0, p.maxStock);
+                                        final q = (_qtyOf(p.id) - 1).clamp(0, p.maxStock);
                                         ctrl.text = '$q';
                                         setState(() {});
                                       }),
@@ -512,16 +516,14 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
                                           decoration: const InputDecoration(
                                             isDense: true,
                                             border: OutlineInputBorder(),
-                                            contentPadding:
-                                                EdgeInsets.symmetric(vertical: 8),
+                                            contentPadding: EdgeInsets.symmetric(vertical: 8),
                                           ),
                                           onChanged: (_) => setState(() {}),
                                         ),
                                       ),
                                       const SizedBox(width: 6),
                                       _qtyBtn(icon: Icons.add, onTap: () {
-                                        final q =
-                                            (_qtyOf(p.id) + 1).clamp(0, p.maxStock);
+                                        final q = (_qtyOf(p.id) + 1).clamp(0, p.maxStock);
                                         ctrl.text = '$q';
                                         setState(() {});
                                       }),
@@ -569,8 +571,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
                     }
                   }),
                   contentPadding: EdgeInsets.zero,
-                  title: Text(p.name,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text(p.supplier),
                   controlAffinity: ListTileControlAffinity.leading,
                 ),
@@ -590,8 +591,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
                     const Text('Req. Qty'),
                     const Spacer(),
                     _qtyBtn(icon: Icons.remove, onTap: () {
-                      final q =
-                          (_qtyOf(p.id) - 1).clamp(0, p.maxStock);
+                      final q = (_qtyOf(p.id) - 1).clamp(0, p.maxStock);
                       ctrl.text = '$q';
                       setState(() {});
                     }),
@@ -602,9 +602,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
                         controller: ctrl,
                         textAlign: TextAlign.center,
                         keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly
-                        ],
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         decoration: const InputDecoration(
                           isDense: true,
                           border: OutlineInputBorder(),
@@ -615,8 +613,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
                     ),
                     const SizedBox(width: 6),
                     _qtyBtn(icon: Icons.add, onTap: () {
-                      final q =
-                          (_qtyOf(p.id) + 1).clamp(0, p.maxStock);
+                      final q = (_qtyOf(p.id) + 1).clamp(0, p.maxStock);
                       ctrl.text = '$q';
                       setState(() {});
                     }),
@@ -637,8 +634,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
         side: BorderSide(color: cs.outlineVariant),
       );
 
-  Widget _qtyBtn({required IconData icon, required VoidCallback onTap}) =>
-      InkWell(
+  Widget _qtyBtn({required IconData icon, required VoidCallback onTap}) => InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
@@ -697,8 +693,7 @@ class _FilterBar extends StatelessWidget {
     final supplierDrop = DropdownButtonFormField<String>(
       value: supplier,
       isExpanded: true,
-      items:
-          suppliers.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+      items: suppliers.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
       onChanged: (v) => onSupplierChanged(v ?? 'All'),
       decoration: const InputDecoration(
         labelText: 'Supplier',
@@ -727,9 +722,7 @@ class _FilterBar extends StatelessWidget {
           onPressed: onRequest,
           icon: const Icon(Icons.send),
           label: Text(
-            selectedCount > 0
-                ? 'Request to Supplier ($selectedCount)'
-                : 'Request to Supplier',
+            selectedCount > 0 ? 'Request to Supplier ($selectedCount)' : 'Request to Supplier',
           ),
         ),
       ],
@@ -776,8 +769,7 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.inventory_2_outlined,
-              size: 56, color: cs.onSurface.withOpacity(.5)),
+          Icon(Icons.inventory_2_outlined, size: 56, color: cs.onSurface.withOpacity(.5)),
           const SizedBox(height: 10),
           Text(text, style: TextStyle(color: cs.onSurface.withOpacity(.75))),
         ],
