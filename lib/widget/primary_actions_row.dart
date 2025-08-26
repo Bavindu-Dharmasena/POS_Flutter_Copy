@@ -84,7 +84,10 @@ class PrimaryActionsRow extends StatelessWidget {
     final isWideScreen = screenWidth >= 1000;
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 10),
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: 10,
+      ),
       child: Row(
         children: [
           // First column: New Sale and Resume buttons
@@ -96,16 +99,28 @@ class PrimaryActionsRow extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: onNewSale, // This will handle null automatically
-                    icon: Icon(Icons.note_add, size: isWideScreen ? 30 : 24),
+                    icon: Icon(
+                      Icons.note_add,
+                      size: isWideScreen ? 30 : 24,
+                      // Remove color from Icon widget, let button style handle it
+                    ),
                     label: Text(
                       'New Sale',
                       style: TextStyle(
-                        fontSize: isWideScreen ? 20 : 18,
+                        fontSize: isWideScreen ? 20 : 25,
                         fontWeight: FontWeight.bold,
+                        // Remove color from Text widget, let button style handle it
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: onNewSale != null
+                          ? Colors.green
+                          : Colors
+                                .grey[700], // Change background color based on state
+                      foregroundColor: onNewSale != null
+                          ? Colors.white
+                          : Colors
+                                .grey[700], // White when active, light gray when inactive
                       padding: EdgeInsets.symmetric(
                         horizontal: isWideScreen ? 20 : 16,
                         vertical: isWideScreen ? 16 : 12,
@@ -114,18 +129,60 @@ class PrimaryActionsRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                
+
                 // Resume button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: hasPausedBills ? onResumeBill : null,
-                    icon: Icon(Icons.history, size: isWideScreen ? 30 : 24),
+                    icon: Icon(
+                      Icons.history,
+                      size: isWideScreen ? 30 : 24,
+                      color: hasPausedBills ? Colors.black : Colors.grey[700],
+                    ),
                     label: Text(
                       'Resume',
                       style: TextStyle(
-                        fontSize: isWideScreen ? 20 : 18,
+                        color: hasPausedBills ? Colors.black : Colors.grey[700],
+                        fontSize: isWideScreen ? 20 : 25,
                         fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isWideScreen ? 20 : 16,
+                        vertical: isWideScreen ? 16 : 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          // Second column: Quick Sale and Pay buttons
+          Expanded(
+            child: Column(
+              children: [
+                // Quick Sale button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: onQuickSale,
+                    icon: Icon(
+                      Icons.flash_on,
+                      size: isWideScreen ? 30 : 24,
+                      color: Colors.white,
+                    ),
+                    label: Text(
+                      'Quick Sale',
+                      style: TextStyle(
+                        fontSize: isWideScreen ? 20 : 25,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
@@ -137,55 +194,30 @@ class PrimaryActionsRow extends StatelessWidget {
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(width: 16),
-          
-          // Second column: Quick Sale and Pay buttons
-          Expanded(
-            child: Column(
-              children: [
-                // Quick Sale button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: onQuickSale,
-                    icon: Icon(Icons.flash_on, size: isWideScreen ? 30 : 24),
-                    label: Text(
-                      'Quick Sale',
-                      style: TextStyle(
-                        fontSize: isWideScreen ? 20 : 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isWideScreen ? 20 : 16,
-                        vertical: isWideScreen ? 16 : 12,
-                      ),
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 8),
-                
+
                 // Pay button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: payEnabled ? onPay : null, // This handles null properly
-                    icon: Icon(Icons.payment, size: isWideScreen ? 30 : 24),
+                    onPressed: payEnabled
+                        ? onPay
+                        : null, // This handles null properly
+                    icon: Icon(
+                      Icons.payment,
+                      size: isWideScreen ? 30 : 24,
+                      color: payEnabled ? Colors.white : Colors.grey[700],
+                    ),
                     label: Text(
                       'Pay',
                       style: TextStyle(
-                        fontSize: isWideScreen ? 20 : 18,
+                        fontSize: isWideScreen ? 20 : 25,
                         fontWeight: FontWeight.bold,
+                        color: payEnabled ? Colors.white : Colors.grey[700],
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
+                      backgroundColor: Colors.red,
                       padding: EdgeInsets.symmetric(
                         horizontal: isWideScreen ? 20 : 16,
                         vertical: isWideScreen ? 16 : 12,
