@@ -1602,12 +1602,8 @@ class _CashierViewPageState extends State<CashierViewPage> {
               // In your widget usage:
               PrimaryActionsRow(
                 onQuickSale: _handleQuickSale,
-                onPay: cartItems.isEmpty
-                    ? () {}
-                    : _showPaymentMethodDialog, // Provide empty function instead of null
-                onNewSale: cartItems.isEmpty
-                    ? () {}
-                    : _pauseCurrentBill, // Provide empty function instead of null
+                onPay: cartItems.isEmpty ? null : _showPaymentMethodDialog,
+                onNewSale: cartItems.isEmpty ? null : _pauseCurrentBill,
                 onResumeBill: _promptSelectPausedBill,
                 payEnabled: cartItems.isNotEmpty,
                 hasPausedBills: pausedBills.isNotEmpty,
