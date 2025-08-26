@@ -29,16 +29,39 @@ class Product {
     required this.supplier,
   });
 
-  bool get isLowStock => currentStock <= minStock && currentStock > 0;
-  bool get isOutOfStock => currentStock == 0;
+  Product copyWith({
+    String? id,
+    String? name,
+    String? category,
+    int? currentStock,
+    int? minStock,
+    int? maxStock,
+    double? price,
+    String? barcode,
+    String? image,
+    String? supplier,
+  }) {
+    return Product(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      currentStock: currentStock ?? this.currentStock,
+      minStock: minStock ?? this.minStock,
+      maxStock: maxStock ?? this.maxStock,
+      price: price ?? this.price,
+      barcode: barcode ?? this.barcode,
+      image: image ?? this.image,
+      supplier: supplier ?? this.supplier,
+    );
+  }
 }
 
-// ===== Restock entry DTO (per selected line) =====
+// ===== Update entry DTO =====
 class RestockEntry {
   final Product product;
   double unitPrice;
   double salePrice;
-  double permanentDiscount; // per-unit absolute
+  double permanentDiscount;
   int quantity;
 
   RestockEntry({
@@ -50,6 +73,7 @@ class RestockEntry {
   });
 
   num get lineTotal => math.max(0, (salePrice - permanentDiscount)) * quantity;
+  int get newStock => product.currentStock + quantity;
 }
 
 class RestockPage extends StatefulWidget {
@@ -63,65 +87,56 @@ class RestockPage extends StatefulWidget {
 class _RestockPageState extends State<RestockPage> {
   // --- demo data (replace with live data) ---
   List<Product> get _demo => const [
-    Product(
-      id: '001',
-      name: 'Cadbury Dairy Milk',
-      category: 'Chocolates',
-      currentStock: 6,
-      minStock: 20,
-      maxStock: 100,
-      price: 250.00,
-      barcode: '123456789',
-      supplier: 'Cadbury Lanka',
-    ),
-    Product(
-      id: '002',
-      name: 'Maliban Cream Crackers',
-      category: 'Biscuits',
-      currentStock: 10,
-      minStock: 15,
-      maxStock: 80,
-      price: 180.00,
-      barcode: '987654321',
-      supplier: 'Maliban Biscuits',
-    ),
-    Product(
-      id: '003',
-      name: 'Coca Cola 330ml',
-      category: 'Beverages',
-      currentStock: 0,
-      minStock: 25,
-      maxStock: 120,
-      price: 150.00,
-      barcode: '456789123',
-      supplier: 'Coca Cola Lanka',
-    ),
-    Product(
-      id: '004',
-      name: 'Anchor Milk Powder 400g',
-      category: 'Dairy',
-      currentStock: 8,
-      minStock: 10,
-      maxStock: 50,
-      price: 850.00,
-      barcode: '789123456',
-      supplier: 'Fonterra Lanka',
-    ),
-  ];
+        Product(
+          id: '001',
+          name: 'Cadbury Dairy Milk',
+          category: 'Chocolates',
+          currentStock: 6,
+          minStock: 20,
+          maxStock: 100,
+          price: 250.00,
+          barcode: '123456789',
+          supplier: 'Cadbury Lanka',
+        ),
+        Product(
+          id: '002',
+          name: 'Maliban Cream Crackers',
+          category: 'Biscuits',
+          currentStock: 10,
+          minStock: 15,
+          maxStock: 80,
+          price: 180.00,
+          barcode: '987654321',
+          supplier: 'Maliban Biscuits',
+        ),
+        Product(
+          id: '003',
+          name: 'Coca Cola 330ml',
+          category: 'Beverages',
+          currentStock: 0,
+          minStock: 25,
+          maxStock: 120,
+          price: 150.00,
+          barcode: '456789123',
+          supplier: 'Coca Cola Lanka',
+        ),
+        Product(
+          id: '004',
+          name: 'Anchor Milk Powder 400g',
+          category: 'Dairy',
+          currentStock: 8,
+          minStock: 10,
+          maxStock: 50,
+          price: 850.00,
+          barcode: '789123456',
+          supplier: 'Fonterra Lanka',
+        ),
+      ];
 
-  late final List<Product> _all;
+  late List<Product> _all;
 
-  // ---- search + scan state ----
-  final TextEditingController _searchCtl = TextEditingController();
+  // ---- barcode scan state ----
   final TextEditingController _barcodeCtl = TextEditingController();
-  String _query = '';
-  List<Product> get _matches {
-    if (_query.trim().isEmpty) return _all;
-    final q = _query.toLowerCase();
-    return _all.where((p) {
-      return p.name.toLowerCase().contains(q) || p.id.toLowerCase().contains(q);
-    }).toList();
-  }
 
   // ---- current form selection ----
   Product? _selectedProduct;
@@ -136,17 +151,32 @@ class _RestockPageState extends State<RestockPage> {
 
   // ESC focus
   final FocusNode _focus = FocusNode();
+  final FocusNode _barcodeFocus = FocusNode();
+
+  // Color Palette
+  final Color _primaryColor = Color(0xFF0A74DA);
+  final Color _accentColor = Color(0xFFF59E0B);
+  final Color _backgroundColor = Color(0xFF121212);
+  final Color _cardColor = Color(0xFF1F1F1F);
+  final Color _textColor = Colors.white;
+  final Color _successColor = Color(0xFF10B981);
+  final Color _warningColor = Color(0xFFF59E0B);
+  final Color _errorColor = Color(0xFFEF4444);
 
   @override
   void initState() {
     super.initState();
     _all = [...(widget.products ?? _demo)];
+    // Auto-focus barcode field for immediate scanning
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _barcodeFocus.requestFocus();
+    });
   }
 
   @override
   void dispose() {
     _focus.dispose();
-    _searchCtl.dispose();
+    _barcodeFocus.dispose();
     _barcodeCtl.dispose();
     _unitPriceCtl.dispose();
     _salePriceCtl.dispose();
@@ -173,12 +203,14 @@ class _RestockPageState extends State<RestockPage> {
       _discountCtl.text = '0';
       _qtyCtl.text = '1';
     });
+    // Refocus barcode field for next scan
+    _barcodeFocus.requestFocus();
   }
 
   void _submitForm() {
     if (_selectedProduct == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select an item first.')),
+        const SnackBar(content: Text('Please scan a product first.')),
       );
       return;
     }
@@ -215,32 +247,31 @@ class _RestockPageState extends State<RestockPage> {
 
     _clearForm();
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Item added to restock list')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Item added to update list')),
+    );
   }
 
   void _removeEntry(RestockEntry e) {
     setState(() => _entries.removeWhere((x) => x.product.id == e.product.id));
   }
 
-  void _sendAll() async {
+  void _applyUpdates() async {
     if (_entries.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Add at least one item to send.')),
+        const SnackBar(content: Text('Add at least one item to update.')),
       );
       return;
     }
 
-    // TODO: POST _entries to your backend.
     final total = _entries.fold<double>(0, (s, e) => s + e.lineTotal);
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Send Restock Request'),
+        title: const Text('Confirm Stock Updates'),
         content: SizedBox(
-          width: 420,
+          width: 460,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -249,7 +280,8 @@ class _RestockPageState extends State<RestockPage> {
                   dense: true,
                   title: Text(e.product.name),
                   subtitle: Text(
-                    'Unit Rs.${e.unitPrice.toStringAsFixed(2)}  •  Sale Rs.${e.salePrice.toStringAsFixed(2)}  •  Disc Rs.${e.permanentDiscount.toStringAsFixed(2)}  •  Qty ${e.quantity}',
+                    'Current: ${e.product.currentStock}  •  +${e.quantity}  →  New: ${e.newStock}\n'
+                    'Unit Rs.${e.unitPrice.toStringAsFixed(2)} • Sale Rs.${e.salePrice.toStringAsFixed(2)} • Disc Rs.${e.permanentDiscount.toStringAsFixed(2)}',
                   ),
                   trailing: Text('Rs.${e.lineTotal.toStringAsFixed(2)}'),
                 ),
@@ -258,7 +290,7 @@ class _RestockPageState extends State<RestockPage> {
               Align(
                 alignment: Alignment.centerRight,
                 child: Text(
-                  'Estimated Total: Rs.${total.toStringAsFixed(2)}',
+                  'Estimated Cost Impact: Rs.${total.toStringAsFixed(2)}',
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
@@ -268,25 +300,59 @@ class _RestockPageState extends State<RestockPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: _errorColor,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
             child: const Text('Cancel'),
           ),
           FilledButton(
             onPressed: () {
               Navigator.pop(context);
+              _applyEntriesToLocalProducts();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Sent ${_entries.length} item(s). Total Rs.${total.toStringAsFixed(2)}',
+                    'Applied ${_entries.length} stock update(s).',
                   ),
                 ),
               );
               setState(() => _entries.clear());
             },
-            child: const Text('Send'),
+            style: FilledButton.styleFrom(
+              backgroundColor: _successColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+            child: const Text('Apply Updates'),
           ),
         ],
       ),
     );
+  }
+
+  void _applyEntriesToLocalProducts() {
+    setState(() {
+      final updated = <Product>[];
+      for (final p in _all) {
+        final entry = _entries.firstWhere(
+          (e) => e.product.id == p.id,
+          orElse: () => RestockEntry(
+            product: p,
+            unitPrice: 0,
+            salePrice: 0,
+            permanentDiscount: 0,
+            quantity: 0,
+          ),
+        );
+        if (entry.quantity > 0) {
+          updated.add(p.copyWith(currentStock: p.currentStock + entry.quantity));
+        } else {
+          updated.add(p);
+        }
+      }
+      _all = updated;
+    });
   }
 
   // Barcode enter -> pick item
@@ -295,8 +361,7 @@ class _RestockPageState extends State<RestockPage> {
     if (trimmed.isEmpty) return;
 
     final p = _all.firstWhere(
-      (e) =>
-          e.barcode == trimmed || e.id.toLowerCase() == trimmed.toLowerCase(),
+      (e) => e.barcode == trimmed || e.id.toLowerCase() == trimmed.toLowerCase(),
       orElse: () => const Product(
         id: '',
         name: '',
@@ -314,10 +379,11 @@ class _RestockPageState extends State<RestockPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No item matched this code')),
       );
+      _barcodeCtl.clear();
     } else {
       _pickProduct(p);
+      _barcodeCtl.clear();
     }
-    _barcodeCtl.clear();
   }
 
   @override
@@ -331,280 +397,138 @@ class _RestockPageState extends State<RestockPage> {
       },
       child: Actions(
         actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (_) {
-              if (Navigator.of(context).canPop()) Navigator.of(context).pop();
-              return null;
-            },
-          ),
+          ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
+            if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+            return null;
+          }),
         },
         child: Focus(
           autofocus: true,
           focusNode: _focus,
           child: Scaffold(
             backgroundColor: cs.surface,
+            resizeToAvoidBottomInset: true,
             appBar: AppBar(
               backgroundColor: cs.surface,
               elevation: 0,
               centerTitle: true,
               title: const Text(
-                'Re‑Stock',
+                'Update Stock',
                 style: TextStyle(fontWeight: FontWeight.w800),
               ),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
                 tooltip: 'Back (Esc)',
                 onPressed: () => Navigator.of(context).pop(),
+                style: IconButton.styleFrom(
+                  foregroundColor: _primaryColor,
+                ),
               ),
             ),
-            body: Column(
-              children: [
-                // ===== TOP SEARCH + BARCODE =====
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                  child: Row(
-                    children: [
-                      // Search by ID / Name
-                      Expanded(
-                        child: TextField(
-                          controller: _searchCtl,
-                          onChanged: (v) => setState(() => _query = v),
-                          decoration: InputDecoration(
-                            hintText: 'Search item by ID or Name',
-                            prefixIcon: const Icon(Feather.search),
-                            filled: true,
-                            fillColor: cs.surfaceVariant.withOpacity(.35),
-                            border: _fieldBorder(),
-                            enabledBorder: _fieldBorder(),
-                            focusedBorder: _focusedBorder(cs),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      // Barcode box - Made more responsive
-                      SizedBox(
-                        width: isDesktop ? 260 : 160,
-                        child: TextField(
-                          controller: _barcodeCtl,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: _onBarcodeSubmit,
-                          decoration: InputDecoration(
-                            hintText: isDesktop
-                                ? 'Scan / Enter barcode or ID'
-                                : 'Scan barcode',
-                            prefixIcon: const Icon(FontAwesome.barcode),
-                            filled: true,
-                            fillColor: cs.surfaceVariant.withOpacity(.35),
-                            border: _fieldBorder(),
-                            enabledBorder: _fieldBorder(),
-                            focusedBorder: _focusedBorder(cs),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 12,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // ===== RESULTS + (desktop) FORM =====
-                Expanded(
-                  child: Row(
-                    children: [
-                      // left: results
-                      Expanded(
-                        flex: isDesktop ? 6 : 10,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-                          child: _ResultList(
-                            items: _matches,
-                            onPick: _pickProduct,
-                            selectedId: _selectedProduct?.id,
-                          ),
-                        ),
-                      ),
-                      // right: form (desktop only here)
-                      if (isDesktop)
-                        Expanded(
-                          flex: 5,
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
-                            child: _FormCard(
-                              product: _selectedProduct,
-                              formKey: _formKey,
-                              unitCtrl: _unitPriceCtl,
-                              saleCtrl: _salePriceCtl,
-                              discCtrl: _discountCtl,
-                              qtyCtrl: _qtyCtl,
-                              onCancel: _clearForm,
-                              onSubmit: _submitForm,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-
-                // mobile: form below results
-                if (!isDesktop)
+            body: SafeArea(
+              child: Column(
+                children: [
+                  // ===== BARCODE SCANNER SECTION =====
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                    child: _FormCard(
-                      product: _selectedProduct,
-                      formKey: _formKey,
-                      unitCtrl: _unitPriceCtl,
-                      saleCtrl: _salePriceCtl,
-                      discCtrl: _discountCtl,
-                      qtyCtrl: _qtyCtl,
-                      onCancel: _clearForm,
-                      onSubmit: _submitForm,
+                    padding: const EdgeInsets.all(16),
+                    child: Card(
+                      color: cs.surfaceVariant.withOpacity(.25),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            Icon(
+                              FontAwesome.barcode,
+                              size: 48,
+                              color: _primaryColor,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Scan or Enter Product Code',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: cs.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Use barcode scanner or manually type product ID/barcode',
+                              style: TextStyle(
+                                color: cs.onSurface.withOpacity(.7),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 20),
+                            TextField(
+                              controller: _barcodeCtl,
+                              focusNode: _barcodeFocus,
+                              textInputAction: TextInputAction.done,
+                              onSubmitted: _onBarcodeSubmit,
+                              decoration: InputDecoration(
+                                hintText: 'Scan barcode or enter product ID',
+                                prefixIcon: const Icon(FontAwesome.barcode),
+                                filled: true,
+                                fillColor: cs.surface,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
 
-                // ===== ADDED ENTRIES + SEND (FIXED OVERFLOW) =====
-                _BottomEntriesBar(
-                  entries: _entries,
-                  onRemove: _removeEntry,
-                  onSend: _sendAll,
-                ),
-              ],
+                  // ===== FORM SECTION =====
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _FormCard(
+                        product: _selectedProduct,
+                        formKey: _formKey,
+                        unitCtrl: _unitPriceCtl,
+                        saleCtrl: _salePriceCtl,
+                        discCtrl: _discountCtl,
+                        qtyCtrl: _qtyCtl,
+                        onCancel: _clearForm,
+                        onSubmit: _submitForm,
+                        primaryColor: _primaryColor,
+                        warningColor: _warningColor,
+                        successColor: _successColor,
+                      ),
+                    ),
+                  ),
+
+                  // ===== BOTTOM ENTRIES BAR =====
+                  _BottomEntriesBar(
+                    entries: _entries,
+                    onRemove: _removeEntry,
+                    onApply: _applyUpdates,
+                    primaryColor: _primaryColor,
+                    successColor: _successColor,
+                    errorColor: _errorColor,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
-
-  OutlineInputBorder _fieldBorder() => OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide(color: Colors.white.withOpacity(.08)),
-  );
-
-  OutlineInputBorder _focusedBorder(ColorScheme cs) => _fieldBorder().copyWith(
-    borderSide: BorderSide(color: cs.primary.withOpacity(.6)),
-  );
 }
 
-// ========== WIDGETS ==========
-
-class _ResultList extends StatelessWidget {
-  const _ResultList({
-    required this.items,
-    required this.onPick,
-    required this.selectedId,
-  });
-
-  final List<Product> items;
-  final void Function(Product) onPick;
-  final String? selectedId;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    if (items.isEmpty) {
-      return Center(
-        child: Text(
-          'No matching items',
-          style: TextStyle(color: cs.onSurface.withOpacity(.7)),
-        ),
-      );
-    }
-    return Material(
-      color: Colors.transparent,
-      child: ListView.separated(
-        itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (context, i) {
-          final p = items[i];
-          final picked = p.id == (selectedId ?? '');
-          final badgeText = p.isOutOfStock
-              ? 'OUT OF STOCK'
-              : (p.isLowStock ? 'LOW STOCK' : 'OK');
-          final badgeColor = p.isOutOfStock
-              ? Colors.red.withOpacity(.12)
-              : (p.isLowStock
-                    ? const Color(0xFFFFF3CD)
-                    : cs.surfaceVariant.withOpacity(.35));
-          final badgeTextColor = p.isOutOfStock
-              ? Colors.red.shade700
-              : (p.isLowStock ? const Color(0xFF8A6D3B) : cs.onSurface);
-
-          return Material(
-            color: picked
-                ? cs.surfaceVariant.withOpacity(.4)
-                : cs.surfaceVariant.withOpacity(.25),
-            borderRadius: BorderRadius.circular(14),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: () => onPick(p),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: cs.surfaceVariant,
-                      child: const Icon(Feather.box),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            p.name,
-                            style: const TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${p.category} • ${p.id}',
-                            style: TextStyle(
-                              color: cs.onSurface.withOpacity(.7),
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: badgeColor,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              '$badgeText • Stock ${p.currentStock} / Min ${p.minStock}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: badgeTextColor,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Rs.${p.price.toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
+// ========== FORM WIDGET ==========
 
 class _FormCard extends StatelessWidget {
   const _FormCard({
@@ -616,6 +540,9 @@ class _FormCard extends StatelessWidget {
     required this.qtyCtrl,
     required this.onCancel,
     required this.onSubmit,
+    required this.primaryColor,
+    required this.warningColor,
+    required this.successColor,
   });
 
   final Product? product;
@@ -626,6 +553,9 @@ class _FormCard extends StatelessWidget {
   final TextEditingController qtyCtrl;
   final VoidCallback onCancel;
   final VoidCallback onSubmit;
+  final Color primaryColor;
+  final Color warningColor;
+  final Color successColor;
 
   @override
   Widget build(BuildContext context) {
@@ -635,64 +565,131 @@ class _FormCard extends StatelessWidget {
       color: cs.surfaceVariant.withOpacity(.25),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _SectionTitle(icon: Feather.sliders, text: 'Add to Restock'),
-            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Feather.edit, size: 20, color: cs.primary),
+                const SizedBox(width: 8),
+                const Text(
+                  'Stock Update Details',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
             if (product == null)
-              Text(
-                'Select an item from the list or scan a barcode to start.',
-                style: TextStyle(color: cs.onSurface.withOpacity(.7)),
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Feather.package,
+                        size: 64,
+                        color: cs.onSurface.withOpacity(.3),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No Product Selected',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface.withOpacity(.7),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Scan a barcode or enter a product ID above to begin',
+                        style: TextStyle(
+                          color: cs.onSurface.withOpacity(.5),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
               )
             else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _ProductHeader(product: product!),
-                  const SizedBox(height: 12),
-                  Form(
-                    key: formKey,
-                    child: Column(
-                      children: [
-                        Row(
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _ProductHeader(product: product!),
+                      const SizedBox(height: 20),
+                      Form(
+                        key: formKey,
+                        child: Column(
                           children: [
-                            Expanded(child: _numField('Unit Price', unitCtrl)),
-                            const SizedBox(width: 10),
-                            Expanded(child: _numField('Sale Price', saleCtrl)),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _numField('Unit Price (Optional)', unitCtrl),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _numField('Sale Price (Optional)', saleCtrl),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _numField('Discount (Optional)', discCtrl),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _intField('Quantity to Add', qtyCtrl),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: onCancel,
+                                    icon: const Icon(Feather.x),
+                                    label: const Text('Clear & Scan Next'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: warningColor,
+                                      side: BorderSide(color: warningColor),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: FilledButton.icon(
+                                    onPressed: onSubmit,
+                                    icon: const Icon(Feather.plus),
+                                    label: const Text('Add to Updates'),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: primaryColor,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _numField('Permanent Discount', discCtrl),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(child: _intField('Quantity', qtyCtrl)),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            OutlinedButton.icon(
-                              onPressed: onCancel,
-                              icon: const Icon(Feather.x),
-                              label: const Text('Cancel'),
-                            ),
-                            const Spacer(),
-                            FilledButton.icon(
-                              onPressed: onSubmit,
-                              icon: const Icon(Feather.plus_square),
-                              label: const Text('Submit'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
           ],
         ),
@@ -709,7 +706,9 @@ class _FormCard extends StatelessWidget {
       ],
       decoration: _fieldDecoration(label),
       validator: (v) {
-        final val = double.tryParse((v ?? '').trim());
+        final t = (v ?? '').trim();
+        if (t.isEmpty) return null;
+        final val = double.tryParse(t);
         if (val == null) return 'Enter a number';
         if (val < 0) return 'Must be ≥ 0';
         return null;
@@ -725,7 +724,7 @@ class _FormCard extends StatelessWidget {
       decoration: _fieldDecoration(label),
       validator: (v) {
         final val = int.tryParse((v ?? '').trim());
-        if (val == null) return 'Enter an integer';
+        if (val == null) return 'Enter a number';
         if (val <= 0) return 'Must be ≥ 1';
         return null;
       },
@@ -736,7 +735,7 @@ class _FormCard extends StatelessWidget {
     return InputDecoration(
       labelText: label,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
 }
@@ -748,190 +747,210 @@ class _ProductHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final status = product.isOutOfStock
-        ? 'OUT OF STOCK'
-        : (product.isLowStock ? 'LOW STOCK' : 'OK');
-    final statusColor = product.isOutOfStock
-        ? Colors.red.withOpacity(.12)
-        : (product.isLowStock
-              ? const Color(0xFFFFF3CD)
-              : cs.surfaceVariant.withOpacity(.35));
-    final statusTextColor = product.isOutOfStock
-        ? Colors.red.shade700
-        : (product.isLowStock ? const Color(0xFF8A6D3B) : cs.onSurface);
 
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 20,
-          backgroundColor: cs.surfaceVariant,
-          child: const Icon(Feather.box),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.primary.withOpacity(.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: cs.primary.withOpacity(.3),
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: cs.primary,
+            child: Icon(
+              Feather.package,
+              color: cs.onPrimary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  product.name,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${product.category} • ID: ${product.id}',
+                  style: TextStyle(
+                    color: cs.onSurface.withOpacity(.7),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: cs.surface,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    'Current Stock: ${product.currentStock}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                product.name,
-                style: const TextStyle(fontWeight: FontWeight.w800),
+                'Rs.${product.price.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-              const SizedBox(height: 2),
               Text(
-                '${product.category} • ${product.id}',
+                'Current Price',
                 style: TextStyle(
-                  color: cs.onSurface.withOpacity(.7),
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '$status • Stock ${product.currentStock} / Min ${product.minStock}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: statusTextColor,
-                  ),
+                  color: cs.onSurface.withOpacity(.6),
+                  fontSize: 10,
                 ),
               ),
             ],
           ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          'Rs.${product.price.toStringAsFixed(2)}',
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: cs.onSurface),
-        const SizedBox(width: 8),
-        Text(text, style: const TextStyle(fontWeight: FontWeight.w900)),
-      ],
-    );
-  }
-}
-
-// ===== Bottom bar (FIXED OVERFLOW ISSUES) =====
+// ===== Bottom entries bar =====
 class _BottomEntriesBar extends StatelessWidget {
   const _BottomEntriesBar({
     required this.entries,
     required this.onRemove,
-    required this.onSend,
+    required this.onApply,
+    required this.primaryColor,
+    required this.successColor,
+    required this.errorColor,
   });
 
   final List<RestockEntry> entries;
   final void Function(RestockEntry) onRemove;
-  final VoidCallback onSend;
+  final VoidCallback onApply;
+  final Color primaryColor;
+  final Color successColor;
+  final Color errorColor;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final total = entries.fold<double>(0, (s, e) => s + e.lineTotal);
-    final isSmallScreen = MediaQuery.of(context).size.width < 600;
 
-    return SafeArea(
-      top: false,
-      child: Container(
-        constraints: BoxConstraints(
-          // Limit the maximum height to prevent overflow
-          maxHeight: MediaQuery.of(context).size.height * 0.3,
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: cs.surface,
+        border: Border(
+          top: BorderSide(color: cs.outline.withOpacity(.2)),
         ),
-        decoration: BoxDecoration(
-          color: cs.surface,
-          border: Border(top: BorderSide(color: Colors.white.withOpacity(.08))),
-        ),
-        padding: EdgeInsets.fromLTRB(
-          12,
-          10,
-          12,
-          // Add extra bottom padding for safe area
-          12 + MediaQuery.of(context).viewPadding.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (entries.isNotEmpty) ...[
-              const _SectionTitle(
-                icon: Feather.shopping_cart,
-                text: 'Items to Send',
-              ),
-              const SizedBox(height: 8),
-              // Fixed height container with proper overflow handling
-              Container(
-                height: isSmallScreen ? 120 : 140,
-                child: entries.length == 1
-                    ? _EntryCard(
-                        entry: entries.first,
-                        onRemove: () => onRemove(entries.first),
-                        isCompact: true,
-                      )
-                    : ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: entries.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (context, i) {
-                          final e = entries[i];
-                          return _EntryCard(
-                            entry: e,
-                            onRemove: () => onRemove(e),
-                            isCompact: true,
-                          );
-                        },
-                      ),
-              ),
-              const SizedBox(height: 10),
-              // Total and send button with responsive layout
-              Flexible(
-                child: Row(
+      ),
+      padding: const EdgeInsets.all(16),
+      child: entries.isNotEmpty
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   children: [
-                    Expanded(
-                      child: Text(
-                        'Total: Rs.${total.toStringAsFixed(2)}',
-                        style: const TextStyle(fontWeight: FontWeight.w900),
-                        overflow: TextOverflow.ellipsis,
+                    Icon(Feather.list, size: 18, color: cs.primary),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Items to Update',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: onSend,
-                      icon: const Icon(Feather.send),
-                      label: const Text('Send'),
+                    const Spacer(),
+                    Text(
+                      '${entries.length} item${entries.length == 1 ? '' : 's'}',
+                      style: TextStyle(
+                        color: cs.onSurface.withOpacity(.7),
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ] else
-              Flexible(
-                child: Text(
-                  'No items added yet — select an item, fill the form, and press Submit.',
-                  style: TextStyle(color: cs.onSurface.withOpacity(.7)),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
+                const SizedBox(height: 12),
+                if (entries.length == 1)
+                  _EntryCard(
+                    entry: entries.first,
+                    onRemove: () => onRemove(entries.first),
+                    errorColor: errorColor,
+                  )
+                else
+                  SizedBox(
+                    height: 80,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: entries.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, i) {
+                        final e = entries[i];
+                        return _EntryCard(
+                          entry: e,
+                          onRemove: () => onRemove(e),
+                          isCompact: true,
+                          errorColor: errorColor,
+                        );
+                      },
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Total Impact: Rs.${total.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    FilledButton.icon(
+                      onPressed: onApply,
+                      icon: const Icon(Feather.check),
+                      label: const Text('Apply Updates'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: successColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+              ],
+            )
+          : Text(
+              'No items added yet. Scan products and add quantities to update stock.',
+              style: TextStyle(
+                color: cs.onSurface.withOpacity(.7),
               ),
-          ],
-        ),
-      ),
+              textAlign: TextAlign.center,
+            ),
     );
   }
 }
@@ -941,139 +960,103 @@ class _EntryCard extends StatelessWidget {
     required this.entry,
     required this.onRemove,
     this.isCompact = false,
+    required this.errorColor,
   });
 
   final RestockEntry entry;
   final VoidCallback onRemove;
   final bool isCompact;
+  final Color errorColor;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return ConstrainedBox(
+    return Container(
       constraints: BoxConstraints(
-        minWidth: isCompact ? 260 : 280,
-        maxWidth: isCompact ? 320 : 360,
-        minHeight: isCompact ? 110 : 130,
-        maxHeight: isCompact ? 130 : 150,
+        minWidth: isCompact ? 200 : double.infinity,
+        maxWidth: isCompact ? 280 : double.infinity,
       ),
-      child: Container(
-        padding: EdgeInsets.all(isCompact ? 10 : 12),
-        decoration: BoxDecoration(
-          color: cs.surfaceVariant.withOpacity(.25),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(.06)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with better overflow handling
-            Row(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceVariant.withOpacity(.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outline.withOpacity(.2)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Expanded(
-                  child: Text(
-                    entry.product.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                Text(
+                  entry.product.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Current: ${entry.product.currentStock} → New: ${entry.newStock} (+${entry.quantity})',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: cs.onSurface.withOpacity(.7),
+                  ),
+                ),
+                if (!isCompact) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Rs.${entry.lineTotal.toStringAsFixed(2)}',
+                    style: const TextStyle(
                       fontWeight: FontWeight.w800,
-                      fontSize: isCompact ? 13 : 14,
+                      fontSize: 12,
                     ),
                   ),
-                ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
-                  tooltip: 'Remove',
-                  onPressed: onRemove,
-                  icon: Icon(Feather.trash_2, size: isCompact ? 16 : 18),
-                ),
+                ],
               ],
             ),
-            // Category and ID
+          ),
+          if (isCompact) ...[
+            const SizedBox(width: 8),
             Text(
-              '${entry.product.category} • ${entry.product.id}',
-              style: TextStyle(
-                color: cs.onSurface.withOpacity(.7),
-                fontSize: isCompact ? 10 : 12,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 6),
-            // Pills with better spacing for compact mode
-            Flexible(
-              child: Wrap(
-                spacing: isCompact ? 6 : 8,
-                runSpacing: isCompact ? 4 : 6,
-                children: [
-                  _pill(
-                    'Unit',
-                    'Rs.${entry.unitPrice.toStringAsFixed(2)}',
-                    isCompact,
-                  ),
-                  _pill(
-                    'Sale',
-                    'Rs.${entry.salePrice.toStringAsFixed(2)}',
-                    isCompact,
-                  ),
-                  _pill(
-                    'Disc',
-                    'Rs.${entry.permanentDiscount.toStringAsFixed(2)}',
-                    isCompact,
-                  ),
-                  _pill('Qty', '${entry.quantity}', isCompact),
-                ],
-              ),
-            ),
-            const SizedBox(height: 6),
-            // Total with proper overflow handling
-            Align(
-              alignment: Alignment.bottomRight,
-              child: Text(
-                'Total: Rs.${entry.lineTotal.toStringAsFixed(2)}',
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: isCompact ? 12 : 13,
-                ),
+              'Rs.${entry.lineTotal.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 11,
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _pill(String label, String value, bool isCompact) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: isCompact ? 6 : 8,
-        vertical: isCompact ? 3 : 4,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.06),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '$label: ',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              fontSize: isCompact ? 10 : 11,
+          const SizedBox(width: 8),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(
+              minWidth: 32,
+              minHeight: 32,
+            ),
+            tooltip: 'Remove',
+            onPressed: onRemove,
+            icon: Icon(
+              Feather.trash_2,
+              size: 16,
+              color: errorColor,
+            ),
+            style: IconButton.styleFrom(
+              foregroundColor: errorColor,
+              backgroundColor: errorColor.withOpacity(0.1),
             ),
           ),
-          Text(value, style: TextStyle(fontSize: isCompact ? 10 : 11)),
         ],
       ),
     );
   }
+}
+
+// ---- Simple "Esc" action intent ----
+class ActivateIntent extends Intent {
+  const ActivateIntent();
 }
