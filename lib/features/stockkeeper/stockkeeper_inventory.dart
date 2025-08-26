@@ -4,6 +4,8 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 // ====== PAGES YOU NAVIGATE TO ======
 import 'package:pos_system/features/stockkeeper/inventory/total_items.dart';
 import 'package:pos_system/features/stockkeeper/inventory/low_stock_page.dart';
+import 'package:pos_system/features/stockkeeper/inventory/restock.dart';
+
 
 // ===== Small helpers: gradients derived from theme =====
 LinearGradient themedHeaderGradient(ColorScheme cs) => LinearGradient(
@@ -111,8 +113,10 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
 
   bool _mobileBannerShown = false;
 
-  List<Product> get _outOfStock => products.where((p) => p.isOutOfStock).toList();
-  List<Product> get _lowStock => products.where((p) => p.isLowStock).toList(); // still for tile
+  List<Product> get _outOfStock =>
+      products.where((p) => p.isOutOfStock).toList();
+  List<Product> get _lowStock =>
+      products.where((p) => p.isLowStock).toList(); // still for tile
 
   @override
   void didChangeDependencies() {
@@ -135,8 +139,10 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
           MaterialBanner(
             elevation: 2,
             backgroundColor: Theme.of(context).colorScheme.errorContainer,
-            leading: Icon(Icons.warning_amber_rounded,
-                color: Theme.of(context).colorScheme.onErrorContainer),
+            leading: Icon(
+              Icons.warning_amber_rounded,
+              color: Theme.of(context).colorScheme.onErrorContainer,
+            ),
             content: Text(
               'Out of stock: $oosCount item(s) need immediate attention.',
               style: TextStyle(
@@ -158,7 +164,9 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
                   setState(() => _mobileBannerShown = true);
                   // Navigate to LOW STOCK page as requested
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const LowStockRequestPage()),
+                    MaterialPageRoute(
+                      builder: (_) => const LowStockRequestPage(),
+                    ),
                   );
                 },
                 child: const Text('VIEW'),
@@ -179,8 +187,8 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
     final cs = Theme.of(context).colorScheme;
 
     final totalItems = products.length;
-    final lowStockCount = _lowStock.length;      // tile
-    final outOfStockCount = _outOfStock.length;  // red warning
+    final lowStockCount = _lowStock.length; // tile
+    final outOfStockCount = _outOfStock.length; // red warning
 
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width >= 900;
@@ -237,8 +245,9 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
                   LayoutBuilder(
                     builder: (context, constraints) {
                       const double minTileWidth = 300;
-                      final int cols =
-                          (constraints.maxWidth / minTileWidth).floor().clamp(1, 4);
+                      final int cols = (constraints.maxWidth / minTileWidth)
+                          .floor()
+                          .clamp(1, 4);
                       const double gap = 20;
                       final double tileWidth =
                           (constraints.maxWidth - (cols - 1) * gap) / cols;
@@ -256,7 +265,9 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
                           value: '$totalItems',
                           label: 'Total Items',
                           onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const TotalItems()),
+                            MaterialPageRoute(
+                              builder: (_) => const TotalItems(),
+                            ),
                           ),
                         ),
                         _StatTile(
@@ -271,7 +282,27 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
                           value: '$lowStockCount',
                           label: 'Low Stock',
                           onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const LowStockRequestPage()),
+                            MaterialPageRoute(
+                              builder: (_) => const LowStockRequestPage(),
+                            ),
+                          ),
+                        ),
+
+                        _StatTile(
+                          width: tileWidth,
+                          gradient: const LinearGradient(
+                            colors: [Color.fromARGB(255, 38, 255, 132), Color.fromARGB(255, 0, 255, 102)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          iconBg: const Color.fromARGB(255, 160, 255, 153),
+                          icon: Feather.alert_triangle,
+                          value: '$lowStockCount',
+                          label: 'Re-Stock',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const RestockPage()
+                            ),
                           ),
                         ),
                       ];
@@ -340,7 +371,10 @@ class _StatTile extends StatelessWidget {
             ),
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 16,
+                ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -387,10 +421,7 @@ class _StatTile extends StatelessWidget {
 
 /// ---------- Compact OUT-OF-STOCK red pill (desktop, top-right) ----------
 class _OutOfStockPill extends StatelessWidget {
-  const _OutOfStockPill({
-    required this.count,
-    required this.items,
-  });
+  const _OutOfStockPill({required this.count, required this.items});
 
   final int count;
   final List<String> items;
@@ -412,21 +443,28 @@ class _OutOfStockPill extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: items
-                          .map((n) => Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                child: Text('• $n'),
-                              ))
+                          .map(
+                            (n) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Text('• $n'),
+                            ),
+                          )
                           .toList(),
                     ),
                   ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
               // Navigate to LOW STOCK page as requested
               FilledButton(
                 onPressed: () {
                   Navigator.pop(context);
                   Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const LowStockRequestPage()),
+                    MaterialPageRoute(
+                      builder: (_) => const LowStockRequestPage(),
+                    ),
                   );
                 },
                 child: const Text('Review & Restock'),
@@ -445,7 +483,11 @@ class _OutOfStockPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.warning_amber_rounded, color: cs.onErrorContainer, size: 18),
+            Icon(
+              Icons.warning_amber_rounded,
+              color: cs.onErrorContainer,
+              size: 18,
+            ),
             const SizedBox(width: 6),
             Text(
               'Out of Stock: $count',
