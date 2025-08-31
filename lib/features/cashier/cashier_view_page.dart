@@ -3,9 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 
-import '../../widget/search_and_categories.dart';
-import '../../widget/cart_table.dart';
-import '../../widget/discount_row.dart';
+import '../../widgets/search_and_categories.dart';
+import '../../widgets/cart_table.dart';
+import '../../widgets/discount_row.dart';
 import 'category_items_page.dart';
 import 'cashier_insights_page.dart';
 
