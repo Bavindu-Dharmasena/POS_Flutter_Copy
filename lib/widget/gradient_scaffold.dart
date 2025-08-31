@@ -14,7 +14,9 @@ class GradientScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(gradient: AppColors.backgroundGradient),
+      decoration: BoxDecoration(
+        gradient: AppColors.backgroundGradient(Theme.of(context).brightness),
+      ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: appBar,
