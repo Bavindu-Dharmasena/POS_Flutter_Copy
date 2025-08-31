@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import '../../../widgets/gradient_scaffold.dart';
-import '../../../widgets/pastel_text_field.dart';
+import '../../../widget/gradient_scaffold.dart';
+import '../../../widget/pastel_text_field.dart';
 
 // If AppColors and colorfulTheme are not defined in app_theme.dart, define them below:
 class AppColors {

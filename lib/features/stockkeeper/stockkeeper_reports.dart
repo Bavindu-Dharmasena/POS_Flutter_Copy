@@ -2,10 +2,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pos_system/widgets/stock_Keeper_Report/ModernCategoryFilterBar.dart';
-import 'package:pos_system/widgets/stock_Keeper_Report/ModernReportCard.dart';
-import 'package:pos_system/widgets/stock_Keeper_Report/report_preview_dialog.dart';
-import 'package:pos_system/widgets/stock_Keeper_Report/ModernSectionHeader.dart';
+import 'package:pos_system/widget/stock_Keeper_Report/ModernCategoryFilterBar.dart';
+import 'package:pos_system/widget/stock_Keeper_Report/ModernReportCard.dart';
+import 'package:pos_system/widget/stock_Keeper_Report/report_preview_dialog.dart';
+import 'package:pos_system/widget/stock_Keeper_Report/ModernSectionHeader.dart';
 
 class StockKeeperReports extends StatefulWidget {
   const StockKeeperReports({Key? key}) : super(key: key);

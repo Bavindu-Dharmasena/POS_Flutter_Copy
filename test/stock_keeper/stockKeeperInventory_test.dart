@@ -3,8 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:pos_system/features/stockkeeper/add_item_page.dart';
 import 'package:pos_system/features/stockkeeper/stockkeeper_inventory.dart';
-import 'package:pos_system/widgets/stock_keeper_inventory/dashboard_summary_grid.dart';
-import 'package:pos_system/widgets/stock_keeper_inventory/search_and_filter_section.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/dashboard_summary_grid.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/search_and_filter_section.dart';
 
 void main() {
   group('StockKeeperInventory', () {

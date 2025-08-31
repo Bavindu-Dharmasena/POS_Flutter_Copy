@@ -5,12 +5,12 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:pos_system/features/stockkeeper/add_item_page.dart';
 
 // Your widgets
-import 'package:pos_system/widgets/stock_keeper_inventory/dashboard_summary_grid.dart';
-import 'package:pos_system/widgets/stock_keeper_inventory/product_actions_sheet.dart';
-import 'package:pos_system/widgets/stock_keeper_inventory/product_card.dart';
-import 'package:pos_system/widgets/stock_keeper_inventory/product_details_dialog.dart';
-import 'package:pos_system/widgets/stock_keeper_inventory/search_and_filter_section.dart';
-import 'package:pos_system/widgets/stock_keeper_inventory/product_edit.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/dashboard_summary_grid.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/product_actions_sheet.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/product_card.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/product_details_dialog.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/search_and_filter_section.dart';
+import 'package:pos_system/widget/stock_keeper_inventory/product_edit.dart';
 
 /// ===== Small helpers: gradients derived from theme =====
 LinearGradient themedHeaderGradient(ColorScheme cs) => LinearGradient(
