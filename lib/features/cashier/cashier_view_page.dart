@@ -9,6 +9,7 @@ import '../../widget/cart_table.dart';
 import '../../widget/discount_row.dart';
 import 'category_items_page.dart';
 import 'cashier_insights_page.dart';
+import '../../widget/primary_actions_row.dart';
 
 // ---- Keyboard Intents ----
 class ActivateSearchIntent extends Intent {
@@ -65,16 +66,30 @@ class _CashierViewPageState extends State<CashierViewPage> {
     {
       'id': 1,
       'category': 'Drinks',
-      'colourCode': '#FF5733',
+      'colourCode': '#F5B027',
+      'categoryImage': 'assets/cat/drinks.png',
       'items': [
         {
           'id': 1,
           'itemcode': '0729701639',
           'name': 'Coke',
           'colourCode': '#FF6347',
+          'itemImage': 'assets/item/coke.png', // Added item image
           'batches': [
-            {'batchID': '123234', 'pprice': 120.00, 'price': 150.0, 'quantity': 20},
-            {'batchID': '123237', 'pprice': 130.00, 'price': 160.0, 'quantity': 20},
+            {
+              'batchID': '123234',
+              'pprice': 120.00,
+              'price': 150.0,
+              'quantity': 20,
+              'discountAmount': 20,
+            },
+            {
+              'batchID': '123237',
+              'pprice': 130.00,
+              'price': 160.0,
+              'quantity': 20,
+              'discountAmount': 0,
+            },
           ],
         },
       ],
@@ -82,15 +97,23 @@ class _CashierViewPageState extends State<CashierViewPage> {
     {
       'id': 2,
       'category': 'Snacks',
-      'colourCode': '#C70039',
+      'colourCode': '#285FF6',
+      'categoryImage': 'assets/cat/snacks.png',
       'items': [
         {
           'id': 2,
           'itemcode': '890123000002',
           'name': 'Chips',
           'colourCode': '#D2691E',
+          'itemImage': 'assets/item/chips.png', // Added item image
           'batches': [
-            {'batchID': '223234', 'pprice': 90.00, 'price': 100.0, 'quantity': 30},
+            {
+              'batchID': '223234',
+              'pprice': 90.00,
+              'price': 100.0,
+              'quantity': 30,
+              'discountAmount': 0,
+            },
           ],
         },
         {
@@ -98,8 +121,15 @@ class _CashierViewPageState extends State<CashierViewPage> {
           'itemcode': '890123000003',
           'name': 'Chocolate',
           'colourCode': '#8B4513',
+          'itemImage': 'assets/item/chocolate.png', // Added item image
           'batches': [
-            {'batchID': '223237', 'pprice': 100.00, 'price': 120.0, 'quantity': 25},
+            {
+              'batchID': '223237',
+              'pprice': 100.00,
+              'price': 120.0,
+              'quantity': 25,
+              'discountAmount': 0,
+            },
           ],
         },
       ],
@@ -107,24 +137,39 @@ class _CashierViewPageState extends State<CashierViewPage> {
     {
       'id': 3,
       'category': 'Grocery',
-      'colourCode': '#900C3F',
+      'colourCode': '#2BF35D',
+      'categoryImage': 'assets/cat/grocery.png',
       'items': [
         {
           'id': 4,
           'itemcode': '890123000004',
           'name': 'Rice',
           'colourCode': '#D3D3D3',
+          'itemImage': 'assets/item/rice.png', // Added item image
           'batches': [
-            {'batchID': '323234', 'pprice': 80.00, 'price': 90.0, 'quantity': 50},
+            {
+              'batchID': '323234',
+              'pprice': 80.00,
+              'price': 90.0,
+              'quantity': 50,
+              'discountAmount': 0,
+            },
           ],
         },
         {
           'id': 5,
-          'itemcode': '23423446', // <-- as you requested
+          'itemcode': '23423446',
           'name': 'Sugar',
           'colourCode': '#F0E68C',
+          'itemImage': 'assets/item/sugar.png', // Added item image
           'batches': [
-            {'batchID': '323237', 'pprice': 60.00, 'price': 70.0, 'quantity': 40},
+            {
+              'batchID': '323237',
+              'pprice': 60.00,
+              'price': 70.0,
+              'quantity': 40,
+              'discountAmount': 0,
+            },
           ],
         },
       ],
@@ -132,15 +177,23 @@ class _CashierViewPageState extends State<CashierViewPage> {
     {
       'id': 4,
       'category': 'Bakery',
-      'colourCode': '#581845',
+      'colourCode': '#FF1F1F',
+      'categoryImage': 'assets/cat/bakery.png',
       'items': [
         {
           'id': 6,
           'itemcode': '890123000006',
           'name': 'Bread',
           'colourCode': '#FFD700',
+          'itemImage': 'assets/item/bread.png', // Added item image
           'batches': [
-            {'batchID': '423234', 'pprice': 70.00, 'price': 80.0, 'quantity': 15},
+            {
+              'batchID': '423234',
+              'pprice': 70.00,
+              'price': 80.0,
+              'quantity': 15,
+              'discountAmount': 0,
+            },
           ],
         },
         {
@@ -148,8 +201,175 @@ class _CashierViewPageState extends State<CashierViewPage> {
           'itemcode': '4791010040037',
           'name': 'Bun',
           'colourCode': '#BC8F8F',
+          'itemImage': 'assets/item/bun.png', // Added item image
           'batches': [
-            {'batchID': '423237', 'pprice': 50.00, 'price': 60.0, 'quantity': 20},
+            {
+              'batchID': '423237',
+              'pprice': 50.00,
+              'price': 60.0,
+              'quantity': 20,
+              'discountAmount': 10,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      'id': 5,
+      'category': 'Beverages',
+      'colourCode': '#E74C3C',
+      'categoryImage': 'assets/cat/beverages.png',
+      'items': [
+        {
+          'id': 8,
+          'itemcode': '890123000101',
+          'name': 'Coca-Cola 1L',
+          'colourCode': '#9B59B6',
+          'itemImage': 'assets/item/coca_cola.png', // Added item image
+          'batches': [
+            {
+              'batchID': '523001',
+              'pprice': 120.00,
+              'price': 150.0,
+              'quantity': 50,
+              'discountAmount': 5,
+            },
+          ],
+        },
+        {
+          'id': 9,
+          'itemcode': '890123000102',
+          'name': 'Pepsi 500ml',
+          'colourCode': '#1ABC9C',
+          'itemImage': 'assets/item/pepsi.png', // Added item image
+          'batches': [
+            {
+              'batchID': '523002',
+              'pprice': 80.00,
+              'price': 100.0,
+              'quantity': 30,
+              'discountAmount': 0,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      'id': 6,
+      'category': 'Dairy',
+      'colourCode': '#F39C12',
+      'categoryImage': 'assets/cat/dairy.png',
+      'items': [
+        {
+          'id': 10,
+          'itemcode': '890123000201',
+          'name': 'Fresh Milk 1L',
+          'colourCode': '#2ECC71',
+          'itemImage': 'assets/item/milk.png', // Added item image
+          'batches': [
+            {
+              'batchID': '623101',
+              'pprice': 180.00,
+              'price': 200.0,
+              'quantity': 25,
+              'discountAmount': 0,
+            },
+          ],
+        },
+        {
+          'id': 11,
+          'itemcode': '890123000202',
+          'name': 'Cheddar Cheese 200g',
+          'colourCode': '#E67E22',
+          'itemImage': 'assets/item/cheese.png', // Added item image
+          'batches': [
+            {
+              'batchID': '623102',
+              'pprice': 350.00,
+              'price': 400.0,
+              'quantity': 10,
+              'discountAmount': 20,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      'id': 7,
+      'category': 'Snacks',
+      'colourCode': '#8E44AD',
+      'categoryImage': 'assets/cat/snacks2.png',
+      'items': [
+        {
+          'id': 12,
+          'itemcode': '890123000301',
+          'name': 'Potato Chips 100g',
+          'colourCode': '#3498DB',
+          'itemImage': 'assets/item/potato_chips.png', // Added item image
+          'batches': [
+            {
+              'batchID': '723201',
+              'pprice': 90.00,
+              'price': 120.0,
+              'quantity': 40,
+              'discountAmount': 10,
+            },
+          ],
+        },
+        {
+          'id': 13,
+          'itemcode': '890123000302',
+          'name': 'Chocolate Bar 50g',
+          'colourCode': '#16A085',
+          'itemImage': 'assets/item/chocolate_bar.png', // Added item image
+          'batches': [
+            {
+              'batchID': '723202',
+              'pprice': 150.00,
+              'price': 180.0,
+              'quantity': 35,
+              'discountAmount': 5,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      'id': 8,
+      'category': 'Household',
+      'colourCode': '#2C3E50',
+      'categoryImage': 'assets/cat/household.png',
+      'items': [
+        {
+          'id': 14,
+          'itemcode': '890123000401',
+          'name': 'Detergent Powder 1kg',
+          'colourCode': '#C0392B',
+          'itemImage': 'assets/item/detergent.png', // Added item image
+          'batches': [
+            {
+              'batchID': '823301',
+              'pprice': 400.00,
+              'price': 450.0,
+              'quantity': 20,
+              'discountAmount': 25,
+            },
+          ],
+        },
+        {
+          'id': 15,
+          'itemcode': '890123000402',
+          'name': 'Toilet Paper Pack (4 rolls)',
+          'colourCode': '#2980B9',
+          'itemImage': 'assets/item/toilet_paper.png', // Added item image
+          'batches': [
+            {
+              'batchID': '823302',
+              'pprice': 250.00,
+              'price': 300.0,
+              'quantity': 60,
+              'discountAmount': 0,
+            },
           ],
         },
       ],
@@ -168,9 +388,11 @@ class _CashierViewPageState extends State<CashierViewPage> {
   final FocusNode _cartAreaNode = FocusNode(debugLabel: 'CartArea');
   final FocusNode _discountAreaNode = FocusNode(debugLabel: 'DiscountArea');
 
-  final FocusNode _categoriesFocusNode =  FocusNode(debugLabel: 'CategoriesArea');
-  final FocusNode _searchFieldNode =  FocusNode(debugLabel: 'SearchField');
-  final FocusNode _headerMenuBtnNode =  FocusNode(debugLabel: 'HeaderMenuBtn');
+  final FocusNode _categoriesFocusNode = FocusNode(
+    debugLabel: 'CategoriesArea',
+  );
+  final FocusNode _searchFieldNode = FocusNode(debugLabel: 'SearchField');
+  final FocusNode _headerMenuBtnNode = FocusNode(debugLabel: 'HeaderMenuBtn');
   final TextEditingController _searchController = TextEditingController();
 
   // ----------------- Scanner state -----------------
@@ -193,9 +415,14 @@ class _CashierViewPageState extends State<CashierViewPage> {
   void _focusSearchField({bool selectAll = false}) {
     _searchFieldNode.requestFocus();
     if (selectAll) {
-      _searchController.selection = TextSelection(baseOffset: 0, extentOffset: _searchController.text.length);
+      _searchController.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _searchController.text.length,
+      );
     } else {
-      _searchController.selection = TextSelection.collapsed(offset: _searchController.text.length);
+      _searchController.selection = TextSelection.collapsed(
+        offset: _searchController.text.length,
+      );
     }
   }
 
@@ -208,7 +435,9 @@ class _CashierViewPageState extends State<CashierViewPage> {
       discount = 0;
       searchQuery = '';
     });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Bill paused (New Sale started)")));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Bill paused (New Sale started)")),
+    );
   }
 
   void _showPaymentMethodDialog() {
@@ -253,17 +482,25 @@ class _CashierViewPageState extends State<CashierViewPage> {
           onSubmitted: (_) => _tryCashPay(cashController, refocus: true),
         ),
         actions: [
-          TextButton(onPressed: () => _tryCashPay(cashController), child: const Text('Pay')),
+          TextButton(
+            onPressed: () => _tryCashPay(cashController),
+            child: const Text('Pay'),
+          ),
         ],
       ),
     );
   }
 
-  void _tryCashPay(TextEditingController cashController, {bool refocus = false}) {
+  void _tryCashPay(
+    TextEditingController cashController, {
+    bool refocus = false,
+  }) {
     final cashGiven = double.tryParse(cashController.text) ?? 0;
     final total = _calculateTotal();
     if (cashGiven < total) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cash amount is less than total')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cash amount is less than total')),
+      );
       return;
     }
     Navigator.pop(context);
@@ -272,7 +509,11 @@ class _CashierViewPageState extends State<CashierViewPage> {
     if (refocus) _payBtnNode.requestFocus();
   }
 
-  void _printBill({required String paymentMethod, double cashGiven = 0, double balance = 0}) {
+  void _printBill({
+    required String paymentMethod,
+    double cashGiven = 0,
+    double balance = 0,
+  }) {
     final now = DateTime.now();
     final formattedDateTime = DateFormat('yyyy-MM-dd – hh:mm a').format(now);
 
@@ -300,7 +541,9 @@ class _CashierViewPageState extends State<CashierViewPage> {
 
       bill.writeln('$name\n  Qty: $qty x Rs. ${price.toStringAsFixed(2)}');
       if (itemDiscount > 0) {
-        bill.writeln('  Discount: ${itemDiscount.toStringAsFixed(2)} ${isPercentage ? "%" : "Rs"}');
+        bill.writeln(
+          '  Discount: ${itemDiscount.toStringAsFixed(2)} ${isPercentage ? "%" : "Rs"}',
+        );
       }
       bill.writeln('  Final Price: Rs. ${finalUnitPrice.toStringAsFixed(2)}');
       bill.writeln('  Line Total: Rs. ${total.toStringAsFixed(2)}\n');
@@ -309,7 +552,9 @@ class _CashierViewPageState extends State<CashierViewPage> {
     bill.writeln('------------------------------');
     bill.writeln('Subtotal: Rs. ${_calculateTotal().toStringAsFixed(2)}');
     if (discount > 0) {
-      final discountText = isPercentageDiscount ? '$discount%' : 'Rs. ${discount.toStringAsFixed(2)}';
+      final discountText = isPercentageDiscount
+          ? '$discount%'
+          : 'Rs. ${discount.toStringAsFixed(2)}';
       bill.writeln('Overall Discount: $discountText');
     }
     bill.writeln('Payment Method: $paymentMethod');
@@ -346,7 +591,11 @@ class _CashierViewPageState extends State<CashierViewPage> {
     );
   }
 
-  void _addToCart(Map<String, dynamic> batch, {int quantity = 1, bool fromSearch = false}) {
+  void _addToCart(
+    Map<String, dynamic> batch, {
+    int quantity = 1,
+    bool fromSearch = false,
+  }) {
     final existingIndex = cartItems.indexWhere(
       (i) => i['name'] == batch['name'] && i['batchID'] == batch['batchID'],
     );
@@ -355,7 +604,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
     } else {
       cartItems.add({
         'name': batch['name'],
-        'price': batch['price'],
+        'price': batch['price'] - batch['discountAmount'],
         'batchID': batch['batchID'],
         'quantity': quantity,
         'itemDiscount': 0.0,
@@ -370,35 +619,52 @@ class _CashierViewPageState extends State<CashierViewPage> {
 
   Future<void> _openCategory(String cat) async {
     final categoryItems =
-        (itemsByCategory.firstWhere((c) => c['category'] == cat)['items'] as List)
+        (itemsByCategory.firstWhere((c) => c['category'] == cat)['items']
+                as List)
             .cast<Map<String, dynamic>>();
 
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => CategoryItemsPage(category: cat, items: categoryItems, onItemSelected: (_) {}),
+        builder: (_) => CategoryItemsPage(
+          category: cat,
+          items: categoryItems,
+          onItemSelected: (_) {},
+        ),
       ),
     );
 
     if (result != null && mounted) {
       final item = result['item'] as Map<String, dynamic>;
-      final batch = Map<String, dynamic>.from(result['batch'] as Map<String, dynamic>);
+      final batch = Map<String, dynamic>.from(
+        result['batch'] as Map<String, dynamic>,
+      );
       final qty = result['quantity'] as int;
 
-      final batchForCart = {'name': item['name'], 'price': batch['price'], 'batchID': batch['batchID']};
+      final batchForCart = {
+        'name': item['name'],
+        'price': batch['price'],
+        'batchID': batch['batchID'],
+        'discountAmount': batch['discountAmount'] ?? 0.0,
+      };
       _addToCart(batchForCart, quantity: qty);
     }
   }
 
-  void _showBatchSelectionDialog(Map<String, dynamic> item, {bool fromSearch = false}) async {
-    final List<Map<String, dynamic>> batchList = List<Map<String, dynamic>>.from(item['batches'] ?? []);
+  void _showBatchSelectionDialog(
+    Map<String, dynamic> item, {
+    bool fromSearch = false,
+  }) async {
+    final List<Map<String, dynamic>> batchList =
+        List<Map<String, dynamic>>.from(item['batches'] ?? []);
     if (batchList.isEmpty) return;
 
     if (batchList.length == 1) {
       final selectedBatch = Map<String, dynamic>.from(batchList[0]);
       selectedBatch['name'] = item['name'];
       final qty = await _showQuantityInputDialog(selectedBatch);
-      if (qty != null) _addToCart(selectedBatch, quantity: qty, fromSearch: fromSearch);
+      if (qty != null)
+        _addToCart(selectedBatch, quantity: qty, fromSearch: fromSearch);
       return;
     }
 
@@ -413,14 +679,25 @@ class _CashierViewPageState extends State<CashierViewPage> {
             itemCount: batchList.length,
             itemBuilder: (context, index) {
               final batch = batchList[index];
+              final dynamic discount = batch['discountAmount'] ?? 0.0;
               return ListTile(
-                title: Text('Batch: ${batch['batchID']} - Price: Rs. ${batch['price']}'),
+                title: Text(
+                  'Batch: ${batch['batchID']} - Price: Rs. ${batch['price']}',
+                ),
+                subtitle: (discount is num && discount > 0)
+                    ? Text('Discount: Rs. $discount')
+                    : null,
                 onTap: () async {
                   Navigator.pop(context);
-                  final selectedBatch = Map<String, dynamic>.from(batch)..['name'] = item['name'];
+                  final selectedBatch = Map<String, dynamic>.from(batch)
+                    ..['name'] = item['name'];
                   final qty = await _showQuantityInputDialog(selectedBatch);
                   if (qty != null) {
-                    _addToCart(selectedBatch, quantity: qty, fromSearch: fromSearch);
+                    _addToCart(
+                      selectedBatch,
+                      quantity: qty,
+                      fromSearch: fromSearch,
+                    );
                   }
                 },
               );
@@ -436,7 +713,9 @@ class _CashierViewPageState extends State<CashierViewPage> {
     return showDialog<int>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: Text('Enter quantity for ${batch['name']} (Batch: ${batch['batchID']})'),
+        title: Text(
+          'Enter quantity for ${batch['name']} (Batch: ${batch['batchID']})',
+        ),
         content: TextField(
           autofocus: true,
           keyboardType: TextInputType.number,
@@ -448,7 +727,10 @@ class _CashierViewPageState extends State<CashierViewPage> {
           decoration: const InputDecoration(hintText: 'Quantity'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(dialogCtx).pop(quantity), child: const Text('Add')),
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(quantity),
+            child: const Text('Add'),
+          ),
         ],
       ),
     );
@@ -456,11 +738,14 @@ class _CashierViewPageState extends State<CashierViewPage> {
 
   void _editCartItem(int index) {
     int quantity = cartItems[index]['quantity'];
-    double itemDiscount = (cartItems[index]['itemDiscount'] as num?)?.toDouble() ?? 0.0;
+    double itemDiscount =
+        (cartItems[index]['itemDiscount'] as num?)?.toDouble() ?? 0.0;
     bool isPercentage = cartItems[index]['isItemDiscountPercentage'] == true;
 
     final quantityController = TextEditingController(text: quantity.toString());
-    final discountController = TextEditingController(text: itemDiscount.toString());
+    final discountController = TextEditingController(
+      text: itemDiscount.toString(),
+    );
 
     showDialog(
       context: context,
@@ -476,10 +761,13 @@ class _CashierViewPageState extends State<CashierViewPage> {
               onChanged: (value) => quantity = int.tryParse(value) ?? quantity,
             ),
             TextField(
-              decoration: InputDecoration(labelText: isPercentage ? 'Discount (%)' : 'Discount (Rs)'),
+              decoration: InputDecoration(
+                labelText: isPercentage ? 'Discount (%)' : 'Discount (Rs)',
+              ),
               keyboardType: TextInputType.number,
               controller: discountController,
-              onChanged: (value) => itemDiscount = double.tryParse(value) ?? itemDiscount,
+              onChanged: (value) =>
+                  itemDiscount = double.tryParse(value) ?? itemDiscount,
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -541,7 +829,10 @@ class _CashierViewPageState extends State<CashierViewPage> {
               children: [
                 TextField(
                   controller: barcodeController,
-                  decoration: const InputDecoration(labelText: 'Barcode', hintText: 'Scan or enter barcode'),
+                  decoration: const InputDecoration(
+                    labelText: 'Barcode',
+                    hintText: 'Scan or enter barcode',
+                  ),
                   onChanged: (value) => barcode = value.trim(),
                 ),
                 TextField(
@@ -552,22 +843,32 @@ class _CashierViewPageState extends State<CashierViewPage> {
                 DropdownButtonFormField<String>(
                   value: selectedCategory,
                   decoration: const InputDecoration(labelText: 'Category'),
-                  items: categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
+                  items: categories
+                      .map(
+                        (cat) => DropdownMenuItem(value: cat, child: Text(cat)),
+                      )
+                      .toList(),
                   onChanged: (value) {
                     if (value != null) selectedCategory = value;
                   },
                 ),
                 TextField(
                   controller: priceController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Selling Price (Rs)'),
-                  onChanged: (value) => sellingPrice = double.tryParse(value) ?? 0.0,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Selling Price (Rs)',
+                  ),
+                  onChanged: (value) =>
+                      sellingPrice = double.tryParse(value) ?? 0.0,
                 ),
                 const SizedBox(height: 10),
                 const Text('Pick Item Color'),
                 ColorPicker(
                   pickerColor: selectedColor,
-                  onColorChanged: (color) => setStateSB(() => selectedColor = color),
+                  onColorChanged: (color) =>
+                      setStateSB(() => selectedColor = color),
                   showLabel: false,
                   pickerAreaHeightPercent: 0.6,
                 ),
@@ -581,19 +882,30 @@ class _CashierViewPageState extends State<CashierViewPage> {
                 itemName = nameController.text.trim();
                 sellingPrice = double.tryParse(priceController.text) ?? 0.0;
 
-                if (barcode.isEmpty || itemName.isEmpty || sellingPrice <= 0.0) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(const SnackBar(content: Text("Please fill all fields correctly.")));
+                if (barcode.isEmpty ||
+                    itemName.isEmpty ||
+                    sellingPrice <= 0.0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Please fill all fields correctly."),
+                    ),
+                  );
                   return;
                 }
 
                 final newItem = {
                   'id': DateTime.now().millisecondsSinceEpoch,
                   'itemcode': barcode, // treat as itemcode
-                  'colourCode': '#${selectedColor.value.toRadixString(16).substring(2).toUpperCase()}',
+                  'colourCode':
+                      '#${selectedColor.value.toRadixString(16).substring(2).toUpperCase()}',
                   'name': itemName,
                   'batches': [
-                    {'batchID': barcode, 'pprice': 0.0, 'price': sellingPrice, 'quantity': 100},
+                    {
+                      'batchID': barcode,
+                      'pprice': 0.0,
+                      'price': sellingPrice,
+                      'quantity': 100,
+                    },
                   ],
                 };
 
@@ -614,7 +926,9 @@ class _CashierViewPageState extends State<CashierViewPage> {
                 });
 
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Item added successfully.")));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Item added successfully.")),
+                );
                 _focusSearchField();
               },
               child: const Text('Add'),
@@ -651,8 +965,14 @@ class _CashierViewPageState extends State<CashierViewPage> {
               }
               return ListTile(
                 leading: CircleAvatar(child: Text('${index + 1}')),
-                title: Text('Bill ${index + 1} • Rs. ${total.toStringAsFixed(2)}'),
-                subtitle: Text(itemNames, maxLines: 2, overflow: TextOverflow.ellipsis),
+                title: Text(
+                  'Bill ${index + 1} • Rs. ${total.toStringAsFixed(2)}',
+                ),
+                subtitle: Text(
+                  itemNames,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _resumeBill(index);
@@ -661,7 +981,12 @@ class _CashierViewPageState extends State<CashierViewPage> {
             },
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Later'))],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Later'),
+          ),
+        ],
       ),
     );
   }
@@ -687,7 +1012,9 @@ class _CashierViewPageState extends State<CashierViewPage> {
       }
       total += unitPrice * (item['quantity'] as int);
     }
-    return isPercentageDiscount ? total - (total * discount / 100) : total - discount;
+    return isPercentageDiscount
+        ? total - (total * discount / 100)
+        : total - discount;
   }
 
   // ----------------- QUICK SALE (button), Ctrl+Q focuses search -----------------
@@ -718,7 +1045,9 @@ class _CashierViewPageState extends State<CashierViewPage> {
           void validate() {
             final q = int.tryParse(qtyCtrl.text.trim()) ?? 0;
             final pr = double.tryParse(priceCtrl.text.trim()) ?? -1;
-            errorText = (q <= 0 || pr <= 0) ? 'Please enter positive values for quantity and price.' : null;
+            errorText = (q <= 0 || pr <= 0)
+                ? 'Please enter positive values for quantity and price.'
+                : null;
             setSB(() {});
           }
 
@@ -728,7 +1057,10 @@ class _CashierViewPageState extends State<CashierViewPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: const InputDecoration(labelText: 'Name'),
+                  ),
                   TextField(
                     controller: qtyCtrl,
                     decoration: const InputDecoration(labelText: 'Quantity'),
@@ -737,18 +1069,27 @@ class _CashierViewPageState extends State<CashierViewPage> {
                   ),
                   TextField(
                     controller: costCtrl,
-                    decoration: const InputDecoration(labelText: 'Unit Cost (Rs)'),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: 'Unit Cost (Rs)',
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                   ),
                   TextField(
                     controller: priceCtrl,
                     decoration: const InputDecoration(labelText: 'Price (Rs)'),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     onChanged: (_) => validate(),
                   ),
                   if (errorText != null) ...[
                     const SizedBox(height: 8),
-                    Text(errorText!, style: const TextStyle(color: Colors.redAccent)),
+                    Text(
+                      errorText!,
+                      style: const TextStyle(color: Colors.redAccent),
+                    ),
                   ],
                 ],
               ),
@@ -864,26 +1205,34 @@ class _CashierViewPageState extends State<CashierViewPage> {
     }
 
     if (foundItem == null && foundBatch == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No item found for code: $code')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('No item found for code: $code')));
       return;
     }
 
     // Case A: exact batch match
     if (foundBatch != null && foundItem != null) {
-      final selected = Map<String, dynamic>.from(foundBatch)..['name'] = foundItem['name'];
+      final selected = Map<String, dynamic>.from(foundBatch)
+        ..['name'] = foundItem['name'];
       final qty = await _showQuantityInputDialog(selected);
       if (qty != null) _addToCart(selected, quantity: qty);
       return;
     }
 
     // Case B: itemcode match only
-    final batches = List<Map<String, dynamic>>.from(foundItem!['batches'] ?? []);
+    final batches = List<Map<String, dynamic>>.from(
+      foundItem!['batches'] ?? [],
+    );
     if (batches.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item has no batches to sell')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Item has no batches to sell')),
+      );
       return;
     }
     if (batches.length == 1) {
-      final selected = Map<String, dynamic>.from(batches.first)..['name'] = foundItem['name'];
+      final selected = Map<String, dynamic>.from(batches.first)
+        ..['name'] = foundItem['name'];
       final qty = await _showQuantityInputDialog(selected);
       if (qty != null) _addToCart(selected, quantity: qty);
     } else {
@@ -896,14 +1245,20 @@ class _CashierViewPageState extends State<CashierViewPage> {
   Widget build(BuildContext context) {
     final shortcuts = <LogicalKeySet, Intent>{
       // Primary actions
-      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyQ): const QuickSaleIntent(),
-      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyP): const PayIntent(),
-      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyB): const PauseBillIntent(),
-      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyY): const ResumeBillIntent(),
+      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyQ):
+          const QuickSaleIntent(),
+      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyP):
+          const PayIntent(),
+      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyB):
+          const PauseBillIntent(),
+      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyY):
+          const ResumeBillIntent(),
 
       // Navigation / utility
-      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyF): const ActivateSearchIntent(),
-      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyG): const FocusCategoriesIntent(),
+      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyF):
+          const ActivateSearchIntent(),
+      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyG):
+          const FocusCategoriesIntent(),
       LogicalKeySet(LogicalKeyboardKey.f2): const FocusCategoriesIntent(),
 
       LogicalKeySet(LogicalKeyboardKey.f1): const ShowHelpIntent(),
@@ -914,21 +1269,77 @@ class _CashierViewPageState extends State<CashierViewPage> {
       LogicalKeySet(LogicalKeyboardKey.arrowDown): const NextFocusIntent(),
       LogicalKeySet(LogicalKeyboardKey.arrowLeft): const PreviousFocusIntent(),
       LogicalKeySet(LogicalKeyboardKey.arrowUp): const PreviousFocusIntent(),
-      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.backquote): const FocusHeaderMenuIntent(),
+      LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.backquote):
+          const FocusHeaderMenuIntent(),
     };
 
     final actions = <Type, Action<Intent>>{
-      QuickSaleIntent: CallbackAction<QuickSaleIntent>(onInvoke: (i) { _handleQuickSale(); return null; }),
-      PayIntent: CallbackAction<PayIntent>(onInvoke: (i) { if (cartItems.isNotEmpty) _showPaymentMethodDialog(); return null; }),
-      PauseBillIntent: CallbackAction<PauseBillIntent>(onInvoke: (i) { if (cartItems.isNotEmpty) _pauseCurrentBill(); return null; }),
-      ResumeBillIntent: CallbackAction<ResumeBillIntent>(onInvoke: (i) { _promptSelectPausedBill(); return null; }),
-      ActivateSearchIntent: CallbackAction<ActivateSearchIntent>(onInvoke: (i) { _focusSearchField(selectAll: true); return null; }),
-      FocusCategoriesIntent: CallbackAction<FocusCategoriesIntent>(onInvoke: (i) { _categoriesFocusNode.requestFocus(); return null; }),
-      ShowHelpIntent: CallbackAction<ShowHelpIntent>(onInvoke: (i) { _showHotkeysHelp(); return null; }),
-      BackIntent: CallbackAction<BackIntent>(onInvoke: (i) { if (Navigator.canPop(context)) Navigator.pop(context); return null; }),
-      NextFocusIntent: CallbackAction<NextFocusIntent>(onInvoke: (i) { FocusScope.of(context).nextFocus(); return null; }),
-      PreviousFocusIntent: CallbackAction<PreviousFocusIntent>(onInvoke: (i) { FocusScope.of(context).previousFocus(); return null; }),
-      FocusHeaderMenuIntent: CallbackAction<FocusHeaderMenuIntent>(onInvoke: (i) { _headerMenuBtnNode.requestFocus(); return null; }),
+      QuickSaleIntent: CallbackAction<QuickSaleIntent>(
+        onInvoke: (i) {
+          _handleQuickSale();
+          return null;
+        },
+      ),
+      PayIntent: CallbackAction<PayIntent>(
+        onInvoke: (i) {
+          if (cartItems.isNotEmpty) _showPaymentMethodDialog();
+          return null;
+        },
+      ),
+      PauseBillIntent: CallbackAction<PauseBillIntent>(
+        onInvoke: (i) {
+          if (cartItems.isNotEmpty) _pauseCurrentBill();
+          return null;
+        },
+      ),
+      ResumeBillIntent: CallbackAction<ResumeBillIntent>(
+        onInvoke: (i) {
+          _promptSelectPausedBill();
+          return null;
+        },
+      ),
+      ActivateSearchIntent: CallbackAction<ActivateSearchIntent>(
+        onInvoke: (i) {
+          _focusSearchField(selectAll: true);
+          return null;
+        },
+      ),
+      FocusCategoriesIntent: CallbackAction<FocusCategoriesIntent>(
+        onInvoke: (i) {
+          _categoriesFocusNode.requestFocus();
+          return null;
+        },
+      ),
+      ShowHelpIntent: CallbackAction<ShowHelpIntent>(
+        onInvoke: (i) {
+          _showHotkeysHelp();
+          return null;
+        },
+      ),
+      BackIntent: CallbackAction<BackIntent>(
+        onInvoke: (i) {
+          if (Navigator.canPop(context)) Navigator.pop(context);
+          return null;
+        },
+      ),
+      NextFocusIntent: CallbackAction<NextFocusIntent>(
+        onInvoke: (i) {
+          FocusScope.of(context).nextFocus();
+          return null;
+        },
+      ),
+      PreviousFocusIntent: CallbackAction<PreviousFocusIntent>(
+        onInvoke: (i) {
+          FocusScope.of(context).previousFocus();
+          return null;
+        },
+      ),
+      FocusHeaderMenuIntent: CallbackAction<FocusHeaderMenuIntent>(
+        onInvoke: (i) {
+          _headerMenuBtnNode.requestFocus();
+          return null;
+        },
+      ),
     };
 
     return Shortcuts(
@@ -949,7 +1360,13 @@ class _CashierViewPageState extends State<CashierViewPage> {
                     const Text('Cashier'),
                     Row(
                       children: [
-                        const Text('John Doe', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                        const Text(
+                          'John Doe',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         IconButton(
                           focusNode: _headerMenuBtnNode,
@@ -958,7 +1375,9 @@ class _CashierViewPageState extends State<CashierViewPage> {
                           onPressed: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (_) => const CashierInsightsPage()),
+                              MaterialPageRoute(
+                                builder: (_) => const CashierInsightsPage(),
+                              ),
                             );
                           },
                         ),
@@ -1003,7 +1422,12 @@ class _CashierViewPageState extends State<CashierViewPage> {
             Text('Ctrl + Y  → Resume paused bill'),
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
       ),
     );
   }
@@ -1033,7 +1457,11 @@ class _CashierViewPageState extends State<CashierViewPage> {
                   child: CircleAvatar(
                     radius: 18,
                     backgroundColor: Color(0xFF1F2A44),
-                    child: Icon(Icons.qr_code_scanner, size: 20, color: Colors.white),
+                    child: Icon(
+                      Icons.qr_code_scanner,
+                      size: 20,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -1055,9 +1483,15 @@ class _CashierViewPageState extends State<CashierViewPage> {
     );
   }
 
-  Widget _buildActionButtons({required bool isWideScreen, EdgeInsetsGeometry? padding}) {
+  Widget _buildActionButtons({
+    required bool isWideScreen,
+    EdgeInsetsGeometry? padding,
+  }) {
     final btnStyle = ElevatedButton.styleFrom(
-      padding: EdgeInsets.symmetric(horizontal: isWideScreen ? 40 : 22, vertical: isWideScreen ? 20 : 14),
+      padding: EdgeInsets.symmetric(
+        horizontal: isWideScreen ? 40 : 22,
+        vertical: isWideScreen ? 20 : 14,
+      ),
       minimumSize: isWideScreen ? const Size(200, 60) : null,
     );
 
@@ -1115,7 +1549,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
     return Row(
       children: [
         Expanded(
-          flex: 3,
+          flex: 4,
           child: _buildSearchWithOverlayScanner(
             searchAndCategories: SearchAndCategories(
               searchQuery: searchQuery,
@@ -1127,46 +1561,72 @@ class _CashierViewPageState extends State<CashierViewPage> {
               searchController: _searchController,
               categoriesFocusNode: _categoriesFocusNode,
               onCategoryTap: (cat) async => await _openCategory(cat),
-              onSearchedItemTap: (item) => _showBatchSelectionDialog(item, fromSearch: true),
+              onSearchedItemTap: (item) =>
+                  _showBatchSelectionDialog(item, fromSearch: true),
             ),
           ),
         ),
         Expanded(
-          flex: 4,
+          flex: 6,
           child: Column(
             children: [
               const Padding(
                 padding: EdgeInsets.all(8.0),
-                child: Text('Bill Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                child: Text(
+                  'Bill Summary',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ),
               Focus(
                 focusNode: _discountAreaNode,
                 child: DiscountRow(
                   discount: discount,
                   isPercentageDiscount: isPercentageDiscount,
-                  onDiscountChange: (v) => setState(() => discount = double.tryParse(v) ?? 0),
+                  onDiscountChange: (v) =>
+                      setState(() => discount = double.tryParse(v) ?? 0),
                   onTypeChange: (v) => setState(() => isPercentageDiscount = v),
+                  totalAmount: _calculateTotal(),
                 ),
               ),
               Expanded(child: _buildResponsiveCartTable(context)),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Text('Total: Rs. ${_calculateTotal().toStringAsFixed(2)}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              // Padding(
+              //   padding: const EdgeInsets.symmetric(vertical: 10),
+              //   child: Text(
+              //     'Total: Rs. ${_calculateTotal().toStringAsFixed(2)}',
+              //     style: const TextStyle(
+              //       fontSize: 16,
+              //       fontWeight: FontWeight.bold,
+              //     ),
+              //   ),
+              // ),
+              // In your widget usage:
+              PrimaryActionsRow(
+                onQuickSale: _handleQuickSale,
+                onPay: cartItems.isEmpty ? null : _showPaymentMethodDialog,
+                onNewSale: cartItems.isEmpty ? null : _pauseCurrentBill,
+                onResumeBill: _promptSelectPausedBill,
+                payEnabled: cartItems.isNotEmpty,
+                hasPausedBills: pausedBills.isNotEmpty,
               ),
-              _buildActionButtons(isWideScreen: true, padding: const EdgeInsets.only(bottom: 8)),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: TextButton.icon(
-                  onPressed: pausedBills.isEmpty ? null : _promptSelectPausedBill,
-                  icon: const Icon(Icons.history),
-                  label: const Text('Resume paused bill  (Ctrl+Y)'),
-                ),
-              ),
+              // Padding(
+              //   padding: const EdgeInsets.only(bottom: 10),
+              //   child: TextButton.icon(
+              //     onPressed: pausedBills.isEmpty
+              //         ? null
+              //         : _promptSelectPausedBill,
+              //     icon: const Icon(Icons.history),
+              //     label: const Text('Resume paused bill  (Ctrl+Y)'),
+              //   ),
+              // ),
               const Padding(
                 padding: EdgeInsets.only(bottom: 10),
-                child: Text('Powered by AASA IT',
-                    style: TextStyle(color: Colors.white60, fontStyle: FontStyle.italic)),
+                child: Text(
+                  'Powered by AASA IT',
+                  style: TextStyle(
+                    color: Colors.white60,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
               ),
             ],
           ),
@@ -1177,12 +1637,19 @@ class _CashierViewPageState extends State<CashierViewPage> {
 
   Widget _buildCompactLayout(BuildContext context, double width) {
     final crossAxisCount = width >= 800
-        ? 6
+        ? 4
         : width >= 700
-            ? 5
-            : width >= 600
-                ? 4
-                : 4;
+        ? 4
+        : width >= 600
+        ? 2
+        : 2;
+
+    final bool isVerySmall = width < 380;
+    final bool isSmall = width < 480;
+
+    final double categoryFontSize = isVerySmall
+        ? 14
+        : (isSmall ? 16 : 18); // <- responsive sizes
 
     final searchedItems = itemsByCategory
         .expand((cat) => cat['items'] as List<Map<String, dynamic>>)
@@ -1215,45 +1682,69 @@ class _CashierViewPageState extends State<CashierViewPage> {
                 searchController: _searchController,
                 categoriesFocusNode: _categoriesFocusNode,
                 onCategoryTap: (cat) async => await _openCategory(cat),
-                onSearchedItemTap: (item) => _showBatchSelectionDialog(item, fromSearch: true),
+                onSearchedItemTap: (item) =>
+                    _showBatchSelectionDialog(item, fromSearch: true),
               ),
             ),
           ),
           const Padding(
             padding: EdgeInsets.all(8.0),
-            child: Text('Bill Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            child: Text(
+              'Bill Summary',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ),
           Focus(
             focusNode: _discountAreaNode,
             child: DiscountRow(
               discount: discount,
               isPercentageDiscount: isPercentageDiscount,
-              onDiscountChange: (v) => setState(() => discount = double.tryParse(v) ?? 0),
+              onDiscountChange: (v) =>
+                  setState(() => discount = double.tryParse(v) ?? 0),
               onTypeChange: (v) => setState(() => isPercentageDiscount = v),
+              totalAmount: _calculateTotal(),
             ),
           ),
-          Padding(padding: const EdgeInsets.all(10.0), child: _buildResponsiveCartTable(context)),
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Text('Total: Rs. ${_calculateTotal().toStringAsFixed(2)}',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+            padding: const EdgeInsets.all(10.0),
+            child: _buildResponsiveCartTable(context),
           ),
-          _buildActionButtons(isWideScreen: false, padding: const EdgeInsets.symmetric(horizontal: 40)),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Center(
-              child: TextButton.icon(
-                onPressed: pausedBills.isEmpty ? null : _promptSelectPausedBill,
-                icon: const Icon(Icons.history),
-                label: const Text('Resume paused bill  (Ctrl+Y)'),
-              ),
-            ),
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(vertical: 10),
+          //   child: Text(
+          //     'Total: Rs. ${_calculateTotal().toStringAsFixed(2)}',
+          //     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          //     textAlign: TextAlign.center,
+          //   ),
+          // ),
+          PrimaryActionsRow(
+            onQuickSale: _handleQuickSale,
+            onPay: cartItems.isEmpty ? null : _showPaymentMethodDialog,
+            onNewSale: cartItems.isEmpty ? null : _pauseCurrentBill,
+            onResumeBill: _promptSelectPausedBill,
+            payEnabled: cartItems.isNotEmpty,
+            hasPausedBills: pausedBills.isNotEmpty,
           ),
+          // Padding(
+          //   padding: const EdgeInsets.only(bottom: 10),
+          //   child: Center(
+          //     child: TextButton.icon(
+          //       onPressed: pausedBills.isEmpty ? null : _promptSelectPausedBill,
+          //       icon: const Icon(Icons.history),
+          //       label: const Text('Resume paused bill  (Ctrl+Y)'),
+          //     ),
+          //   ),
+          // ),
           const Padding(
             padding: EdgeInsets.only(bottom: 10),
             child: Center(
-              child: Text('Powered by AASA IT',
-                  style: TextStyle(color: Colors.white60, fontStyle: FontStyle.italic)),
+              child: Text(
+                'Powered by AASA IT',
+                style: TextStyle(
+                  color: Colors.white60,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ),
           ),
         ],
