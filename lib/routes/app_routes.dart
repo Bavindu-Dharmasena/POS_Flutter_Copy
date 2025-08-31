@@ -6,19 +6,22 @@ import '../features/auth/two_step_login_page.dart';
 // Splash
 import '../features/splashscreen.dart';
 
-// import '../features/cashier/billingview.dart';
+// Cashier
 import '../features/cashier/cashier_view_page.dart';
-
-
 
 // Stockkeeper
 import '../features/stockkeeper/stockkeeper_home.dart';
 
-// Cashier
-
-// These two files both define a widget named `CashierViewPage`.
-// Use aliases to disambiguate which one you want in each route.
-import '../features/cashier/cashier_view_page.dart';
+/// ---------------- Manager / Owner Module ----------------
+import '../features/manager/manager_home.dart';
+import '../features/manager/pages/user_management_password_change.dart';
+import '../features/manager/pages/reports_sales_summaries.dart';
+import '../features/manager/pages/reports_trending_items.dart';
+import '../features/manager/pages/reports_profit_margins.dart';
+import '../features/manager/pages/reports_creditors.dart';
+import '../features/manager/pages/audit_logs.dart';
+import '../features/manager/pages/price_rules.dart';
+import '../features/manager/pages/create_creditor.dart';
 
 class AppRoutes {
   static Route<dynamic> generateRoute(
@@ -34,48 +37,56 @@ class AppRoutes {
       case '/login':
         return MaterialPageRoute(builder: (_) => const TwoStepLoginPage());
 
-      // Stockkeeper homepage
+      // ---------------- Manager / Owner ----------------
+      case '/manager':
+        return MaterialPageRoute(builder: (_) => const ManagerHomePage());
+
+      // User Management
+      case '/manager/user-management':
+        return MaterialPageRoute(builder: (_) => const UserManagementPasswordChangePage());
+
+      // Reports
+      case '/manager/reports/sales-summaries':
+        return MaterialPageRoute(builder: (_) => const SalesSummariesReportPage());
+      case '/manager/reports/trending-items':
+        return MaterialPageRoute(builder: (_) => const TrendingItemsReportPage());
+      case '/manager/reports/profit-margins':
+        return MaterialPageRoute(builder: (_) => const ProfitMarginsReportPage());
+      case '/manager/reports/creditors':
+        return MaterialPageRoute(builder: (_) => const CreditorsReportPage());
+
+      // Audit Logs
+      case '/manager/audit-logs':
+        return MaterialPageRoute(builder: (_) => const AuditLogsPage());
+
+      // Price Rules
+      case '/manager/price-rules':
+        return MaterialPageRoute(builder: (_) => const PriceRulesPage());
+
+      // Create Creditor
+      case '/manager/create-creditor':
+        return MaterialPageRoute(builder: (_) => const CreateCreditorPage());
+
+      // ---------------- Quick Access From Manager ----------------
+      case '/cashier':
+        return MaterialPageRoute(builder: (_) => const CashierViewPage());
       case '/stockkeeper':
         return MaterialPageRoute(builder: (_) => const StockKeeperHome());
 
-      // Cashier homepage (dashboard)
-      case '/cashier':
-        return MaterialPageRoute(builder: (_) => const CashierViewPage());
-
-      // Cashier: product list / main view (from cashier_view_page.dart)
-      // case '/cashier/view':
-      //   return MaterialPageRoute(
-      //     builder: (_) => const cashier_view.CashierViewPage(),
-      //   );
-
-      // Cashier: quick billing view (from billingview.dart)
-      // NOTE: That file also exports a class named CashierViewPage.
-      // If you later rename the class to BillingViewPage, update here too.
-      // case '/cashier/billing':
-      //   return MaterialPageRoute(
-      //     builder: (_) => const billing_view.CashierViewPage(),
-      //   );
-
-      // Manager (stub until you add a real page)
-      case '/manager':
-        return MaterialPageRoute(
-          builder: (_) => const _StubPage(title: 'Manager Home'),
-        );
-
-      // Admin (stub until you add a real page)
+      // ---------------- Admin (placeholder) ----------------
       case '/admin':
         return MaterialPageRoute(
           builder: (_) => const _StubPage(title: 'Admin Home'),
         );
 
-      // Default → login (avoid falling back to role tiles)
+      // Default → login
       default:
         return MaterialPageRoute(builder: (_) => const TwoStepLoginPage());
     }
   }
 }
 
-/* Simple stub page for Admin/Manager until you plug in real widgets */
+/* Simple stub page for Admin until you plug in real widgets */
 class _StubPage extends StatelessWidget {
   final String title;
   const _StubPage({super.key, required this.title});
@@ -84,8 +95,10 @@ class _StubPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Text('$title (stub)\nReplace with your real page',
-            textAlign: TextAlign.center),
+        child: Text(
+          '$title (stub)\nReplace with your real page',
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }
