@@ -23,6 +23,9 @@ dependencies:
   url_launcher: ^6.3.2
   path_provider: ^2.1.4
   provider: ^6.1.2
+  test_reporter: ^1.0.0
+  allure_report: ^1.4.0
+  
 
 dev_dependencies:
   flutter_test:
