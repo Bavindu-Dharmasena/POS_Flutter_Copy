@@ -19,9 +19,9 @@ class CategoryItemsPage extends StatefulWidget {
 
 class _CategoryItemsPageState extends State<CategoryItemsPage> {
   int _focusedIndex = 0;
-  final int _crossAxisCount = 6;
 
-  void _moveFocus(int offset) {
+  // ---------- NAV FOCUS HELPERS ----------
+  void _moveFocus(int offset, int currentCrossAxisCount) {
     setState(() {
       int newIndex = _focusedIndex + offset;
       if (newIndex < 0) {
@@ -33,59 +33,170 @@ class _CategoryItemsPageState extends State<CategoryItemsPage> {
     });
   }
 
-  void _moveUp() => _moveFocus(-_crossAxisCount);
-  void _moveDown() => _moveFocus(_crossAxisCount);
-  void _moveLeft() => _moveFocus(-1);
-  void _moveRight() => _moveFocus(1);
+  void _moveUp(int currentCrossAxisCount) => _moveFocus(-currentCrossAxisCount, currentCrossAxisCount);
+  void _moveDown(int currentCrossAxisCount) => _moveFocus(currentCrossAxisCount, currentCrossAxisCount);
+  void _moveLeft(int currentCrossAxisCount) => _moveFocus(-1, currentCrossAxisCount);
+  void _moveRight(int currentCrossAxisCount) => _moveFocus(1, currentCrossAxisCount);
 
-  // ---------- DIALOG ----------
+  // ---------- HELPERS ----------
+  Color _parseHexColor(String? hex, {String fallback = '#222222'}) {
+    final raw = (hex == null || hex.isEmpty) ? fallback : hex;
+    final normalized = raw.startsWith('#') ? raw.substring(1) : raw;
+    final six = normalized.length == 6 ? normalized : fallback.replaceAll('#', '');
+    return Color(int.parse('0xFF$six'));
+  }
+
+  void _finishSelection(Map<String, dynamic> item, Map<String, dynamic> batch, int qty) {
+    final payload = {
+      'item': item,
+      'batch': batch,
+      'quantity': qty,
+    };
+    widget.onItemSelected(payload);
+    if (mounted) {
+      Navigator.pop(context, payload);
+    }
+  }
+
+  // ---------- DIALOGS ----------
   Future<int?> _showQuantityInputDialog({
     required Map<String, dynamic> item,
     required Map<String, dynamic> batch,
-  }) {
+  }) async {
     int quantity = 1;
     return showDialog<int>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: Text(
-          'Enter quantity for ${item['name']} (Batch: ${batch['batchID']})',
-        ),
+        title: Text('Enter quantity for ${item['name']} (Batch: ${batch['batchID']})'),
         content: TextField(
           autofocus: true,
           keyboardType: TextInputType.number,
           onChanged: (value) => quantity = int.tryParse(value) ?? 1,
           onSubmitted: (value) {
             quantity = int.tryParse(value) ?? 1;
-            Navigator.of(dialogCtx).pop(quantity); // return quantity
+            Navigator.of(dialogCtx).pop(quantity);
           },
           decoration: const InputDecoration(hintText: 'Quantity'),
         ),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogCtx).pop(quantity); // return quantity
-            },
-            child: const Text('Add'),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(dialogCtx).pop(null);
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
+                },
+                child: const Text('Home'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(dialogCtx).pop(quantity),
+                child: const Text('Add'),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
+  Future<Map<String, dynamic>?> _showBatchPickerDialog({
+    required String itemName,
+    required List<Map<String, dynamic>> batches,
+  }) async {
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Select Batch for $itemName'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: batches.length,
+            itemBuilder: (context, index) {
+              final batch = batches[index];
+              final dynamic price = batch['price'];
+              final dynamic discount = batch['discountAmount'] ?? 0.0;
+              return ListTile(
+                title: Text('Batch: ${batch['batchID']}  •  Price: Rs. $price'),
+                subtitle: (discount is num && discount > 0)
+                    ? Text('Discount: Rs. $discount')
+                    : null,
+                onTap: () => Navigator.of(context).pop(batch),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   // ---------- ITEM PICK FLOW ----------
   Future<void> _pickItemAndReturn(Map<String, dynamic> item) async {
-    final batches = (item['batches'] as List?) ?? const [];
-    if (batches.isEmpty) {
-      // No batch -> just go back without result or show a message (optional)
+    final List<Map<String, dynamic>> batchList =
+        List<Map<String, dynamic>>.from(item['batches'] ?? const []);
+
+    if (batchList.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No batches available for this item')),
+      );
       return;
     }
-    final Map<String, dynamic> batch = Map<String, dynamic>.from(batches.first);
 
-    final qty = await _showQuantityInputDialog(item: item, batch: batch);
-    if (qty == null || !mounted) return;
+    Map<String, dynamic> selectedBatch;
+    if (batchList.length == 1) {
+      selectedBatch = Map<String, dynamic>.from(batchList.first);
+    } else {
+      final chosen = await _showBatchPickerDialog(
+        itemName: item['name'] ?? '',
+        batches: batchList,
+      );
+      if (chosen == null) return;
+      selectedBatch = Map<String, dynamic>.from(chosen);
+    }
 
-    // Pop ONLY this page (CategoryItemsPage) with the selection result.
-    Navigator.pop(context, {'item': item, 'batch': batch, 'quantity': qty});
+    selectedBatch['name'] = item['name'];
+
+    final qty = await _showQuantityInputDialog(item: item, batch: selectedBatch);
+    if (qty == null) return;
+
+    _finishSelection(item, selectedBatch, qty);
+  }
+
+  // Helper function to calculate cross axis count based on screen width
+  int _calculateCrossAxisCount(double screenWidth) {
+    if (screenWidth > 1000) {
+      return 6;
+    } else if (screenWidth > 500) {
+      return 4;  // Changed from 6 to 4
+    } else {
+      return 2;
+    }
+  }
+
+  // Helper function to get font size based on cross axis count
+  double _getFontSize(int crossAxisCount, {bool isTitle = true}) {
+    if (crossAxisCount == 6) {
+      return isTitle ? 25 : 20;
+    } else if (crossAxisCount == 4) {
+      return isTitle ? 25 : 20;  // Medium size for 4 columns
+    } else {
+      return isTitle ? 25 : 20;  // Largest size for 2 columns
+    }
+  }      
+
+  // Helper function to get image size based on cross axis count
+  double _getImageSize(int crossAxisCount) {
+    if (crossAxisCount == 6) {
+      return 40;  // Smallest for 6 columns
+    } else if (crossAxisCount == 4) {
+      return 50;  // Medium for 4 columns
+    } else {
+      return 60;  // Largest for 2 columns
+    }
   }
 
   @override
@@ -96,111 +207,147 @@ class _CategoryItemsPageState extends State<CategoryItemsPage> {
         appBar: AppBar(title: Text(widget.category)),
         body: Shortcuts(
           shortcuts: {
-            LogicalKeySet(LogicalKeyboardKey.arrowUp):
-                const ArrowDirection.up(),
-            LogicalKeySet(LogicalKeyboardKey.arrowDown):
-                const ArrowDirection.down(),
-            LogicalKeySet(LogicalKeyboardKey.arrowLeft):
-                const ArrowDirection.left(),
-            LogicalKeySet(LogicalKeyboardKey.arrowRight):
-                const ArrowDirection.right(),
+            LogicalKeySet(LogicalKeyboardKey.arrowUp): const ArrowDirection.up(),
+            LogicalKeySet(LogicalKeyboardKey.arrowDown): const ArrowDirection.down(),
+            LogicalKeySet(LogicalKeyboardKey.arrowLeft): const ArrowDirection.left(),
+            LogicalKeySet(LogicalKeyboardKey.arrowRight): const ArrowDirection.right(),
             LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
             LogicalKeySet(LogicalKeyboardKey.space): const ActivateIntent(),
-            LogicalKeySet(LogicalKeyboardKey.escape):
-                const EscapeIntent(), // ESC to go back
+            LogicalKeySet(LogicalKeyboardKey.escape): const EscapeIntent(),
           },
           child: Actions(
             actions: {
               ArrowDirection: CallbackAction<ArrowDirection>(
                 onInvoke: (intent) {
-                  switch (intent.direction) {
-                    case ArrowKey.up:
-                      _moveUp();
-                      break;
-                    case ArrowKey.down:
-                      _moveDown();
-                      break;
-                    case ArrowKey.left:
-                      _moveLeft();
-                      break;
-                    case ArrowKey.right:
-                      _moveRight();
-                      break;
-                  }
                   return null;
                 },
               ),
               ActivateIntent: CallbackAction<ActivateIntent>(
                 onInvoke: (intent) {
+                  if (widget.items.isEmpty) return null;
                   final item = widget.items[_focusedIndex];
-                  _pickItemAndReturn(item); // open dialog, then pop with result
+                  _pickItemAndReturn(item);
                   return null;
                 },
               ),
               EscapeIntent: CallbackAction<EscapeIntent>(
                 onInvoke: (intent) {
-                  Navigator.pop(context); // Back one page
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.pop(context);
+                  }
                   return null;
                 },
               ),
             },
             child: Focus(
               autofocus: true,
-              child: GridView.count(
-                crossAxisCount: _crossAxisCount,
-                padding: const EdgeInsets.all(10),
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                children: List.generate(widget.items.length, (index) {
-                  final item = widget.items[index];
-                  final firstBatch =
-                      (item['batches'] as List?)?.isNotEmpty == true
-                      ? (item['batches'] as List).first
-                      : null;
-                  final price = firstBatch != null
-                      ? firstBatch['price']
-                      : 'N/A';
-                  final itemColorCode =
-                      (item['colourCode'] ?? '#222222') as String;
-                  final isFocused = index == _focusedIndex;
-
-                  return AnimatedScale(
-                    scale: isFocused ? 1.06 : 1.0,
-                    duration: const Duration(milliseconds: 120),
-                    curve: Curves.easeOut,
-                    child: GestureDetector(
-                      onTap: () => _pickItemAndReturn(item),
-                      child: Card(
-                        elevation: isFocused ? 6 : 2,
-                        color: Color(
-                          int.parse("0xFF${itemColorCode.replaceAll('#', '')}"),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                item['name'] ?? '',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              Text(
-                                'Rs. $price',
-                                style: const TextStyle(fontSize: 10),
-                              ),
-                            ],
-                          ),
-                        ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final screenWidth = constraints.maxWidth;
+                  final currentCrossAxisCount = _calculateCrossAxisCount(screenWidth);
+                  final titleFontSize = _getFontSize(currentCrossAxisCount, isTitle: true);
+                  final priceFontSize = _getFontSize(currentCrossAxisCount, isTitle: false);
+                  final imageSize = _getImageSize(currentCrossAxisCount);
+                  
+                  return Actions(
+                    actions: {
+                      ArrowDirection: CallbackAction<ArrowDirection>(
+                        onInvoke: (intent) {
+                          switch (intent.direction) {
+                            case ArrowKey.up:
+                              _moveUp(currentCrossAxisCount);
+                              break;
+                            case ArrowKey.down:
+                              _moveDown(currentCrossAxisCount);
+                              break;
+                            case ArrowKey.left:
+                              _moveLeft(currentCrossAxisCount);
+                              break;
+                            case ArrowKey.right:
+                              _moveRight(currentCrossAxisCount);
+                              break;
+                          }
+                          return null;
+                        },
                       ),
+                    },
+                    child: GridView.count(
+                      crossAxisCount: currentCrossAxisCount,
+                      padding: const EdgeInsets.all(10),
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      children: List.generate(widget.items.length, (index) {
+                        final item = widget.items[index];
+                        final List batches = (item['batches'] as List?) ?? const [];
+                        final firstBatch = batches.isNotEmpty ? batches.first : null;
+                        final dynamic price = firstBatch != null ? firstBatch['price'] : 'N/A';
+                        final String itemColorCode = (item['colourCode'] ?? '#222222') as String;
+                        final String itemImage = (item['itemImage'] ?? 'assets/item/placeholder.png') as String;
+                        final bool isFocused = index == _focusedIndex;
+
+                        return AnimatedScale(
+                          scale: isFocused ? 1.06 : 1.0,
+                          duration: const Duration(milliseconds: 120),
+                          curve: Curves.easeOut,
+                          child: GestureDetector(
+                            onTap: () => _pickItemAndReturn(item),
+                            child: Card(
+                              elevation: isFocused ? 6 : 2,
+                              color: _parseHexColor(itemColorCode),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      (item['name'] ?? '').toString(),
+                                      style: TextStyle(
+                                        fontSize: titleFontSize,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Expanded(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                        child: Image.asset(
+                                          itemImage,
+                                          width: imageSize,
+                                          height: imageSize,
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (context, error, stackTrace) =>
+                                              Icon(Icons.image_not_supported, 
+                                                   size: imageSize * 0.75, 
+                                                   color: Colors.white.withOpacity(0.7)),
+                                        ),
+                                      ),
+                                    ),
+                                    Text(
+                                      batches.isEmpty ? 'N/A' : 'Rs. $price',
+                                      style: TextStyle(
+                                        fontSize: priceFontSize,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
                     ),
                   );
-                }),
+                },
               ),
             ),
           ),

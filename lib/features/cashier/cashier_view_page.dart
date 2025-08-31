@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../widget/search_and_categories.dart';
 import '../../widget/cart_table.dart';
 import '../../widget/discount_row.dart';
 import 'category_items_page.dart';
 import 'cashier_insights_page.dart';
+import '../../widget/primary_actions_row.dart';
 
 // ---- Keyboard Intents ----
 class ActivateSearchIntent extends Intent {
@@ -64,24 +66,29 @@ class _CashierViewPageState extends State<CashierViewPage> {
     {
       'id': 1,
       'category': 'Drinks',
-      'colourCode': '#FF5733',
+      'colourCode': '#F5B027',
+      'categoryImage': 'assets/cat/drinks.png',
       'items': [
         {
           'id': 1,
+          'itemcode': '0729701639',
           'name': 'Coke',
           'colourCode': '#FF6347',
+          'itemImage': 'assets/item/coke.png', // Added item image
           'batches': [
             {
               'batchID': '123234',
               'pprice': 120.00,
               'price': 150.0,
               'quantity': 20,
+              'discountAmount': 20,
             },
             {
               'batchID': '123237',
               'pprice': 130.00,
               'price': 160.0,
               'quantity': 20,
+              'discountAmount': 0,
             },
           ],
         },
@@ -90,31 +97,38 @@ class _CashierViewPageState extends State<CashierViewPage> {
     {
       'id': 2,
       'category': 'Snacks',
-      'colourCode': '#C70039',
+      'colourCode': '#285FF6',
+      'categoryImage': 'assets/cat/snacks.png',
       'items': [
         {
           'id': 2,
+          'itemcode': '890123000002',
           'name': 'Chips',
           'colourCode': '#D2691E',
+          'itemImage': 'assets/item/chips.png', // Added item image
           'batches': [
             {
               'batchID': '223234',
               'pprice': 90.00,
               'price': 100.0,
               'quantity': 30,
+              'discountAmount': 0,
             },
           ],
         },
         {
           'id': 3,
+          'itemcode': '890123000003',
           'name': 'Chocolate',
           'colourCode': '#8B4513',
+          'itemImage': 'assets/item/chocolate.png', // Added item image
           'batches': [
             {
               'batchID': '223237',
               'pprice': 100.00,
               'price': 120.0,
               'quantity': 25,
+              'discountAmount': 0,
             },
           ],
         },
@@ -123,31 +137,38 @@ class _CashierViewPageState extends State<CashierViewPage> {
     {
       'id': 3,
       'category': 'Grocery',
-      'colourCode': '#900C3F',
+      'colourCode': '#2BF35D',
+      'categoryImage': 'assets/cat/grocery.png',
       'items': [
         {
           'id': 4,
+          'itemcode': '890123000004',
           'name': 'Rice',
           'colourCode': '#D3D3D3',
+          'itemImage': 'assets/item/rice.png', // Added item image
           'batches': [
             {
               'batchID': '323234',
               'pprice': 80.00,
               'price': 90.0,
               'quantity': 50,
+              'discountAmount': 0,
             },
           ],
         },
         {
           'id': 5,
+          'itemcode': '23423446',
           'name': 'Sugar',
           'colourCode': '#F0E68C',
+          'itemImage': 'assets/item/sugar.png', // Added item image
           'batches': [
             {
               'batchID': '323237',
               'pprice': 60.00,
               'price': 70.0,
               'quantity': 40,
+              'discountAmount': 0,
             },
           ],
         },
@@ -156,31 +177,198 @@ class _CashierViewPageState extends State<CashierViewPage> {
     {
       'id': 4,
       'category': 'Bakery',
-      'colourCode': '#581845',
+      'colourCode': '#FF1F1F',
+      'categoryImage': 'assets/cat/bakery.png',
       'items': [
         {
           'id': 6,
+          'itemcode': '890123000006',
           'name': 'Bread',
           'colourCode': '#FFD700',
+          'itemImage': 'assets/item/bread.png', // Added item image
           'batches': [
             {
               'batchID': '423234',
               'pprice': 70.00,
               'price': 80.0,
               'quantity': 15,
+              'discountAmount': 0,
             },
           ],
         },
         {
           'id': 7,
+          'itemcode': '4791010040037',
           'name': 'Bun',
           'colourCode': '#BC8F8F',
+          'itemImage': 'assets/item/bun.png', // Added item image
           'batches': [
             {
               'batchID': '423237',
               'pprice': 50.00,
               'price': 60.0,
               'quantity': 20,
+              'discountAmount': 10,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      'id': 5,
+      'category': 'Beverages',
+      'colourCode': '#E74C3C',
+      'categoryImage': 'assets/cat/beverages.png',
+      'items': [
+        {
+          'id': 8,
+          'itemcode': '890123000101',
+          'name': 'Coca-Cola 1L',
+          'colourCode': '#9B59B6',
+          'itemImage': 'assets/item/coca_cola.png', // Added item image
+          'batches': [
+            {
+              'batchID': '523001',
+              'pprice': 120.00,
+              'price': 150.0,
+              'quantity': 50,
+              'discountAmount': 5,
+            },
+          ],
+        },
+        {
+          'id': 9,
+          'itemcode': '890123000102',
+          'name': 'Pepsi 500ml',
+          'colourCode': '#1ABC9C',
+          'itemImage': 'assets/item/pepsi.png', // Added item image
+          'batches': [
+            {
+              'batchID': '523002',
+              'pprice': 80.00,
+              'price': 100.0,
+              'quantity': 30,
+              'discountAmount': 0,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      'id': 6,
+      'category': 'Dairy',
+      'colourCode': '#F39C12',
+      'categoryImage': 'assets/cat/dairy.png',
+      'items': [
+        {
+          'id': 10,
+          'itemcode': '890123000201',
+          'name': 'Fresh Milk 1L',
+          'colourCode': '#2ECC71',
+          'itemImage': 'assets/item/milk.png', // Added item image
+          'batches': [
+            {
+              'batchID': '623101',
+              'pprice': 180.00,
+              'price': 200.0,
+              'quantity': 25,
+              'discountAmount': 0,
+            },
+          ],
+        },
+        {
+          'id': 11,
+          'itemcode': '890123000202',
+          'name': 'Cheddar Cheese 200g',
+          'colourCode': '#E67E22',
+          'itemImage': 'assets/item/cheese.png', // Added item image
+          'batches': [
+            {
+              'batchID': '623102',
+              'pprice': 350.00,
+              'price': 400.0,
+              'quantity': 10,
+              'discountAmount': 20,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      'id': 7,
+      'category': 'Snacks',
+      'colourCode': '#8E44AD',
+      'categoryImage': 'assets/cat/snacks2.png',
+      'items': [
+        {
+          'id': 12,
+          'itemcode': '890123000301',
+          'name': 'Potato Chips 100g',
+          'colourCode': '#3498DB',
+          'itemImage': 'assets/item/potato_chips.png', // Added item image
+          'batches': [
+            {
+              'batchID': '723201',
+              'pprice': 90.00,
+              'price': 120.0,
+              'quantity': 40,
+              'discountAmount': 10,
+            },
+          ],
+        },
+        {
+          'id': 13,
+          'itemcode': '890123000302',
+          'name': 'Chocolate Bar 50g',
+          'colourCode': '#16A085',
+          'itemImage': 'assets/item/chocolate_bar.png', // Added item image
+          'batches': [
+            {
+              'batchID': '723202',
+              'pprice': 150.00,
+              'price': 180.0,
+              'quantity': 35,
+              'discountAmount': 5,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      'id': 8,
+      'category': 'Household',
+      'colourCode': '#2C3E50',
+      'categoryImage': 'assets/cat/household.png',
+      'items': [
+        {
+          'id': 14,
+          'itemcode': '890123000401',
+          'name': 'Detergent Powder 1kg',
+          'colourCode': '#C0392B',
+          'itemImage': 'assets/item/detergent.png', // Added item image
+          'batches': [
+            {
+              'batchID': '823301',
+              'pprice': 400.00,
+              'price': 450.0,
+              'quantity': 20,
+              'discountAmount': 25,
+            },
+          ],
+        },
+        {
+          'id': 15,
+          'itemcode': '890123000402',
+          'name': 'Toilet Paper Pack (4 rolls)',
+          'colourCode': '#2980B9',
+          'itemImage': 'assets/item/toilet_paper.png', // Added item image
+          'batches': [
+            {
+              'batchID': '823302',
+              'pprice': 250.00,
+              'price': 300.0,
+              'quantity': 60,
+              'discountAmount': 0,
             },
           ],
         },
@@ -206,6 +394,9 @@ class _CashierViewPageState extends State<CashierViewPage> {
   final FocusNode _searchFieldNode = FocusNode(debugLabel: 'SearchField');
   final FocusNode _headerMenuBtnNode = FocusNode(debugLabel: 'HeaderMenuBtn');
   final TextEditingController _searchController = TextEditingController();
+
+  // ----------------- Scanner state -----------------
+  bool _scannerOpen = false;
 
   @override
   void dispose() {
@@ -278,7 +469,6 @@ class _CashierViewPageState extends State<CashierViewPage> {
   }
 
   void _showCashPaymentDialog() {
-    double cashGiven = 0;
     final cashController = TextEditingController();
     showDialog(
       context: context,
@@ -414,7 +604,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
     } else {
       cartItems.add({
         'name': batch['name'],
-        'price': batch['price'],
+        'price': batch['price'] - batch['discountAmount'],
         'batchID': batch['batchID'],
         'quantity': quantity,
         'itemDiscount': 0.0,
@@ -422,9 +612,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
       });
     }
     setState(() {
-      if (fromSearch) {
-        searchQuery = '';
-      }
+      if (fromSearch) searchQuery = '';
     });
     _cartAreaNode.requestFocus();
   }
@@ -457,6 +645,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
         'name': item['name'],
         'price': batch['price'],
         'batchID': batch['batchID'],
+        'discountAmount': batch['discountAmount'] ?? 0.0,
       };
       _addToCart(batchForCart, quantity: qty);
     }
@@ -474,9 +663,8 @@ class _CashierViewPageState extends State<CashierViewPage> {
       final selectedBatch = Map<String, dynamic>.from(batchList[0]);
       selectedBatch['name'] = item['name'];
       final qty = await _showQuantityInputDialog(selectedBatch);
-      if (qty != null) {
+      if (qty != null)
         _addToCart(selectedBatch, quantity: qty, fromSearch: fromSearch);
-      }
       return;
     }
 
@@ -491,14 +679,18 @@ class _CashierViewPageState extends State<CashierViewPage> {
             itemCount: batchList.length,
             itemBuilder: (context, index) {
               final batch = batchList[index];
+              final dynamic discount = batch['discountAmount'] ?? 0.0;
               return ListTile(
                 title: Text(
                   'Batch: ${batch['batchID']} - Price: Rs. ${batch['price']}',
                 ),
+                subtitle: (discount is num && discount > 0)
+                    ? Text('Discount: Rs. $discount')
+                    : null,
                 onTap: () async {
                   Navigator.pop(context);
-                  final selectedBatch = Map<String, dynamic>.from(batch);
-                  selectedBatch['name'] = item['name'];
+                  final selectedBatch = Map<String, dynamic>.from(batch)
+                    ..['name'] = item['name'];
                   final qty = await _showQuantityInputDialog(selectedBatch);
                   if (qty != null) {
                     _addToCart(
@@ -703,6 +895,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
 
                 final newItem = {
                   'id': DateTime.now().millisecondsSinceEpoch,
+                  'itemcode': barcode, // treat as itemcode
                   'colourCode':
                       '#${selectedColor.value.toRadixString(16).substring(2).toUpperCase()}',
                   'name': itemName,
@@ -824,37 +1017,6 @@ class _CashierViewPageState extends State<CashierViewPage> {
         : total - discount;
   }
 
-  // ----------------- KEYBOARD-ONLY SEARCH -----------------
-  Future<void> _showSearchDialog() async {
-    String q = searchQuery;
-    final ctrl = TextEditingController(text: q);
-    await showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Search (Ctrl+F)'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Type item name or ID'),
-          onSubmitted: (_) {
-            setState(() => searchQuery = ctrl.text.trim());
-            Navigator.pop(context);
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() => searchQuery = ctrl.text.trim());
-              Navigator.pop(context);
-            },
-            child: const Text('Apply'),
-          ),
-        ],
-      ),
-    );
-    _focusSearchField();
-  }
-
   // ----------------- QUICK SALE (button), Ctrl+Q focuses search -----------------
   void _handleQuickSale() async {
     final item = await _showQuickSaleInputDialog();
@@ -883,12 +1045,9 @@ class _CashierViewPageState extends State<CashierViewPage> {
           void validate() {
             final q = int.tryParse(qtyCtrl.text.trim()) ?? 0;
             final pr = double.tryParse(priceCtrl.text.trim()) ?? -1;
-            if (q <= 0 || pr <= 0) {
-              errorText =
-                  'Please enter positive values for quantity and price.';
-            } else {
-              errorText = null;
-            }
+            errorText = (q <= 0 || pr <= 0)
+                ? 'Please enter positive values for quantity and price.'
+                : null;
             setSB(() {});
           }
 
@@ -963,13 +1122,131 @@ class _CashierViewPageState extends State<CashierViewPage> {
     );
   }
 
+  // ----------------- Scanner helpers (added) -----------------
+  Future<void> _openScanner() async {
+    if (_scannerOpen) return;
+    _scannerOpen = true;
+
+    String? code;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.black,
+      builder: (_) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.9,
+        child: Stack(
+          children: [
+            MobileScanner(
+              onDetect: (capture) {
+                final barcodes = capture.barcodes;
+                if (barcodes.isEmpty) return;
+                final raw = barcodes.first.rawValue;
+                if (raw == null || raw.trim().isEmpty) return;
+                Navigator.of(context).pop(raw.trim());
+              },
+            ),
+            Positioned(
+              top: 16,
+              right: 16,
+              child: IconButton(
+                color: Colors.white,
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).then((value) {
+      if (value is String) code = value.trim();
+    });
+
+    _scannerOpen = false;
+
+    if (!mounted) return;
+    if (code == null || code!.isEmpty) return;
+
+    await _handleScannedCode(code!);
+  }
+
+  Future<void> _handleScannedCode(String code) async {
+    Map<String, dynamic>? foundItem;
+    Map<String, dynamic>? foundBatch;
+
+    // 1) Prefer exact batchID match
+    outer:
+    for (final cat in itemsByCategory) {
+      final items = (cat['items'] as List).cast<Map<String, dynamic>>();
+      for (final it in items) {
+        final batches = (it['batches'] as List).cast<Map<String, dynamic>>();
+        for (final b in batches) {
+          if (b['batchID'].toString() == code) {
+            foundItem = it;
+            foundBatch = b;
+            break outer;
+          }
+        }
+      }
+    }
+
+    // 2) If not found, try itemcode
+    if (foundBatch == null) {
+      outer2:
+      for (final cat in itemsByCategory) {
+        final items = (cat['items'] as List).cast<Map<String, dynamic>>();
+        for (final it in items) {
+          if (it['itemcode']?.toString() == code) {
+            foundItem = it;
+            break outer2;
+          }
+        }
+      }
+    }
+
+    if (foundItem == null && foundBatch == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('No item found for code: $code')));
+      return;
+    }
+
+    // Case A: exact batch match
+    if (foundBatch != null && foundItem != null) {
+      final selected = Map<String, dynamic>.from(foundBatch)
+        ..['name'] = foundItem['name'];
+      final qty = await _showQuantityInputDialog(selected);
+      if (qty != null) _addToCart(selected, quantity: qty);
+      return;
+    }
+
+    // Case B: itemcode match only
+    final batches = List<Map<String, dynamic>>.from(
+      foundItem!['batches'] ?? [],
+    );
+    if (batches.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Item has no batches to sell')),
+      );
+      return;
+    }
+    if (batches.length == 1) {
+      final selected = Map<String, dynamic>.from(batches.first)
+        ..['name'] = foundItem['name'];
+      final qty = await _showQuantityInputDialog(selected);
+      if (qty != null) _addToCart(selected, quantity: qty);
+    } else {
+      _showBatchSelectionDialog(foundItem);
+    }
+  }
+
   // ----------------- UI / LAYOUT WITH KEYBOARD SHORTCUTS -----------------
   @override
   Widget build(BuildContext context) {
     final shortcuts = <LogicalKeySet, Intent>{
       // Primary actions
       LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyQ):
-          const QuickSaleIntent(), // Ctrl+Q -> Quick Sale
+          const QuickSaleIntent(),
       LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyP):
           const PayIntent(),
       LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyB):
@@ -979,7 +1256,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
 
       // Navigation / utility
       LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyF):
-          const ActivateSearchIntent(), // Ctrl+F -> focus search (no popup)
+          const ActivateSearchIntent(),
       LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyG):
           const FocusCategoriesIntent(),
       LogicalKeySet(LogicalKeyboardKey.f2): const FocusCategoriesIntent(),
@@ -993,7 +1270,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
       LogicalKeySet(LogicalKeyboardKey.arrowLeft): const PreviousFocusIntent(),
       LogicalKeySet(LogicalKeyboardKey.arrowUp): const PreviousFocusIntent(),
       LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.backquote):
-          const FocusHeaderMenuIntent(), // Ctrl + `
+          const FocusHeaderMenuIntent(),
     };
 
     final actions = <Type, Action<Intent>>{
@@ -1021,7 +1298,6 @@ class _CashierViewPageState extends State<CashierViewPage> {
           return null;
         },
       ),
-      // Ctrl+F now just focuses the search field (no popup)
       ActivateSearchIntent: CallbackAction<ActivateSearchIntent>(
         onInvoke: (i) {
           _focusSearchField(selectAll: true);
@@ -1065,6 +1341,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
         },
       ),
     };
+
     return Shortcuts(
       shortcuts: shortcuts,
       child: Actions(
@@ -1154,7 +1431,46 @@ class _CashierViewPageState extends State<CashierViewPage> {
       ),
     );
   }
-  // =================== UI SECTIONS (unchanged visuals) ===================
+
+  // =================== UI SECTIONS (with scan button after search bar) ===================
+
+  Widget _buildSearchWithOverlayScanner({
+    required Widget searchAndCategories,
+    EdgeInsets overlayPadding = const EdgeInsets.only(top: 8, right: 10),
+  }) {
+    return Stack(
+      children: [
+        searchAndCategories,
+        // Scanner button overlayed to appear at the end of search bar area
+        Positioned(
+          right: overlayPadding.right,
+          top: overlayPadding.top,
+          child: Material(
+            color: Colors.transparent,
+            child: Tooltip(
+              message: 'Scan (QR/Barcode)',
+              child: InkWell(
+                borderRadius: BorderRadius.circular(24),
+                onTap: _openScanner,
+                child: const Padding(
+                  padding: EdgeInsets.all(6.0),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Color(0xFF1F2A44),
+                    child: Icon(
+                      Icons.qr_code_scanner,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildResponsiveCartTable(BuildContext context) {
     return Focus(
@@ -1224,33 +1540,34 @@ class _CashierViewPageState extends State<CashierViewPage> {
         .where((item) {
           final name = item['name'].toString().toLowerCase();
           final idStr = item['id'].toString();
-          return name.contains(searchQuery.toLowerCase()) ||
-              idStr == searchQuery.trim();
+          final code = (item['itemcode'] ?? '').toString().toLowerCase();
+          final q = searchQuery.toLowerCase().trim();
+          return name.contains(q) || idStr == q || code.contains(q);
         })
         .toList();
 
     return Row(
       children: [
         Expanded(
-          flex: 3,
-          child: SearchAndCategories(
-            searchQuery: searchQuery,
-            onSearchChange: (v) => setState(() => searchQuery = v),
-            itemsByCategory: itemsByCategory,
-            categories: categories,
-            searchedItems: searchedItems,
-            searchFieldFocusNode: _searchFieldNode,
-            searchController: _searchController,
-            categoriesFocusNode: _categoriesFocusNode,
-            onCategoryTap: (cat) async {
-              await _openCategory(cat);
-            },
-            onSearchedItemTap: (item) =>
-                _showBatchSelectionDialog(item, fromSearch: true),
+          flex: 4,
+          child: _buildSearchWithOverlayScanner(
+            searchAndCategories: SearchAndCategories(
+              searchQuery: searchQuery,
+              onSearchChange: (v) => setState(() => searchQuery = v),
+              itemsByCategory: itemsByCategory,
+              categories: categories,
+              searchedItems: searchedItems,
+              searchFieldFocusNode: _searchFieldNode,
+              searchController: _searchController,
+              categoriesFocusNode: _categoriesFocusNode,
+              onCategoryTap: (cat) async => await _openCategory(cat),
+              onSearchedItemTap: (item) =>
+                  _showBatchSelectionDialog(item, fromSearch: true),
+            ),
           ),
         ),
         Expanded(
-          flex: 4,
+          flex: 6,
           child: Column(
             children: [
               const Padding(
@@ -1268,33 +1585,39 @@ class _CashierViewPageState extends State<CashierViewPage> {
                   onDiscountChange: (v) =>
                       setState(() => discount = double.tryParse(v) ?? 0),
                   onTypeChange: (v) => setState(() => isPercentageDiscount = v),
+                  totalAmount: _calculateTotal(),
                 ),
               ),
               Expanded(child: _buildResponsiveCartTable(context)),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Text(
-                  'Total: Rs. ${_calculateTotal().toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              // Padding(
+              //   padding: const EdgeInsets.symmetric(vertical: 10),
+              //   child: Text(
+              //     'Total: Rs. ${_calculateTotal().toStringAsFixed(2)}',
+              //     style: const TextStyle(
+              //       fontSize: 16,
+              //       fontWeight: FontWeight.bold,
+              //     ),
+              //   ),
+              // ),
+              // In your widget usage:
+              PrimaryActionsRow(
+                onQuickSale: _handleQuickSale,
+                onPay: cartItems.isEmpty ? null : _showPaymentMethodDialog,
+                onNewSale: cartItems.isEmpty ? null : _pauseCurrentBill,
+                onResumeBill: _promptSelectPausedBill,
+                payEnabled: cartItems.isNotEmpty,
+                hasPausedBills: pausedBills.isNotEmpty,
               ),
-              _buildActionButtons(
-                isWideScreen: true,
-                padding: const EdgeInsets.only(bottom: 8),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: TextButton.icon(
-                  onPressed: pausedBills.isEmpty
-                      ? null
-                      : _promptSelectPausedBill,
-                  icon: const Icon(Icons.history),
-                  label: const Text('Resume paused bill  (Ctrl+Y)'),
-                ),
-              ),
+              // Padding(
+              //   padding: const EdgeInsets.only(bottom: 10),
+              //   child: TextButton.icon(
+              //     onPressed: pausedBills.isEmpty
+              //         ? null
+              //         : _promptSelectPausedBill,
+              //     icon: const Icon(Icons.history),
+              //     label: const Text('Resume paused bill  (Ctrl+Y)'),
+              //   ),
+              // ),
               const Padding(
                 padding: EdgeInsets.only(bottom: 10),
                 child: Text(
@@ -1314,20 +1637,28 @@ class _CashierViewPageState extends State<CashierViewPage> {
 
   Widget _buildCompactLayout(BuildContext context, double width) {
     final crossAxisCount = width >= 800
-        ? 6
-        : width >= 700
-        ? 5
-        : width >= 600
         ? 4
-        : 4;
+        : width >= 700
+        ? 4
+        : width >= 600
+        ? 2
+        : 2;
+
+    final bool isVerySmall = width < 380;
+    final bool isSmall = width < 480;
+
+    final double categoryFontSize = isVerySmall
+        ? 14
+        : (isSmall ? 16 : 18); // <- responsive sizes
 
     final searchedItems = itemsByCategory
         .expand((cat) => cat['items'] as List<Map<String, dynamic>>)
         .where((item) {
           final name = item['name'].toString().toLowerCase();
           final idStr = item['id'].toString();
-          return name.contains(searchQuery.toLowerCase()) ||
-              idStr == searchQuery.trim();
+          final code = (item['itemcode'] ?? '').toString().toLowerCase();
+          final q = searchQuery.toLowerCase().trim();
+          return name.contains(q) || idStr == q || code.contains(q);
         })
         .toList();
 
@@ -1337,22 +1668,23 @@ class _CashierViewPageState extends State<CashierViewPage> {
         children: [
           SizedBox(
             height: 300,
-            child: SearchAndCategories(
-              searchQuery: searchQuery,
-              onSearchChange: (v) => setState(() => searchQuery = v),
-              itemsByCategory: itemsByCategory,
-              categories: categories,
-              searchedItems: searchedItems,
-              gridHeight: 300,
-              gridCrossAxisCount: crossAxisCount,
-              searchFieldFocusNode: _searchFieldNode,
-              searchController: _searchController,
-              categoriesFocusNode: _categoriesFocusNode,
-              onCategoryTap: (cat) async {
-                await _openCategory(cat);
-              },
-              onSearchedItemTap: (item) =>
-                  _showBatchSelectionDialog(item, fromSearch: true),
+            child: _buildSearchWithOverlayScanner(
+              overlayPadding: const EdgeInsets.only(top: 6, right: 12),
+              searchAndCategories: SearchAndCategories(
+                searchQuery: searchQuery,
+                onSearchChange: (v) => setState(() => searchQuery = v),
+                itemsByCategory: itemsByCategory,
+                categories: categories,
+                searchedItems: searchedItems,
+                gridHeight: 300,
+                gridCrossAxisCount: crossAxisCount,
+                searchFieldFocusNode: _searchFieldNode,
+                searchController: _searchController,
+                categoriesFocusNode: _categoriesFocusNode,
+                onCategoryTap: (cat) async => await _openCategory(cat),
+                onSearchedItemTap: (item) =>
+                    _showBatchSelectionDialog(item, fromSearch: true),
+              ),
             ),
           ),
           const Padding(
@@ -1370,34 +1702,39 @@ class _CashierViewPageState extends State<CashierViewPage> {
               onDiscountChange: (v) =>
                   setState(() => discount = double.tryParse(v) ?? 0),
               onTypeChange: (v) => setState(() => isPercentageDiscount = v),
+              totalAmount: _calculateTotal(),
             ),
           ),
           Padding(
             padding: const EdgeInsets.all(10.0),
             child: _buildResponsiveCartTable(context),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Text(
-              'Total: Rs. ${_calculateTotal().toStringAsFixed(2)}',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(vertical: 10),
+          //   child: Text(
+          //     'Total: Rs. ${_calculateTotal().toStringAsFixed(2)}',
+          //     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          //     textAlign: TextAlign.center,
+          //   ),
+          // ),
+          PrimaryActionsRow(
+            onQuickSale: _handleQuickSale,
+            onPay: cartItems.isEmpty ? null : _showPaymentMethodDialog,
+            onNewSale: cartItems.isEmpty ? null : _pauseCurrentBill,
+            onResumeBill: _promptSelectPausedBill,
+            payEnabled: cartItems.isNotEmpty,
+            hasPausedBills: pausedBills.isNotEmpty,
           ),
-          _buildActionButtons(
-            isWideScreen: false,
-            padding: const EdgeInsets.symmetric(horizontal: 40),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Center(
-              child: TextButton.icon(
-                onPressed: pausedBills.isEmpty ? null : _promptSelectPausedBill,
-                icon: const Icon(Icons.history),
-                label: const Text('Resume paused bill  (Ctrl+Y)'),
-              ),
-            ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.only(bottom: 10),
+          //   child: Center(
+          //     child: TextButton.icon(
+          //       onPressed: pausedBills.isEmpty ? null : _promptSelectPausedBill,
+          //       icon: const Icon(Icons.history),
+          //       label: const Text('Resume paused bill  (Ctrl+Y)'),
+          //     ),
+          //   ),
+          // ),
           const Padding(
             padding: EdgeInsets.only(bottom: 10),
             child: Center(

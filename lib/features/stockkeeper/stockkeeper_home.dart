@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'package:provider/provider.dart';
+// ignore: unused_import
 import 'package:pos_system/features/cashier/cashier_view_page.dart';
 import 'package:pos_system/features/stockkeeper/settings/settings_provider.dart';
 
-import '../stockkeeper/stockkeeper_dashboard.dart';
+
+
+import '../stockkeeper/stockkeeper_inventory.dart';
 import '../stockkeeper/stockkeeper_reports.dart';
 import 'settings/stockkeeper_setting.dart';
 import 'package:pos_system/features/stockkeeper/add_item_page.dart';
 import 'package:pos_system/features/stockkeeper/supplier_page.dart';
+import '../stockkeeper/stockkeeper_supplier_request.dart';
 
 
 /// Custom intents for extra keyboard actions
@@ -52,7 +57,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
         colors: [Color(0xFF6A11CB), Color(0xFF2575FC)], // Purple to Blue
         begin: Alignment.topLeft, end: Alignment.bottomRight,
       ),
-      pageBuilder: () => const StockKeeperDashboard(),
+      pageBuilder: () => const stockkeeper_supplier_request(),
     ),
     _TileSpec(
       id: 'addnewitem',
@@ -77,8 +82,8 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
       pageBuilder: () => const SupplierPage(),
     ),
     _TileSpec(
-      id: 'reports',
-      title: 'Reports',
+      id: 'insights',
+      title: 'Insights',
       subtitle: 'Charts & Analytics',
       icon: Icons.bar_chart_outlined,
       gradientBuilder: (cs) => LinearGradient(
@@ -96,7 +101,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
         colors: [Color(0xFF43C6AC), Color(0xFF191654)], // Aqua to Navy
         begin: Alignment.topLeft, end: Alignment.bottomRight,
       ),
-      pageBuilder: () => const CashierViewPage(),
+      pageBuilder: () => const InventoryStatsOnly(),
     ),
     _TileSpec(
       id: 'settings',
@@ -280,10 +285,10 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Stock Keeper Home',
+          'Stock Keeper Dashboard',
           style: textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            fontSize: 20 * settings.textScaleFactor,
+            fontSize: 18 * settings.textScaleFactor,
           ),
         ),
         centerTitle: true,
