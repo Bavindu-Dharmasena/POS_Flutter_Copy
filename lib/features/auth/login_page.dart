@@ -1,8 +1,9 @@
 import "package:flutter/material.dart";
 import "package:flutter/gestures.dart";
-import "package:flutter/services.dart"; // 👈 for keyboard keys
-import "package:url_launcher/url_launcher.dart";
+import "package:flutter/services.dart";
 import "package:provider/provider.dart";
+import "package:url_launcher/url_launcher.dart";
+
 import "package:pos_system/core/services/auth_service.dart";
 
 class SubmitIntent extends Intent {
@@ -17,21 +18,22 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
   String? _error;
   bool _isLoading = false;
   bool _obscurePassword = true;
 
-  // 👇 Focus nodes for keyboard navigation
-  final _usernameNode = FocusNode();
+  // Focus nodes for keyboard navigation
+  final _emailNode = FocusNode();
   final _passwordNode = FocusNode();
 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  // Colors
+  // Colors (your palette)
   static const Color _bg = Color(0xFF0D1B2A);
   static const Color _cardBgTop = Color(0xFFFFFFFF);
   static const Color _cardBgBottom = Color(0xFFF7F8FA);
@@ -51,6 +53,27 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     _animationController.forward();
   }
 
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _emailNode.dispose();
+    _passwordNode.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  String? _validateEmail(String? v) {
+    if (v == null || v.trim().isEmpty) return "Enter email";
+    // very light validation
+    final s = v.trim();
+    if (!s.contains("@") || !s.contains(".")) return "Enter a valid email";
+    return null;
+  }
+
+  String? _validatePassword(String? v) =>
+      (v == null || v.isEmpty) ? "Enter password" : null;
+
   Future<void> _submitLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -59,16 +82,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       _error = null;
     });
 
-    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
     final password = _passwordController.text;
     final auth = Provider.of<AuthService>(context, listen: false);
 
     try {
-      final success = await auth.login(username, password);
-      if (!success) {
-        setState(() => _error = "Incorrect username or password. Please try again.");
-        return;
-      }
+      // AuthService.login throws on failure, returns void on success
+      await auth.login(email, password);
 
       final role = auth.currentUser?.role ?? "";
       if (!mounted) return;
@@ -88,12 +108,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           break;
         default:
           setState(() => _error = "Your account role is not recognized. Contact admin.");
-          auth.logout();
+          await auth.logout();
       }
-    } catch (_) {
-      setState(() => _error = "Login failed. Please check your connection and try again.");
+    } catch (e) {
+      setState(() => _error = "Login failed. Please check your credentials/connection.");
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -115,15 +135,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       body: Container(
         color: _bg,
         child: SafeArea(
-          // 🔑 Keyboard handling wrapper
           child: Shortcuts(
-            shortcuts: <ShortcutActivator, Intent>{
-              // Move focus with arrow keys
-              const SingleActivator(LogicalKeyboardKey.arrowDown): const NextFocusIntent(),
-              const SingleActivator(LogicalKeyboardKey.arrowUp): const PreviousFocusIntent(),
-              // Submit with Enter / Numpad Enter
-              const SingleActivator(LogicalKeyboardKey.enter): const SubmitIntent(),
-              const SingleActivator(LogicalKeyboardKey.numpadEnter): const SubmitIntent(),
+            shortcuts: const <ShortcutActivator, Intent>{
+              SingleActivator(LogicalKeyboardKey.arrowDown): NextFocusIntent(),
+              SingleActivator(LogicalKeyboardKey.arrowUp): PreviousFocusIntent(),
+              SingleActivator(LogicalKeyboardKey.enter): SubmitIntent(),
+              SingleActivator(LogicalKeyboardKey.numpadEnter): SubmitIntent(),
             },
             child: Actions(
               actions: <Type, Action<Intent>>{
@@ -215,14 +232,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                           ),
                                           const SizedBox(height: 28),
 
-                                          // Username
+                                          // Email
                                           TextFormField(
-                                            focusNode: _usernameNode, // 👈
-                                            controller: _usernameController,
+                                            focusNode: _emailNode,
+                                            controller: _emailController,
+                                            keyboardType: TextInputType.emailAddress,
                                             cursorColor: Colors.black,
                                             style: const TextStyle(color: Colors.black),
                                             decoration: InputDecoration(
-                                              labelText: "Username",
+                                              labelText: "Email",
                                               labelStyle: const TextStyle(color: Colors.black54),
                                               prefixIcon: const Icon(Icons.person_outline, color: Colors.black),
                                               filled: true,
@@ -240,18 +258,16 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                                 borderSide: const BorderSide(color: Colors.black, width: 1.5),
                                               ),
                                             ),
-                                            // Pressing Enter here can also submit (handled globally),
-                                            // but we make UX nicer: Enter moves to password first.
                                             onFieldSubmitted: (_) => _passwordNode.requestFocus(),
                                             textInputAction: TextInputAction.next,
-                                            validator: (v) => (v == null || v.isEmpty) ? "Enter username" : null,
+                                            validator: _validateEmail,
                                           ),
 
                                           const SizedBox(height: 16),
 
                                           // Password
                                           TextFormField(
-                                            focusNode: _passwordNode, // 👈
+                                            focusNode: _passwordNode,
                                             controller: _passwordController,
                                             obscureText: _obscurePassword,
                                             cursorColor: Colors.black,
@@ -282,9 +298,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                                 borderSide: const BorderSide(color: Colors.black, width: 1.5),
                                               ),
                                             ),
-                                            onFieldSubmitted: (_) => _submitLogin(), // 👈 Enter submits
+                                            onFieldSubmitted: (_) => _submitLogin(),
                                             textInputAction: TextInputAction.done,
-                                            validator: (v) => (v == null || v.isEmpty) ? "Enter password" : null,
+                                            validator: _validatePassword,
                                           ),
 
                                           if (_error != null) ...[
@@ -318,7 +334,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
                                           TextButton(
                                             onPressed: () {
-                                              // TODO: Forgot password flow
+                                              // TODO: forgot password
                                             },
                                             child: const Text("Forgot password?", style: TextStyle(color: Colors.black54)),
                                           ),
@@ -381,15 +397,5 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    _usernameNode.dispose();
-    _passwordNode.dispose();
-    _usernameController.dispose();
-    _passwordController.dispose();
-    super.dispose();
   }
 }
