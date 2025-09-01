@@ -3,7 +3,6 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i3;
 import 'dart:ui' as _i4;
 
 import 'package:mockito/mockito.dart' as _i1;
@@ -38,12 +37,12 @@ class MockAuthService extends _i1.Mock implements _i2.AuthService {
           as bool);
 
   @override
-  _i3.Future<bool> login(String? username, String? password) =>
-      (super.noSuchMethod(
-            Invocation.method(#login, [username, password]),
-            returnValue: _i3.Future<bool>.value(false),
-          )
-          as _i3.Future<bool>);
+  // _i3.Future<bool> login(String? username, String? password) =>
+  //     (super.noSuchMethod(
+  //           Invocation.method(#login, [username, password]),
+  //           returnValue: _i3.Future<bool>.value(false),
+  //         )
+  //         as _i3.Future<bool>);
 
   @override
   void logout() => super.noSuchMethod(

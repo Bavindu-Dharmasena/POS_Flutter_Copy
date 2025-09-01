@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // + for DiagnosticPropertiesBuilder
+import 'package:flutter/foundation.dart'; // for DiagnosticPropertiesBuilder
 import '../auth/login_page.dart'; // Adjust the import path
 
 class POSHomePage extends StatelessWidget {
@@ -20,9 +20,9 @@ class POSHomePage extends StatelessWidget {
               Text(
                 shopName,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
               ),
               const SizedBox(height: 30),
               Expanded(
@@ -36,24 +36,28 @@ class POSHomePage extends StatelessWidget {
                         subtitle: 'Manage Stock',
                         icon: Icons.inventory_2,
                         color: Colors.orange,
+                        route: '/stockkeeper',
                       ),
                       RoleCard(
                         title: 'Cashier',
                         subtitle: 'Quick Billing',
                         icon: Icons.receipt_long,
                         color: Colors.green,
+                        route: '/cashier',
                       ),
                       RoleCard(
                         title: 'Admin',
                         subtitle: 'User Management',
                         icon: Icons.admin_panel_settings,
                         color: Colors.red,
+                        route: '/admin',
                       ),
                       RoleCard(
                         title: 'Manager',
                         subtitle: 'Oversee Sales',
                         icon: Icons.supervisor_account,
                         color: Colors.blue,
+                        route: '/manager',
                       ),
                     ],
                   ),
@@ -83,6 +87,7 @@ class RoleCard extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final Color color;
+  final String? route; // NEW: named route to navigate
 
   const RoleCard({
     super.key,
@@ -90,6 +95,7 @@ class RoleCard extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.color,
+    this.route,
   });
 
   @override
@@ -99,7 +105,8 @@ class RoleCard extends StatelessWidget {
       ..add(StringProperty('title', title))
       ..add(StringProperty('subtitle', subtitle))
       ..add(DiagnosticsProperty<IconData>('icon', icon))
-      ..add(ColorProperty('color', color));
+      ..add(ColorProperty('color', color))
+      ..add(StringProperty('route', route));
   }
 
   @override
@@ -110,12 +117,15 @@ class RoleCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => LoginPage(), // Pass the role here
-            ),
-          );
+          if (route != null && route!.isNotEmpty) {
+            Navigator.pushNamed(context, route!);
+          } else {
+            // Fallback to login if no route provided
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => LoginPage()),
+            );
+          }
         },
         child: Card(
           shape: RoundedRectangleBorder(
@@ -128,7 +138,7 @@ class RoleCard extends StatelessWidget {
             child: MediaQuery(
               data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
               child: FittedBox(
-                fit: BoxFit.scaleDown, // shrink if contents get too big
+                fit: BoxFit.scaleDown,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
