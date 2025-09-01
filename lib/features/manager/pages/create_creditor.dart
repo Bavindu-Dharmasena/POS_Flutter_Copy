@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../widget/gradient_scaffold.dart';
-import '../../../widget/pastel_text_field.dart';
+import '../../../widget/manager/gradient_scaffold.dart';
+import '../../../widget/manager/pastel_text_field.dart';
 
 /// If your project already defines `AppColors` and a theme, remove the
 /// classes below and import them from your central theme module instead.
