@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/src/services/text_formatter.dart';
 
 class PastelTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -17,7 +18,7 @@ class PastelTextField extends StatelessWidget {
     required this.iconColor,
     this.keyboardType,
     this.validator,
-    this.maxLines = 1,
+    this.maxLines = 1, required List<FilteringTextInputFormatter> inputFormatters,
   });
 
   @override

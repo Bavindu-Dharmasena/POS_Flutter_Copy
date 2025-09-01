@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
+import '../../theme/app_colors.dart';
 
 class GradientScaffold extends StatelessWidget {
   final PreferredSizeWidget? appBar;
@@ -14,7 +14,9 @@ class GradientScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(gradient: AppColors.backgroundGradient),
+      decoration: BoxDecoration(
+        gradient: AppColors.backgroundGradient(Theme.of(context).brightness),
+      ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: appBar,
