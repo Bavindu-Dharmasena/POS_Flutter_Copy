@@ -1,6 +1,6 @@
 // lib/widgets/risk_chip.dart
 import 'package:flutter/material.dart';
-import '../models/creditor_model.dart';
+import '../../models/creditor_model.dart';
 
 class RiskChip extends StatelessWidget {
   final int creditLimit;

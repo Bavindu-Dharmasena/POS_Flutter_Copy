@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../theme/app_colors.dart';
-import '../../../theme/theme_controller.dart';
+import '../../../../theme/app_colors.dart';
+import '../../../../theme/theme_controller.dart';
 
 /// This page expects a top-level `late ThemeController themeController;`
 /// to be assigned from `main.dart`, e.g.:
