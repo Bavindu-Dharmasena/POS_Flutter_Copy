@@ -2,26 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/services/auth_service.dart';
-import 'routes/app_routes.dart';
-import 'features/auth/two_step_login_page.dart'; // <-- New login page
-
-// ✅ Settings + Theming
 import 'features/stockkeeper/settings/settings_provider.dart';
-import 'theme/app_theme.dart';
+import 'routes/app_routes.dart';
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // ✅ Load settings BEFORE runApp — no theme flash; default dark applies.
-  final settings = SettingsController();
-  await settings.load();
-
-  
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()),
-        ChangeNotifierProvider<SettingsController>.value(value: settings),
+        ChangeNotifierProvider<SettingsController>(
+          create: (_) {
+            final c = SettingsController();
+            // load persisted theme/font size once
+            c.load();
+            return c;
+          },
+        ),
       ],
       child: const MyApp(),
     ),
@@ -33,41 +30,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Listen to settings to apply theme + text scale
     final settings = context.watch<SettingsController>();
 
     return MaterialApp(
-      title: 'AASA POS System',
+      title: 'AASA POS',
       debugShowCheckedModeBanner: false,
-
- //     theme: ThemeData(
- //       colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
- //       useMaterial3: true,
- //     ),
- //     // Start with the two-step login page
- //     home: const TwoStepLoginPage(),
- //     onGenerateRoute: (settings) => AppRoutes.generateRoute(settings, context),
-
-
-      // ✅ Centralized themes (font size handled via MediaQuery scaling)
-      theme: buildLightTheme(settings.fontSize),
-      darkTheme: buildDarkTheme(settings.fontSize),
-      themeMode: settings.themeMode, // defaults to DARK on first launch
-
-      // ✅ Uniform scaling across widgets based on settings.fontSize
+      // Apply theme mode (defaults to dark until load() finishes)
+      themeMode: settings.themeMode,
+      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo, brightness: Brightness.light),
+      darkTheme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo, brightness: Brightness.dark),
+      // Apply global text scaling from SettingsController
       builder: (context, child) {
+        final media = MediaQuery.of(context);
         return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaleFactor: settings.textScaleFactor,
-          ),
-          child: child!,
+          data: media.copyWith(textScaleFactor: settings.textScaleFactor),
+          child: child ?? const SizedBox.shrink(),
         );
       },
-
-      // ✅ Your existing routing
       initialRoute: '/',
-      onGenerateRoute: (routeSettings) =>
-          AppRoutes.generateRoute(routeSettings, context),
-
+      onGenerateRoute: (s) => AppRoutes.generateRoute(s, context),
     );
   }
 }
