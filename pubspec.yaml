@@ -25,9 +25,13 @@ dependencies:
   # ---- Networking + Auth plumbing ----
   http: ^1.2.2
   provider: ^6.1.2
+
   shared_preferences: ^2.3.2
   flutter_secure_storage: ^9.2.2
   url_launcher: ^6.3.2
+
+  http: ^1.2.2  
+
 
 dev_dependencies:
   flutter_test:
@@ -50,6 +54,7 @@ flutter:
     - assets/cat/grocery.png
     - assets/cat/household.png
     - assets/cat/dairy.png
+
 
 flutter_launcher_icons:
   android: "launcher_icon"
