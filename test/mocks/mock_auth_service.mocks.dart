@@ -3,6 +3,7 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'dart:async' as _i3;
 import 'dart:ui' as _i4;
 
 import 'package:mockito/mockito.dart' as _i1;
@@ -37,12 +38,20 @@ class MockAuthService extends _i1.Mock implements _i2.AuthService {
           as bool);
 
   @override
-  // _i3.Future<bool> login(String? username, String? password) =>
-  //     (super.noSuchMethod(
-  //           Invocation.method(#login, [username, password]),
-  //           returnValue: _i3.Future<bool>.value(false),
-  //         )
-  //         as _i3.Future<bool>);
+  _i3.Future<List<String>> checkUsername(String? username) =>
+      (super.noSuchMethod(
+            Invocation.method(#checkUsername, [username]),
+            returnValue: _i3.Future<List<String>>.value(<String>[]),
+          )
+          as _i3.Future<List<String>>);
+
+  @override
+  _i3.Future<bool> login(String? username, String? password, {String? role}) =>
+      (super.noSuchMethod(
+            Invocation.method(#login, [username, password], {#role: role}),
+            returnValue: _i3.Future<bool>.value(false),
+          )
+          as _i3.Future<bool>);
 
   @override
   void logout() => super.noSuchMethod(
@@ -99,6 +108,17 @@ class MockUser extends _i1.Mock implements _i2.User {
       (super.noSuchMethod(
             Invocation.getter(#role),
             returnValue: _i5.dummyValue<String>(this, Invocation.getter(#role)),
+          )
+          as String);
+
+  @override
+  String get token =>
+      (super.noSuchMethod(
+            Invocation.getter(#token),
+            returnValue: _i5.dummyValue<String>(
+              this,
+              Invocation.getter(#token),
+            ),
           )
           as String);
 }

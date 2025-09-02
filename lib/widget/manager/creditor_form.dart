@@ -1,15 +1,15 @@
 // lib/widgets/creditor_form.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/creditor_model.dart';
+import '../../models/creditor_model.dart';
 import 'section_card.dart';
 import 'beautiful_text_field.dart';
 import 'tag_editor.dart';
 import 'status_switch.dart';
 import 'reminder_settings.dart';
 import 'advanced_options.dart';
-import '../utils/currency_formatter.dart'; // Ensure this import exists
-import '../utils/form_validators.dart';
+import '../../utils/manager/currency_formatter.dart'; // Ensure this import exists
+import '../../utils/manager/form_validators.dart';
 
 class CreditorForm extends StatefulWidget {
   final GlobalKey<FormState> formKey;
