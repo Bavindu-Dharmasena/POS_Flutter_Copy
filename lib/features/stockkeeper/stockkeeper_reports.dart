@@ -1,6 +1,12 @@
+import 'dart:convert';
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/services.dart'; // for ESC key
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 class StockKeeperReports extends StatefulWidget {
   const StockKeeperReports({Key? key}) : super(key: key);
@@ -13,10 +19,34 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   String selectedPeriod = 'Today';
   late FocusNode _focusNode;
 
-  // ===== Accent colors (unchanged) =====
+  // ===== Accent colors =====
   static const Color kInfo = Color(0xFF3B82F6);
   static const Color kSuccess = Color(0xFF10B981);
   static const Color kWarn = Color(0xFFF59E0B);
+
+  // ==== Total Sales ====
+  bool _loadingTotal = true;
+  String? _errorTotal;
+  double _totalSales = 0.0;
+  String? _changePctText; // optional "+15%"
+
+  // ==== Total Products ====
+  bool _loadingProducts = true;
+  String? _errorProducts;
+  int _totalProducts = 0;
+
+  // ==== Total Customers ====
+  bool _loadingCustomers = true;
+  String? _errorCustomers;
+  int _totalCustomers = 0;
+
+  // ==== Top Selling Items ====
+  bool _loadingTopItems = true;
+  String? _errorTopItems;
+  List<_TopItem> _topItems = [];
+
+  // currency formatter
+  final _currency = NumberFormat.currency(locale: 'en_LK', symbol: 'Rs. ', decimalDigits: 2);
 
   @override
   void initState() {
@@ -24,6 +54,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     _focusNode = FocusNode();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
+      _refreshAll();
     });
   }
 
@@ -33,14 +64,226 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     super.dispose();
   }
 
-  // Handle key events: ESC -> back
+  // === Base URL per platform ===
+  String _apiBase() {
+    if (kIsWeb) return 'http://localhost:3001';
+    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
+    return 'http://127.0.0.1:3001';
+  }
+
+  Future<void> _refreshAll() async {
+    // Fire them in parallel; each manages its own loading/error state.
+    await Future.wait([
+      _loadTotalSales(),
+      _loadTotalProducts(),
+      _loadTotalCustomers(),
+      _loadTopItems(),
+    ]);
+  }
+
+  // ---- Helpers to extract numbers from various JSON shapes ----
+  double _extractDouble(dynamic body, List<String> keys) {
+    if (body is num) return body.toDouble();
+    if (body is Map<String, dynamic>) {
+      for (final k in keys) {
+        final v = body[k];
+        if (v is num) return v.toDouble();
+      }
+    }
+    throw Exception('Unexpected response: $body');
+  }
+
+  int _extractInt(dynamic body, List<String> keys) {
+    if (body is num) return body.toInt();
+    if (body is Map<String, dynamic>) {
+      for (final k in keys) {
+        final v = body[k];
+        if (v is num) return v.toInt();
+      }
+    }
+    throw Exception('Unexpected response: $body');
+  }
+
+  // ================= API LOADERS =================
+  Future<void> _loadTotalSales() async {
+    setState(() {
+      _loadingTotal = true;
+      _errorTotal = null;
+    });
+
+    try {
+      // final periodKey = _mapPeriod(selectedPeriod); // period support
+      // final uri = Uri.parse('${_apiBase()}/insight/total-sales?period=$periodKey');
+      final uri = Uri.parse('${_apiBase()}/insight/total-sales');
+
+      final res = await http.get(uri, headers: {'Accept': 'application/json'});
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw Exception('HTTP ${res.statusCode}: ${res.body}');
+      }
+
+      final body = res.body.trim().isEmpty ? null : jsonDecode(res.body);
+      double total = 0.0;
+      String? changeText;
+
+      if (body is num) {
+        total = body.toDouble();
+      } else if (body is Map<String, dynamic>) {
+        total = _extractDouble(body, ['totalSales', 'total', 'amount', 'value']);
+        if (body['change'] is String) changeText = body['change'] as String;
+        if (body['changePct'] is num) {
+          final pct = (body['changePct'] as num).toDouble() * 100.0;
+          changeText = (pct >= 0 ? '+' : '') + pct.toStringAsFixed(0) + '%';
+        }
+      } else {
+        throw Exception('Unexpected response');
+      }
+
+      setState(() {
+        _totalSales = total;
+        _changePctText = changeText;
+        _loadingTotal = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorTotal = e.toString();
+        _loadingTotal = false;
+      });
+    }
+  }
+
+  Future<void> _loadTotalProducts() async {
+    setState(() {
+      _loadingProducts = true;
+      _errorProducts = null;
+    });
+
+    try {
+      // final periodKey = _mapPeriod(selectedPeriod);
+      // final uri = Uri.parse('${_apiBase()}/insight/total-products?period=$periodKey');
+      final uri = Uri.parse('${_apiBase()}/insight/total-products');
+
+      final res = await http.get(uri, headers: {'Accept': 'application/json'});
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw Exception('HTTP ${res.statusCode}: ${res.body}');
+      }
+
+      final body = res.body.trim().isEmpty ? null : jsonDecode(res.body);
+      final total = _extractInt(body, ['totalProducts', 'total', 'count', 'value']);
+
+      setState(() {
+        _totalProducts = total;
+        _loadingProducts = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorProducts = e.toString();
+        _loadingProducts = false;
+      });
+    }
+  }
+
+  Future<void> _loadTotalCustomers() async {
+    setState(() {
+      _loadingCustomers = true;
+      _errorCustomers = null;
+    });
+
+    try {
+      // final periodKey = _mapPeriod(selectedPeriod);
+      // final uri = Uri.parse('${_apiBase()}/insight/total-customers?period=$periodKey');
+      final uri = Uri.parse('${_apiBase()}/insight/total-customers');
+
+      final res = await http.get(uri, headers: {'Accept': 'application/json'});
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw Exception('HTTP ${res.statusCode}: ${res.body}');
+      }
+
+      final body = res.body.trim().isEmpty ? null : jsonDecode(res.body);
+      final total = _extractInt(body, ['totalCustomers', 'total', 'count', 'value']);
+
+      setState(() {
+        _totalCustomers = total;
+        _loadingCustomers = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorCustomers = e.toString();
+        _loadingCustomers = false;
+      });
+    }
+  }
+
+  Future<void> _loadTopItems() async {
+    setState(() {
+      _loadingTopItems = true;
+      _errorTopItems = null;
+    });
+
+    try {
+      // final periodKey = _mapPeriod(selectedPeriod);
+      // final uri = Uri.parse('${_apiBase()}/insight/top-selling-items?period=$periodKey');
+      final uri = Uri.parse('${_apiBase()}/insight/top-selling-items');
+
+      final res = await http.get(uri, headers: {'Accept': 'application/json'});
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw Exception('HTTP ${res.statusCode}: ${res.body}');
+      }
+
+      final body = res.body.trim().isEmpty ? null : jsonDecode(res.body);
+
+      final items = <_TopItem>[];
+      if (body is List) {
+        for (final e in body) {
+          if (e is Map<String, dynamic>) {
+            final name = (e['name'] ?? e['itemName'] ?? e['title'] ?? 'Item').toString();
+            final priceRaw = e['price'] ?? e['sellPrice'] ?? e['unitPrice'];
+            final price = (priceRaw is num) ? priceRaw.toDouble() : null;
+            final soldRaw = e['sold'] ?? e['count'] ?? e['quantity'] ?? e['qty'];
+            final sold = (soldRaw is num) ? soldRaw.toInt() : 0;
+            items.add(_TopItem(name: name, price: price, sold: sold));
+          } else if (e is String) {
+            items.add(_TopItem(name: e, price: null, sold: 0));
+          }
+        }
+      } else {
+        throw Exception('Unexpected response for top-selling-items');
+      }
+
+      setState(() {
+        _topItems = items;
+        _loadingTopItems = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorTopItems = e.toString();
+        _loadingTopItems = false;
+      });
+    }
+  }
+
+  String _mapPeriod(String uiValue) {
+    switch (uiValue) {
+      case 'Today':
+        return 'today';
+      case 'This Week':
+        return 'week';
+      case 'This Month':
+        return 'month';
+      case 'This Year':
+        return 'year';
+      default:
+        return 'today';
+    }
+  }
+
+  // === ESC -> back ===
   void _handleKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
       Navigator.of(context).pop();
     }
   }
 
-  // ===== Dynamic palette that follows light/dark theme =====
+  // ===== Dynamic palette =====
   _Palette _palette(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     if (isDark) {
@@ -52,17 +295,15 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         textMuted: Colors.white70,
       );
     }
-    // Light equivalents chosen to preserve your look while being readable
     return const _Palette(
       bg: Color(0xFFF4F6FA),
       surface: Colors.white,
-      border: Color(0x1A000000), // ~6% black
-      text: Color(0xFF0F172A),   // slate-900
+      border: Color(0x1A000000),
+      text: Color(0xFF0F172A),
       textMuted: Colors.black54,
     );
   }
 
-  // Card decoration using palette (same shape/shadows)
   BoxDecoration _cardBox(_Palette p) => BoxDecoration(
         color: p.surface,
         borderRadius: BorderRadius.circular(16),
@@ -146,8 +387,10 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       child: Text(value),
                     );
                   }).toList(),
-                  onChanged: (String? newValue) {
+                  onChanged: (String? newValue) async {
                     setState(() => selectedPeriod = newValue!);
+                    // If API supports period filter, the loaders already have commented lines.
+                    await _refreshAll();
                   },
                 ),
               ),
@@ -165,18 +408,25 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
+                      // Total Sales
                       SizedBox(
                         width: 160,
                         child: _buildStatCard(
                           p: p,
                           title: 'Total Sales',
-                          value: 'Rs. 12,450',
-                          change: '+15%',
+                          value: _loadingTotal
+                              ? 'Loading...'
+                              : _errorTotal != null
+                                  ? 'Error'
+                                  : _currency.format(_totalSales),
+                          change: _loadingTotal ? '...' : (_changePctText ?? ''),
                           color: kSuccess,
                           icon: Icons.trending_up,
                         ),
                       ),
                       const SizedBox(width: 12),
+
+                      // Orders (still static unless you add endpoint)
                       SizedBox(
                         width: 160,
                         child: _buildStatCard(
@@ -189,25 +439,37 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                         ),
                       ),
                       const SizedBox(width: 12),
+
+                      // Customers from API
                       SizedBox(
                         width: 160,
                         child: _buildStatCard(
                           p: p,
                           title: 'Customers',
-                          value: '156',
-                          change: '+12%',
-                          color: Color(0xFF6366F1), // Indigo
+                          value: _loadingCustomers
+                              ? 'Loading...'
+                              : _errorCustomers != null
+                                  ? 'Error'
+                                  : _totalCustomers.toString(),
+                          change: '',
+                          color: const Color(0xFF6366F1),
                           icon: Icons.people,
                         ),
                       ),
                       const SizedBox(width: 12),
+
+                      // Products from API
                       SizedBox(
                         width: 160,
                         child: _buildStatCard(
                           p: p,
                           title: 'Products',
-                          value: '89',
-                          change: '+3%',
+                          value: _loadingProducts
+                              ? 'Loading...'
+                              : _errorProducts != null
+                                  ? 'Error'
+                                  : _totalProducts.toString(),
+                          change: '',
                           color: kWarn,
                           icon: Icons.inventory_2_outlined,
                         ),
@@ -218,9 +480,64 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                 ),
               ),
 
-              // Sales Content - Direct without tabs
               const SizedBox(height: 12),
               _buildSalesContent(p),
+
+              // Top selling items section (with loading/error)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: _cardBox(p),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SectionHeader(title: 'Top Selling Items', iconColor: kSuccess, textColor: p.text),
+                      const SizedBox(height: 12),
+                      if (_loadingTopItems)
+                        Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Center(
+                            child: Text('Loading...', style: TextStyle(color: p.textMuted)),
+                          ),
+                        )
+                      else if (_errorTopItems != null)
+                        Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Text('Failed to load: $_errorTopItems', style: const TextStyle(color: Colors.redAccent)),
+                        )
+                      else if (_topItems.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Text('No data', style: TextStyle(color: p.textMuted)),
+                        )
+                      else
+                        Column(
+                          children: _topItems
+                              .take(10)
+                              .map((it) => _buildTopSellingItem(
+                                    p,
+                                    it.name,
+                                    it.price != null ? _currency.format(it.price!) : '—',
+                                    '${it.sold} sold',
+                                  ))
+                              .toList(),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+
+              if (_errorTotal != null)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    'Total Sales load failed:\n$_errorTotal',
+                    style: TextStyle(color: Colors.red.shade300),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
             ],
           ),
         ),
@@ -228,7 +545,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     );
   }
 
-  // ======= Reusable stat card (uses palette) =======
+  // ======= Reusable stat card =======
   Widget _buildStatCard({
     required _Palette p,
     required String title,
@@ -296,7 +613,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     );
   }
 
-  // ================== SALES CONTENT (without tabs) ==================
+  // ================== SALES CONTENT (chart) ==================
   Widget _buildSalesContent(_Palette p) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -362,7 +679,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                             FlSpot(6, 4),
                           ],
                           isCurved: true,
-                          color: kInfo, // keep flat color
+                          color: kInfo,
                           barWidth: 3,
                           belowBarData: BarAreaData(
                             show: true,
@@ -374,24 +691,6 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          // Top Selling Items
-          Container(
-            padding: const EdgeInsets.all(16),
-            margin: const EdgeInsets.only(bottom: 16),
-            decoration: _cardBox(p),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _SectionHeader(title: 'Top Selling Items', iconColor: kSuccess, textColor: p.text),
-                const SizedBox(height: 12),
-                _buildTopSellingItem(p, 'Coffee Latte', 'Rs. 450.00', '234 sold'),
-                _buildTopSellingItem(p, 'Chicken Burger', 'Rs. 899.00', '189 sold'),
-                _buildTopSellingItem(p, 'Caesar Salad', 'Rs. 675.00', '156 sold'),
-                _buildTopSellingItem(p, 'Chocolate Cake', 'Rs. 525.00', '134 sold'),
               ],
             ),
           ),
@@ -411,18 +710,15 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name,
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700, color: p.text)),
+                Text(name, style: TextStyle(fontWeight: FontWeight.w700, color: p.text)),
                 Text(sold, style: TextStyle(fontSize: 12, color: p.textMuted)),
               ],
             ),
           ),
-          Text(price,
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: kInfo,
-              )),
+          Text(
+            price,
+            style: const TextStyle(fontWeight: FontWeight.w800, color: kInfo),
+          ),
         ],
       ),
     );
@@ -445,7 +741,7 @@ class _Palette {
   });
 }
 
-// ===== Small reusable header matching dark cards =====
+// ===== Small reusable header =====
 class _SectionHeader extends StatelessWidget {
   final String title;
   final Color iconColor;
@@ -479,13 +775,17 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 12),
         Text(
           title,
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.w800,
-            fontSize: 16,
-          ),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 16),
         ),
       ],
     );
   }
+}
+
+// ===== Top item model =====
+class _TopItem {
+  final String name;
+  final double? price; // can be null if API doesn’t send it
+  final int sold;
+  _TopItem({required this.name, this.price, required this.sold});
 }

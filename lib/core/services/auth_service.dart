@@ -1,49 +1,51 @@
-import 'package:flutter/material.dart';
+// lib/core/services/auth_service.dart
+import 'package:flutter/foundation.dart';
+import 'api_client.dart';
+import 'secure_storage_service.dart';
 
 class User {
-  final String username;
+  final String email;
   final String role;
-  final String token;
-
-  User(this.username, this.role, this.token);
+  final String accessToken;
+  User(this.email, this.role, this.accessToken);
 }
 
 class AuthService with ChangeNotifier {
+  AuthService({ApiClient? api}) : _api = api ?? ApiClient.auto();
+
+  final ApiClient _api;
+  final _storage = SecureStorageService.instance;
+
   User? _currentUser;
-
-  // Seed data for local login
-  final Map<String, Map<String, String>> _seedUsers = {
-    'cashier': {'password': 'cash123', 'role': 'Cashier'},
-    'stock': {'password': 'stock123', 'role': 'StockKeeper'},
-    'manager': {'password': 'manager123', 'role': 'Manager'},
-    'admin': {'password': 'admin123', 'role': 'Admin'},
-  };
-
   User? get currentUser => _currentUser;
 
-  /// Step 1: Simulate username check
-  Future<List<String>> checkUsername(String username) async {
-    await Future.delayed(const Duration(milliseconds: 500)); // simulate network delay
-    if (_seedUsers.containsKey(username)) {
-      return [_seedUsers[username]!['role']!];
-    }
-    throw Exception("User not found");
+  Future<void> login(String email, String password) async {
+    final resp = await _api.login(email: email, password: password);
+    final user = (resp['user'] as Map?) ?? {};
+    final access = resp['access_token'] as String? ?? '';
+    final role = (user['role'] as String?) ?? '';
+    if (access.isEmpty) throw Exception('No access token returned from server.');
+    _currentUser = User(email, role, access);
+    notifyListeners();
   }
 
-  /// Step 2: Simulate login
-  Future<bool> login(String username, String password, {String? role}) async {
-    await Future.delayed(const Duration(milliseconds: 500)); // simulate network delay
-    final user = _seedUsers[username];
-    if (user != null && user['password'] == password) {
-      _currentUser = User(username, user['role']!, 'fake-jwt-token');
+  Future<bool> hydrate() async {
+    final access = await _storage.getAccessToken();
+    final email = await _storage.getEmail();
+    final role  = await _storage.getRole();
+    if (access != null && email != null && role != null) {
+      _currentUser = User(email, role, access);
       notifyListeners();
       return true;
     }
-    throw Exception("Invalid credentials");
+    return false;
   }
 
-  void logout() {
-    _currentUser = null;
-    notifyListeners();
+  Future<void> logout() async {
+    try { await _api.logout(); } finally {
+      _currentUser = null;
+      await _storage.clear();
+      notifyListeners();
+    }
   }
 }

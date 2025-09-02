@@ -1,102 +1,84 @@
-// import 'package:flutter/material.dart';
-// import 'package:provider/provider.dart';
-
-// import 'core/services/auth_service.dart';
-// import 'routes/app_routes.dart';
-// import 'features/auth/two_step_login_page.dart'; // <-- New login page
-
-// // ✅ Settings + Theming
-// import 'features/stockkeeper/settings/settings_provider.dart';
-// import 'theme/app_theme.dart';
-
-// Future<void> main() async {
-//   WidgetsFlutterBinding.ensureInitialized();
-
-//   // ✅ Load settings BEFORE runApp — no theme flash; default dark applies.
-//   final settings = SettingsController();
-//   await settings.load();
-
-  
-//   runApp(
-//     MultiProvider(
-//       providers: [
-//         ChangeNotifierProvider(create: (_) => AuthService()),
-//         ChangeNotifierProvider<SettingsController>.value(value: settings),
-//       ],
-//       child: const MyApp(),
-//     ),
-//   );
-// }
-
-// class MyApp extends StatelessWidget {
-//   const MyApp({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final settings = context.watch<SettingsController>();
-
-//     return MaterialApp(
-//       title: 'AASA POS System',
-//       debugShowCheckedModeBanner: false,
-
-//  //     theme: ThemeData(
-//  //       colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-//  //       useMaterial3: true,
-//  //     ),
-//  //     // Start with the two-step login page
-//  //     home: const TwoStepLoginPage(),
-//  //     onGenerateRoute: (settings) => AppRoutes.generateRoute(settings, context),
-
-
-//       // ✅ Centralized themes (font size handled via MediaQuery scaling)
-//       theme: buildLightTheme(settings.fontSize),
-//       darkTheme: buildDarkTheme(settings.fontSize),
-//       themeMode: settings.themeMode, // defaults to DARK on first launch
-
-//       // ✅ Uniform scaling across widgets based on settings.fontSize
-//       builder: (context, child) {
-//         return MediaQuery(
-//           data: MediaQuery.of(context).copyWith(
-//             textScaleFactor: settings.textScaleFactor,
-//           ),
-//           child: child!,
-//         );
-//       },
-
-//       // ✅ Your existing routing
-//       initialRoute: '/',
-//       onGenerateRoute: (routeSettings) =>
-//           AppRoutes.generateRoute(routeSettings, context),
-
-//     );
-//   }
-// }
-
-//----------------------------------------------
 import 'package:flutter/material.dart';
-import 'ui/pages/home_page.dart';
+import 'package:provider/provider.dart';
 
-Future<void> main() async {
+import 'core/services/auth_service.dart';
+import 'features/stockkeeper/settings/settings_provider.dart';
+import 'routes/app_routes.dart';
+
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const App());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthService()),
+        ChangeNotifierProvider<SettingsController>(
+          create: (_) {
+            final c = SettingsController();
+            // load persisted theme/font size once
+            c.load();
+            return c;
+          },
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
-class App extends StatelessWidget {
-  const App({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Listen to settings to apply theme + text scale
+    final settings = context.watch<SettingsController>();
+
     return MaterialApp(
-      title: 'Flutter SQLite CRUD',
+      title: 'AASA POS',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.indigo,
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
-        ),
-      ),
-      home: const HomePage(),
+      // Apply theme mode (defaults to dark until load() finishes)
+      themeMode: settings.themeMode,
+      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo, brightness: Brightness.light),
+      darkTheme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo, brightness: Brightness.dark),
+      // Apply global text scaling from SettingsController
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(textScaleFactor: settings.textScaleFactor),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+      initialRoute: '/',
+      onGenerateRoute: (s) => AppRoutes.generateRoute(s, context),
     );
   }
 }
+
+
+// import 'package:flutter/material.dart';
+// import 'ui/pages/home_page.dart';
+
+// Future<void> main() async {
+//   WidgetsFlutterBinding.ensureInitialized();
+//   runApp(const App());
+// }
+
+// class App extends StatelessWidget {
+//   const App({super.key});
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       title: 'Flutter SQLite CRUD',
+//       debugShowCheckedModeBanner: false,
+//       theme: ThemeData(
+//         useMaterial3: true,
+//         colorSchemeSeed: Colors.indigo,
+//         inputDecorationTheme: const InputDecorationTheme(
+//           border: OutlineInputBorder(),
+//         ),
+//       ),
+//       home: const HomePage(),
+//     );
+//   }
+// }

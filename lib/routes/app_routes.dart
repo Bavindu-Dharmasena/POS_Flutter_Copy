@@ -1,92 +1,62 @@
 import 'package:flutter/material.dart';
 
 // Auth
-import '../features/auth/two_step_login_page.dart';
+import '../features/auth/login_page.dart';
+import '../features/auth/auth_guard.dart';
 
-// Splash
-import '../features/splashscreen.dart';
-
-// import '../features/cashier/billingview.dart';
+// Features
 import '../features/cashier/cashier_view_page.dart';
-
-
-
-// Stockkeeper
 import '../features/stockkeeper/stockkeeper_home.dart';
-
-// Cashier
-
-// These two files both define a widget named `CashierViewPage`.
-// Use aliases to disambiguate which one you want in each route.
-import '../features/cashier/cashier_view_page.dart';
+import '../features/manager/manager_home.dart';
 
 class AppRoutes {
-  static Route<dynamic> generateRoute(
-    RouteSettings settings,
-    BuildContext context,
-  ) {
+  static Route<dynamic> generateRoute(RouteSettings settings, BuildContext context) {
     switch (settings.name) {
-      // Splash
       case '/':
-        return MaterialPageRoute(builder: (_) => const SplashScreen());
-
-      // Two-step login
       case '/login':
-        return MaterialPageRoute(builder: (_) => const TwoStepLoginPage());
+        return MaterialPageRoute(builder: (_) => const LoginPage());
 
-      // Stockkeeper homepage
-      case '/stockkeeper':
-        return MaterialPageRoute(builder: (_) => const StockKeeperHome());
-
-      // Cashier homepage (dashboard)
       case '/cashier':
-        return MaterialPageRoute(builder: (_) => const CashierViewPage());
+        return MaterialPageRoute(
+          builder: (_) => AuthGuard(
+            allowedRoles: const ['Cashier'],
+            builder: (ctx) => const CashierViewPage(),
+          ),
+        );
 
-      // Cashier: product list / main view (from cashier_view_page.dart)
-      // case '/cashier/view':
-      //   return MaterialPageRoute(
-      //     builder: (_) => const cashier_view.CashierViewPage(),
-      //   );
+      case '/stockkeeper':
+        return MaterialPageRoute(
+          builder: (_) => AuthGuard(
+            allowedRoles: const ['StockKeeper'],
+            builder: (ctx) => const StockKeeperHome(),
+          ),
+        );
 
-      // Cashier: quick billing view (from billingview.dart)
-      // NOTE: That file also exports a class named CashierViewPage.
-      // If you later rename the class to BillingViewPage, update here too.
-      // case '/cashier/billing':
-      //   return MaterialPageRoute(
-      //     builder: (_) => const billing_view.CashierViewPage(),
-      //   );
-
-      // Manager (stub until you add a real page)
       case '/manager':
         return MaterialPageRoute(
-          builder: (_) => const _StubPage(title: 'Manager Home'),
+          builder: (_) => AuthGuard(
+            allowedRoles: const ['Manager'],
+            builder: (ctx) => const ManagerHomePage(),
+          ),
         );
 
-      // Admin (stub until you add a real page)
       case '/admin':
         return MaterialPageRoute(
-          builder: (_) => const _StubPage(title: 'Admin Home'),
+          builder: (_) => AuthGuard(
+            allowedRoles: const ['Admin'],
+            builder: (ctx) => const _Stub(title: 'Admin Home'),
+          ),
         );
 
-      // Default → login (avoid falling back to role tiles)
       default:
-        return MaterialPageRoute(builder: (_) => const TwoStepLoginPage());
+        return MaterialPageRoute(builder: (_) => const LoginPage());
     }
   }
 }
 
-/* Simple stub page for Admin/Manager until you plug in real widgets */
-class _StubPage extends StatelessWidget {
+class _Stub extends StatelessWidget {
   final String title;
-  const _StubPage({super.key, required this.title});
-
+  const _Stub({super.key, required this.title});
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Text('$title (stub)\nReplace with your real page',
-            textAlign: TextAlign.center),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => Scaffold(body: Center(child: Text(title)));
 }
