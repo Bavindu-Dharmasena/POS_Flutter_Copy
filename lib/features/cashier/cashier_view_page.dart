@@ -11,6 +11,8 @@ import '../../widget/discount_row.dart';
 import 'category_items_page.dart';
 import 'cashier_insights_page.dart';
 import '../../widget/primary_actions_row.dart';
+import '../../data/repositories/cashier/cashier_repository.dart';
+import '../../data/models/cashier/cashier.dart';
 
 // ---- Keyboard Intents ----
 class ActivateSearchIntent extends Intent { const ActivateSearchIntent(); }
@@ -31,6 +33,7 @@ class CashierViewPage extends StatefulWidget {
 
 class _CashierViewPageState extends State<CashierViewPage> {
   // ----------------- SAMPLE DATA -----------------
+  final CashierRepository _cashierrepo = CashierRepository();
   List<String> get categories =>
       itemsByCategory.map((cat) => (cat['category'] ?? '').toString()).toList();
 
@@ -55,18 +58,18 @@ class _CashierViewPageState extends State<CashierViewPage> {
   final FocusNode _headerMenuBtnNode = FocusNode(debugLabel: 'HeaderMenuBtn');
   final TextEditingController _searchController = TextEditingController();
 
-  static const String _path = '/cashier/categories';
-  static const String _baseUrl = "http://localhost:3001";
+  // static const String _path = '/cashier/categories';
+  // static const String _baseUrl = "http://localhost:3001";
 
-  final Dio _dio = Dio(BaseOptions(
-    // ⭐ sensible timeouts
-    connectTimeout: const Duration(seconds: 8),
-    receiveTimeout: const Duration(seconds: 8),
-    sendTimeout: const Duration(seconds: 8),
-    // ⭐ JSON
-    responseType: ResponseType.json,
-    // You can add headers/auth here if needed
-  ));
+  // final Dio _dio = Dio(BaseOptions(
+  //   // ⭐ sensible timeouts
+  //   connectTimeout: const Duration(seconds: 8),
+  //   receiveTimeout: const Duration(seconds: 8),
+  //   sendTimeout: const Duration(seconds: 8),
+  //   // ⭐ JSON
+  //   responseType: ResponseType.json,
+  //   // You can add headers/auth here if needed
+  // ));
 
   // ----------------- Scanner state -----------------
   bool _scannerOpen = false;
@@ -93,65 +96,77 @@ class _CashierViewPageState extends State<CashierViewPage> {
   }
 
   // ⭐ Fetch from your API and map to the UI shape
+  // Future<void> _loadCatalog() async {
+  //   setState(() {
+  //     _loading = true;
+  //     _error = null;
+  //   });
+
+  //   try {
+  //     final res = await _dio.get('$_baseUrl$_path');
+  //     final data = res.data;
+
+  //     if (data is! List) {
+  //       throw const FormatException('Unexpected JSON shape (expected List)');
+  //     }
+
+  //     itemsByCategory = _mapApiToUi(data);
+  //     setState(() => _loading = false);
+  //   } catch (e) {
+  //     setState(() {
+  //       _error = e.toString();
+  //       _loading = false;
+  //     });
+  //   }
+  // }
+
+  // /// Transform API → same shape as dummy
+  // List<Map<String, dynamic>> _mapApiToUi(List<dynamic> api) {
+  //   return api.map<Map<String, dynamic>>((rawCat) {
+  //     final Map<String, dynamic> cat = Map<String, dynamic>.from(rawCat as Map);
+  //     final items = (cat['items'] as List? ?? const [])
+  //         .map<Map<String, dynamic>>((rawIt) {
+  //       final it = Map<String, dynamic>.from(rawIt as Map);
+  //       final batches = (it['batches'] as List? ?? const [])
+  //           .map<Map<String, dynamic>>((b) => Map<String, dynamic>.from(b as Map))
+  //           .toList();
+
+  //       return {
+  //         'id': it['id'],
+  //         'itemcode': it['itemcode'],
+  //         'name': it['name'],
+  //         'colourCode': it['colorCode'] ?? it['colourCode'] ?? '#777777',
+  //         'itemImage': _itemImageFor((it['name'] ?? '').toString()),
+  //         'batches': batches,
+  //       };
+  //     }).toList();
+
+  //     final catName = (cat['category'] ?? '').toString();
+  //     return {
+  //       'id': cat['id'],
+  //       'category': catName,
+  //       'colourCode': cat['colorCode'] ?? cat['colourCode'] ?? '#555555',
+  //       'categoryImage': _categoryImageFor(catName),
+  //       'items': items,
+  //     };
+  //   }).toList();
+  // }
+
+  // String _categoryImageFor(String cat) =>
+  //     'assets/cat/${cat.toLowerCase().replaceAll(' ', '_')}.png';
+  // String _itemImageFor(String name) => 'assets/item/default.png';
+
   Future<void> _loadCatalog() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  setState(() => _loading = true);
 
-    try {
-      final res = await _dio.get('$_baseUrl$_path');
-      final data = res.data;
+  final data = await _cashierrepo.getCategoriesWithItemsAndBatches();
 
-      if (data is! List) {
-        throw const FormatException('Unexpected JSON shape (expected List)');
-      }
+  setState(() {
+    itemsByCategory = data; // _categories is List<Category>
+    _loading = false;
+  });
+}
 
-      itemsByCategory = _mapApiToUi(data);
-      setState(() => _loading = false);
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
-    }
-  }
-
-  /// Transform API → same shape as dummy
-  List<Map<String, dynamic>> _mapApiToUi(List<dynamic> api) {
-    return api.map<Map<String, dynamic>>((rawCat) {
-      final Map<String, dynamic> cat = Map<String, dynamic>.from(rawCat as Map);
-      final items = (cat['items'] as List? ?? const [])
-          .map<Map<String, dynamic>>((rawIt) {
-        final it = Map<String, dynamic>.from(rawIt as Map);
-        final batches = (it['batches'] as List? ?? const [])
-            .map<Map<String, dynamic>>((b) => Map<String, dynamic>.from(b as Map))
-            .toList();
-
-        return {
-          'id': it['id'],
-          'itemcode': it['itemcode'],
-          'name': it['name'],
-          'colourCode': it['colorCode'] ?? it['colourCode'] ?? '#777777',
-          'itemImage': _itemImageFor((it['name'] ?? '').toString()),
-          'batches': batches,
-        };
-      }).toList();
-
-      final catName = (cat['category'] ?? '').toString();
-      return {
-        'id': cat['id'],
-        'category': catName,
-        'colourCode': cat['colorCode'] ?? cat['colourCode'] ?? '#555555',
-        'categoryImage': _categoryImageFor(catName),
-        'items': items,
-      };
-    }).toList();
-  }
-
-  String _categoryImageFor(String cat) =>
-      'assets/cat/${cat.toLowerCase().replaceAll(' ', '_')}.png';
-  String _itemImageFor(String name) => 'assets/item/default.png';
 
   void _focusSearchField({bool selectAll = false}) {
     _searchFieldNode.requestFocus();
