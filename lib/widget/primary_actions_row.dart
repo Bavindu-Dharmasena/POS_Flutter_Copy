@@ -59,9 +59,10 @@
 import 'package:flutter/material.dart';
 
 class PrimaryActionsRow extends StatelessWidget {
+  final VoidCallback onAddItem;
   final VoidCallback onQuickSale;
-  final VoidCallback? onPay; // Keep as nullable
-  final VoidCallback? onNewSale; // Keep as nullable
+  final VoidCallback? onPay;
+  final VoidCallback? onNewSale;
   final VoidCallback onResumeBill;
   final bool payEnabled;
   final bool hasPausedBills;
@@ -69,13 +70,14 @@ class PrimaryActionsRow extends StatelessWidget {
 
   const PrimaryActionsRow({
     super.key,
+    required this.onAddItem,
     required this.onQuickSale,
     required this.onPay,
     required this.onNewSale,
     required this.onResumeBill,
     required this.payEnabled,
     required this.hasPausedBills,
-    this.horizontalPadding = 16,
+    this.horizontalPadding = 4,
   });
 
   @override
@@ -83,150 +85,162 @@ class PrimaryActionsRow extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final isWideScreen = screenWidth >= 1000;
 
+    // ✅ Button size
+    final double buttonWidth = isWideScreen ? 250 : 125;
+    final double buttonHeight = isWideScreen ? 80 : 80;
+
+    // ✅ Font and icon size scale with screen type
+    final double fontSize = isWideScreen ? 30 : 16;
+    final double iconSize = isWideScreen ? 30 : 30;
+
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: horizontalPadding,
-        vertical: 10,
+        vertical: 8,
       ),
-      child: Row(
+      child: Column(
         children: [
-          // First column: New Sale and Resume buttons
-          Expanded(
-            child: Column(
-              children: [
-                // New Sale button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: onNewSale, // This will handle null automatically
-                    icon: Icon(
-                      Icons.note_add,
-                      size: isWideScreen ? 30 : 24,
-                      // Remove color from Icon widget, let button style handle it
-                    ),
-                    label: Text(
-                      'New Sale',
-                      style: TextStyle(
-                        fontSize: isWideScreen ? 20 : 25,
-                        fontWeight: FontWeight.bold,
-                        // Remove color from Text widget, let button style handle it
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: onNewSale != null
-                          ? Colors.green
-                          : Colors
-                                .grey[700], // Change background color based on state
-                      foregroundColor: onNewSale != null
-                          ? Colors.white
-                          : Colors
-                                .grey[700], // White when active, light gray when inactive
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isWideScreen ? 20 : 16,
-                        vertical: isWideScreen ? 16 : 12,
-                      ),
+          // First row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Add Item button
+              // Add Item button
+              SizedBox(
+                width: buttonWidth,
+                height: buttonHeight,
+                child: ElevatedButton(
+                  onPressed: onAddItem,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        6,
+                      ), // 👈 smaller corner radius
                     ),
                   ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add, size: iconSize),
+                      Text('Add Item', style: TextStyle(fontSize: fontSize)),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 8),
+              ),
+              const SizedBox(width: 8),
 
-                // Resume button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: hasPausedBills ? onResumeBill : null,
-                    icon: Icon(
-                      Icons.history,
-                      size: isWideScreen ? 30 : 24,
-                      color: hasPausedBills ? Colors.black : Colors.grey[700],
-                    ),
-                    label: Text(
-                      'Resume',
-                      style: TextStyle(
-                        color: hasPausedBills ? Colors.black : Colors.grey[700],
-                        fontSize: isWideScreen ? 20 : 25,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isWideScreen ? 20 : 16,
-                        vertical: isWideScreen ? 16 : 12,
-                      ),
+              // Resume button
+              SizedBox(
+                width: buttonWidth,
+                height: buttonHeight,
+                child: ElevatedButton(
+                  onPressed: hasPausedBills ? onResumeBill : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: hasPausedBills
+                        ? Colors.black
+                        : Colors.grey,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
                     ),
                   ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.history, size: iconSize),
+                      Text('Resume', style: TextStyle(fontSize: fontSize)),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+
+              // Quick Sale button
+              SizedBox(
+                width: buttonWidth,
+                height: buttonHeight,
+                child: ElevatedButton(
+                  onPressed: onQuickSale,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.flash_on, size: iconSize),
+                      Text('Quick Sale', style: TextStyle(fontSize: fontSize)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
 
-          const SizedBox(width: 16),
+          const SizedBox(height: 8),
 
-          // Second column: Quick Sale and Pay buttons
-          Expanded(
-            child: Column(
-              children: [
-                // Quick Sale button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: onQuickSale,
-                    icon: Icon(
-                      Icons.flash_on,
-                      size: isWideScreen ? 30 : 24,
-                      color: Colors.white,
-                    ),
-                    label: Text(
-                      'Quick Sale',
-                      style: TextStyle(
-                        fontSize: isWideScreen ? 20 : 25,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isWideScreen ? 20 : 16,
-                        vertical: isWideScreen ? 16 : 12,
-                      ),
+          // Second row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // New Sale button
+              SizedBox(
+                width: buttonWidth,
+                height: buttonHeight,
+                child: ElevatedButton(
+                  onPressed: onNewSale,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: onNewSale != null
+                        ? Colors.green
+                        : Colors.grey,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        6,
+                      ), // 👈 corner radius
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-
-                // Pay button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: payEnabled
-                        ? onPay
-                        : null, // This handles null properly
-                    icon: Icon(
-                      Icons.payment,
-                      size: isWideScreen ? 30 : 24,
-                      color: payEnabled ? Colors.white : Colors.grey[700],
-                    ),
-                    label: Text(
-                      'Pay',
-                      style: TextStyle(
-                        fontSize: isWideScreen ? 20 : 25,
-                        fontWeight: FontWeight.bold,
-                        color: payEnabled ? Colors.white : Colors.grey[700],
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isWideScreen ? 20 : 16,
-                        vertical: isWideScreen ? 16 : 12,
-                      ),
-                    ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.note_add, size: iconSize),
+                      Text('New Sale', style: TextStyle(fontSize: fontSize)),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              // Pay button
+              SizedBox(
+                width: buttonWidth,
+                height: buttonHeight,
+                child: ElevatedButton(
+                  onPressed: payEnabled ? onPay : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: payEnabled ? Colors.white : Colors.grey,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        6,
+                      ), // 👈 smaller corners
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.payment, size: iconSize),
+                      // const SizedBox(height: 2), // small gap
+                      Text('Pay', style: TextStyle(fontSize: fontSize)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

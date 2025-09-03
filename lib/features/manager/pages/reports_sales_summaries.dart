@@ -28,7 +28,6 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  String? get _store => null;
 
   @override
   void initState() {

@@ -20,17 +20,23 @@ dependencies:
   flutter_vector_icons: ^2.0.0
   flutter_colorpicker: ^1.0.3
   mobile_scanner: ^3.5.5
+  shared_preferences: ^2.3.2
+  url_launcher: ^6.3.2
   path_provider: ^2.1.4
 
   # ---- Networking + Auth plumbing ----
   http: ^1.2.2
   provider: ^6.1.2
-
-  shared_preferences: ^2.3.2
+  dio: ^5.7.0
+  path: ^1.9.0
+  drift: ^2.20.0
+  sqflite: ^2.3.3+1    # bundles SQLite for Android/iOS/macOS/Windows
   flutter_secure_storage: ^9.2.2
+
   url_launcher: ^6.3.2
 
    
+
 
 
 dev_dependencies:
@@ -41,6 +47,7 @@ dev_dependencies:
   mocktail: ^1.0.4
   build_runner: ^2.4.11
   flutter_launcher_icons: ^0.13.1
+  drift_dev: ^2.20.0
 
 flutter:
   uses-material-design: true
