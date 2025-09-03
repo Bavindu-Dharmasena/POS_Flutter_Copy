@@ -56,12 +56,26 @@
 
 
 import 'package:flutter/material.dart';
-// import 'ui/pages/home_page.dart';
+import 'package:provider/provider.dart';
+
+import '../features/stockkeeper/settings/settings_provider.dart';
 import '../features/splashscreen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const App());
+
+  // Create + preload persisted settings
+  final settings = SettingsController();
+  await settings.load();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<SettingsController>.value(value: settings),
+      ],
+      child: const App(),
+    ),
+  );
 }
 
 class App extends StatelessWidget {
@@ -69,17 +83,39 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter SQLite CRUD',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.indigo,
-        inputDecorationTheme: const InputDecorationTheme(
-          border: OutlineInputBorder(),
-        ),
-      ),
-      home: const SplashScreen(),
+    // Rebuild MaterialApp when settings change
+    return Consumer<SettingsController>(
+      builder: (context, settings, _) {
+        return MaterialApp(
+          title: 'Flutter SQLite CRUD',
+          debugShowCheckedModeBanner: false,
+          themeMode: settings.themeMode, // light/dark from SettingsController
+          theme: ThemeData(
+            useMaterial3: true,
+            colorSchemeSeed: Colors.indigo,
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+            ),
+            brightness: Brightness.light,
+          ),
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            colorSchemeSeed: Colors.indigo,
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+            ),
+            brightness: Brightness.dark,
+          ),
+          // Apply global text scaling from settings
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaleFactor: settings.textScaleFactor,
+            ),
+            child: child!,
+          ),
+          home: const SplashScreen(), // your existing splash → pushes to pages later
+        );
+      },
     );
   }
 }

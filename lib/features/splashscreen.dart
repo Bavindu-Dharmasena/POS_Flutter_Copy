@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pos_system/features/stockkeeper/stockkeeper_home.dart';
 
 import 'dart:async';
 
@@ -7,6 +8,7 @@ import 'dart:async';
 // import './auth//login_page.dart';
 // import './cashier/billingview.dart';
 import './cashier/cashier_view_page.dart';
+import 'package:pos_system/features/manager/manager_home.dart';
 
 
 class SplashScreen extends StatefulWidget {
@@ -24,7 +26,7 @@ class _SplashScreenState extends State<SplashScreen> {
     // Delay for 3 seconds before navigating to POSHomePage
     Timer(const Duration(seconds: 1), () {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const CashierViewPage()),
+        MaterialPageRoute(builder: (context) => const StockKeeperHome()),
       );
     });
   }
