@@ -155,9 +155,7 @@ class _RestockPageState extends State<RestockPage> {
 
   // Color Palette
   final Color _primaryColor = Color(0xFF0A74DA);
-  final Color _accentColor = Color(0xFFF59E0B);
-  final Color _backgroundColor = Color(0xFF121212);
-  final Color _cardColor = Color(0xFF1F1F1F);
+  // ignore: unused_field
   final Color _textColor = Colors.white;
   final Color _successColor = Color(0xFF10B981);
   final Color _warningColor = Color(0xFFF59E0B);
@@ -389,7 +387,6 @@ class _RestockPageState extends State<RestockPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDesktop = MediaQuery.of(context).size.width >= 900;
 
     return Shortcuts(
       shortcuts: {
