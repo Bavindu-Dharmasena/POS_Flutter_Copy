@@ -55,15 +55,14 @@
 //---------------------------------------------------------------------
 
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 class DatabaseHelper {
   DatabaseHelper._internal();
   static final DatabaseHelper instance = DatabaseHelper._internal();
 
-  // ✅ Your requested names
   static const _dbName = 'pos.db';
   static const _dbVersion = 1;
 
@@ -76,14 +75,14 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDB() async {
-    final dir = await getApplicationDocumentsDirectory();
-    final dbPath = p.join(dir.path, _dbName);
+    // On web, the factory stores in IndexedDB and only needs a name.
+    // On mobile/desktop, use getDatabasesPath().
+    final String dbPath = kIsWeb ? _dbName : p.join(await getDatabasesPath(), _dbName);
 
     return await openDatabase(
       dbPath,
       version: _dbVersion,
       onConfigure: (db) async {
-        // Enable foreign keys
         await db.execute('PRAGMA foreign_keys = ON;');
       },
       onCreate: _onCreate,
@@ -92,7 +91,7 @@ class DatabaseHelper {
   }
 
   FutureOr<void> _onCreate(Database db, int version) async {
-    // -------- Root tables (no FKs) --------
+    // === keep your existing schema & seed exactly as you already wrote ===
     await db.execute('''
       CREATE TABLE user (
         id                 INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,7 +144,6 @@ class DatabaseHelper {
       );
     ''');
 
-    // -------- Dependent tables --------
     await db.execute('''
       CREATE TABLE item (
         id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -172,7 +170,6 @@ class DatabaseHelper {
         sell_price      REAL    NOT NULL,
         discount_amount REAL    NOT NULL DEFAULT 0,
         supplier_id     INTEGER NOT NULL,
-        -- optional: keep unique batches per item to avoid dup rows
         UNIQUE (batch_id, item_id),
         FOREIGN KEY (item_id)     REFERENCES item(id)     ON DELETE CASCADE ON UPDATE CASCADE,
         FOREIGN KEY (supplier_id) REFERENCES supplier(id) ON DELETE CASCADE ON UPDATE CASCADE
@@ -189,7 +186,6 @@ class DatabaseHelper {
       );
     ''');
 
-    // ✅ FIX: sale_invoice_id must reference sale(id) and be INTEGER
     await db.execute('''
       CREATE TABLE invoice (
         id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -239,7 +235,6 @@ class DatabaseHelper {
       );
     ''');
 
-    // Helpful indexes
     await db.execute('CREATE INDEX idx_item_category ON item(category_id);');
     await db.execute('CREATE INDEX idx_item_supplier ON item(supplier_id);');
     await db.execute('CREATE INDEX idx_stock_item ON stock(item_id);');
@@ -247,8 +242,7 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_sale_user ON sale(user_id);');
     await db.execute('CREATE INDEX idx_payment_user ON payment(user_id);');
 
-    // ----------- Seed data (order matters!) -----------
-    // 1) Supplier #1 (so FK inserts won’t fail)
+    // ---- seed (unchanged) ----
     final now = DateTime.now().millisecondsSinceEpoch;
     final supplierId1 = await db.insert('supplier', {
       'id': 1,
@@ -267,109 +261,25 @@ class DatabaseHelper {
       'updated_at': now,
     });
 
-    // 2) Categories
-    await db.insert('category', {
-      'id': 1,
-      'category': 'Beverages',
-      'color_code': '#FF5733',
-      'category_image': 'beverages.png',
-    });
-    await db.insert('category', {
-      'id': 2,
-      'category': 'Snacks',
-      'color_code': '#33FF57',
-      'category_image': 'snacks.png',
-    });
-    await db.insert('category', {
-      'id': 3,
-      'category': 'Stationery',
-      'color_code': '#3357FF',
-      'category_image': 'household.png',
-    });
+    await db.insert('category', {'id': 1, 'category': 'Beverages',  'color_code': '#FF5733', 'category_image': 'beverages.png'});
+    await db.insert('category', {'id': 2, 'category': 'Snacks',     'color_code': '#33FF57', 'category_image': 'snacks.png'});
+    await db.insert('category', {'id': 3, 'category': 'Stationery', 'color_code': '#3357FF', 'category_image': 'household.png'});
 
-    // 3) Items (reference category + supplier)
-    await db.insert('item', {
-      'id': 1,
-      'name': 'Coca Cola 500ml',
-      'barcode': 'BARC0001',
-      'category_id': 1,
-      'supplier_id': supplierId1, // 1
-      'color_code': '#FF0000',
-    });
-    await db.insert('item', {
-      'id': 2,
-      'name': 'Potato Chips 100g',
-      'barcode': 'BARC0002',
-      'category_id': 2,
-      'supplier_id': supplierId1,
-      'color_code': '#FFD700',
-    });
-    await db.insert('item', {
-      'id': 3,
-      'name': 'A4 Paper Ream',
-      'barcode': 'BARC0003',
-      'category_id': 3,
-      'supplier_id': supplierId1,
-      'color_code': '#FFFFFF',
-    });
+    await db.insert('item', {'id': 1, 'name': 'Coca Cola 500ml',     'barcode': 'BARC0001', 'category_id': 1, 'supplier_id': supplierId1, 'color_code': '#FF0000'});
+    await db.insert('item', {'id': 2, 'name': 'Potato Chips 100g',   'barcode': 'BARC0002', 'category_id': 2, 'supplier_id': supplierId1, 'color_code': '#FFD700'});
+    await db.insert('item', {'id': 3, 'name': 'A4 Paper Ream',       'barcode': 'BARC0003', 'category_id': 3, 'supplier_id': supplierId1, 'color_code': '#FFFFFF'});
 
-    // 4) Stock batches (reference item + supplier)
-    await db.insert('stock', {
-      'batch_id': 'BATCH-COCA-002',
-      'item_id': 1,
-      'quantity': 100,
-      'unit_price': 50,
-      'sell_price': 65,
-      'discount_amount': 0,
-      'supplier_id': supplierId1,
-    });
-    await db.insert('stock', {
-      'batch_id': 'BATCH-CHIPS-001',
-      'item_id': 2,
-      'quantity': 200,
-      'unit_price': 80,
-      'sell_price': 100,
-      'discount_amount': 0,
-      'supplier_id': supplierId1,
-    });
-    await db.insert('stock', {
-      'batch_id': 'BATCH-CHIPS-002',
-      'item_id': 2,
-      'quantity': 200,
-      'unit_price': 80,
-      'sell_price': 100,
-      'discount_amount': 0,
-      'supplier_id': supplierId1,
-    });
-    await db.insert('stock', {
-      'batch_id': 'BATCH-PAPER-001',
-      'item_id': 3,
-      'quantity': 50,
-      'unit_price': 400,
-      'sell_price': 480,
-      'discount_amount': 0,
-      'supplier_id': supplierId1,
-    });
-    await db.insert('stock', {
-      'batch_id': 'BATCH-PAPER-002',
-      'item_id': 3,
-      'quantity': 50,
-      'unit_price': 400,
-      'sell_price': 480,
-      'discount_amount': 0,
-      'supplier_id': supplierId1,
-    });
+    await db.insert('stock', {'batch_id': 'BATCH-COCA-002', 'item_id': 1, 'quantity': 100, 'unit_price': 50,  'sell_price': 65,  'discount_amount': 0, 'supplier_id': supplierId1});
+    await db.insert('stock', {'batch_id': 'BATCH-CHIPS-001','item_id': 2, 'quantity': 200, 'unit_price': 80,  'sell_price': 100, 'discount_amount': 0, 'supplier_id': supplierId1});
+    await db.insert('stock', {'batch_id': 'BATCH-CHIPS-002','item_id': 2, 'quantity': 200, 'unit_price': 80,  'sell_price': 100, 'discount_amount': 0, 'supplier_id': supplierId1});
+    await db.insert('stock', {'batch_id': 'BATCH-PAPER-001','item_id': 3, 'quantity': 50,  'unit_price': 400, 'sell_price': 480, 'discount_amount': 0, 'supplier_id': supplierId1});
+    await db.insert('stock', {'batch_id': 'BATCH-PAPER-002','item_id': 3, 'quantity': 50,  'unit_price': 400, 'sell_price': 480, 'discount_amount': 0, 'supplier_id': supplierId1});
   }
 
   FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Add ALTER TABLE migrations here when bumping _dbVersion
-    // Example when you go to v2:
-    // if (oldVersion < 2) {
-    //   await db.execute('ALTER TABLE invoice ADD COLUMN ...');
-    // }
+    // migrations go here when you bump _dbVersion
   }
 
-  // Utility to wrap writes in a transaction
   Future<T> runInTransaction<T>(Future<T> Function(Transaction tx) action) async {
     final db = await database;
     return db.transaction<T>(action);
