@@ -1,59 +1,3 @@
-// import 'dart:async';
-// import 'package:path/path.dart' as p;
-// import 'package:path_provider/path_provider.dart';
-// import 'package:sqflite/sqflite.dart';
-
-// class DatabaseHelper {
-//   DatabaseHelper._internal();
-//   static final DatabaseHelper instance = DatabaseHelper._internal();
-
-//   static const _dbName = 'app.db';
-//   static const _dbVersion = 1;
-
-//   Database? _db;
-
-//   Future<Database> get database async {
-//     if (_db != null) return _db!;
-//     _db = await _initDB();
-//     return _db!;
-//   }
-
-//   Future<Database> _initDB() async {
-//     final dir = await getApplicationDocumentsDirectory();
-//     final dbPath = p.join(dir.path, _dbName);
-
-//     return await openDatabase(
-//       dbPath,
-//       version: _dbVersion,
-//       onCreate: _onCreate,
-//       onConfigure: (db) async {
-//         await db.execute('PRAGMA foreign_keys = ON');
-//       },
-//     );
-//   }
-
-//   FutureOr<void> _onCreate(Database db, int version) async {
-//     await db.execute('''
-//       CREATE TABLE todos (
-//         id INTEGER PRIMARY KEY AUTOINCREMENT,
-//         title TEXT NOT NULL,
-//         description TEXT,
-//         is_done INTEGER NOT NULL DEFAULT 0,
-//         created_at INTEGER NOT NULL
-//       );
-//     ''');
-//     // Seed example
-//     await db.insert('todos', {
-//       'title': 'Welcome to SQLite CRUD',
-//       'description': 'Tap to edit, swipe to delete, check to complete.',
-//       'is_done': 0,
-//       'created_at': DateTime.now().millisecondsSinceEpoch,
-//     });
-//   }
-// }
-
-//---------------------------------------------------------------------
-
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
@@ -64,34 +8,24 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._internal();
 
   static const _dbName = 'pos.db';
-  static const _dbVersion = 1;
+  // Bump version if you change schema
+  static const _dbVersion = 2;
 
   Database? _db;
-
-  Future<Database> get database async {
-    if (_db != null) return _db!;
-    _db = await _initDB();
-    return _db!;
-  }
+  Future<Database> get database async => _db ??= await _initDB();
 
   Future<Database> _initDB() async {
-    // On web, the factory stores in IndexedDB and only needs a name.
-    // On mobile/desktop, use getDatabasesPath().
     final String dbPath = kIsWeb ? _dbName : p.join(await getDatabasesPath(), _dbName);
-
-    return await openDatabase(
+    return openDatabase(
       dbPath,
       version: _dbVersion,
-      onConfigure: (db) async {
-        await db.execute('PRAGMA foreign_keys = ON;');
-      },
+      onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON;'),
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
   }
 
   FutureOr<void> _onCreate(Database db, int version) async {
-    // === keep your existing schema & seed exactly as you already wrote ===
     await db.execute('''
       CREATE TABLE user (
         id                 INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,8 +33,7 @@ class DatabaseHelper {
         email              TEXT    NOT NULL UNIQUE,
         contact            TEXT    NOT NULL,
         password           TEXT    NOT NULL,
-        role               TEXT    NOT NULL DEFAULT 'Cashier'
-                                 CHECK (role IN ('Admin','Manager','Cashier','StockKeeper')),
+        role               TEXT    NOT NULL DEFAULT 'Cashier' CHECK (role IN ('Admin','Manager','Cashier','StockKeeper')),
         color_code         TEXT    NOT NULL DEFAULT '#000000',
         created_at         INTEGER NOT NULL,
         updated_at         INTEGER NOT NULL,
@@ -126,7 +59,7 @@ class DatabaseHelper {
         brand          TEXT    NOT NULL,
         color_code     TEXT    NOT NULL DEFAULT '#000000',
         location       TEXT    NOT NULL,
-        status         TEXT    CHECK (status IN ('ACTIVE','INACTIVE','PENDING')),
+        status         TEXT    CHECK (status IN ('ACTIVE','INACTIVE','PENDING')) DEFAULT 'ACTIVE',
         preferred      INTEGER NOT NULL DEFAULT 0,
         payment_terms  TEXT,
         notes          TEXT,
@@ -135,6 +68,7 @@ class DatabaseHelper {
       );
     ''');
 
+    // Keep the rest of your tables if needed by other pages (safe defaults; no crashing seeds)
     await db.execute('''
       CREATE TABLE category (
         id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -235,49 +169,11 @@ class DatabaseHelper {
       );
     ''');
 
-    await db.execute('CREATE INDEX idx_item_category ON item(category_id);');
-    await db.execute('CREATE INDEX idx_item_supplier ON item(supplier_id);');
-    await db.execute('CREATE INDEX idx_stock_item ON stock(item_id);');
-    await db.execute('CREATE INDEX idx_stock_supplier ON stock(supplier_id);');
-    await db.execute('CREATE INDEX idx_sale_user ON sale(user_id);');
-    await db.execute('CREATE INDEX idx_payment_user ON payment(user_id);');
-
-    // ---- seed (unchanged) ----
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final supplierId1 = await db.insert('supplier', {
-      'id': 1,
-      'name': 'Default Supplier',
-      'contact': '+94 77 000 0000',
-      'email': 'supplier@demo.lk',
-      'address': 'Colombo',
-      'brand': 'Generic',
-      'color_code': '#000000',
-      'location': 'LK',
-      'status': 'ACTIVE',
-      'preferred': 1,
-      'payment_terms': 'NET 30',
-      'notes': 'Seed supplier',
-      'created_at': now,
-      'updated_at': now,
-    });
-
-    await db.insert('category', {'id': 1, 'category': 'Beverages',  'color_code': '#FF5733', 'category_image': 'beverages.png'});
-    await db.insert('category', {'id': 2, 'category': 'Snacks',     'color_code': '#33FF57', 'category_image': 'snacks.png'});
-    await db.insert('category', {'id': 3, 'category': 'Stationery', 'color_code': '#3357FF', 'category_image': 'household.png'});
-
-    await db.insert('item', {'id': 1, 'name': 'Coca Cola 500ml',     'barcode': 'BARC0001', 'category_id': 1, 'supplier_id': supplierId1, 'color_code': '#FF0000'});
-    await db.insert('item', {'id': 2, 'name': 'Potato Chips 100g',   'barcode': 'BARC0002', 'category_id': 2, 'supplier_id': supplierId1, 'color_code': '#FFD700'});
-    await db.insert('item', {'id': 3, 'name': 'A4 Paper Ream',       'barcode': 'BARC0003', 'category_id': 3, 'supplier_id': supplierId1, 'color_code': '#FFFFFF'});
-
-    await db.insert('stock', {'batch_id': 'BATCH-COCA-002', 'item_id': 1, 'quantity': 100, 'unit_price': 50,  'sell_price': 65,  'discount_amount': 0, 'supplier_id': supplierId1});
-    await db.insert('stock', {'batch_id': 'BATCH-CHIPS-001','item_id': 2, 'quantity': 200, 'unit_price': 80,  'sell_price': 100, 'discount_amount': 0, 'supplier_id': supplierId1});
-    await db.insert('stock', {'batch_id': 'BATCH-CHIPS-002','item_id': 2, 'quantity': 200, 'unit_price': 80,  'sell_price': 100, 'discount_amount': 0, 'supplier_id': supplierId1});
-    await db.insert('stock', {'batch_id': 'BATCH-PAPER-001','item_id': 3, 'quantity': 50,  'unit_price': 400, 'sell_price': 480, 'discount_amount': 0, 'supplier_id': supplierId1});
-    await db.insert('stock', {'batch_id': 'BATCH-PAPER-002','item_id': 3, 'quantity': 50,  'unit_price': 400, 'sell_price': 480, 'discount_amount': 0, 'supplier_id': supplierId1});
+    // No image-based seeds here (avoids asset-missing crashes).
   }
 
   FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // migrations go here when you bump _dbVersion
+    // Add migrations here when you bump versions.
   }
 
   Future<T> runInTransaction<T>(Future<T> Function(Transaction tx) action) async {

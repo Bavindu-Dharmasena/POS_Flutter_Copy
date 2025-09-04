@@ -1,23 +1,22 @@
-// lib/data/models/stockkeeper/supplier_model.dart
 import 'package:flutter/material.dart';
 
-class SupplierModel {
+class Supplier {
   final int? id;
   final String name;
   final String contact;
   final String? email;
   final String? address;
   final String brand;
-  final String colorCode; // HEX like "#000000"
+  final String colorCode;      // HEX like "#3B82F6"
   final String location;
-  final String status; // 'ACTIVE' | 'INACTIVE' | 'PENDING'
-  final bool preferred; // stored as 0/1 in DB
-  final String? paymentTerms; // 'CASH', 'NET 7', 'NET 15', 'NET 30', 'NET 60'
+  final String status;         // 'ACTIVE' | 'INACTIVE' | 'PENDING'
+  final bool preferred;        // stored as 0/1 in DB
+  final String? paymentTerms;  // 'CASH', 'NET 7', 'NET 15', 'NET 30', 'NET 60'
   final String? notes;
-  final int createdAt; // msSinceEpoch
-  final int updatedAt; // msSinceEpoch
+  final int createdAt;         // msSinceEpoch
+  final int updatedAt;         // msSinceEpoch
 
-  const SupplierModel({
+  const Supplier({
     this.id,
     required this.name,
     required this.contact,
@@ -34,7 +33,7 @@ class SupplierModel {
     required this.updatedAt,
   });
 
-  SupplierModel copyWith({
+  Supplier copyWith({
     int? id,
     String? name,
     String? contact,
@@ -50,7 +49,7 @@ class SupplierModel {
     int? createdAt,
     int? updatedAt,
   }) {
-    return SupplierModel(
+    return Supplier(
       id: id ?? this.id,
       name: name ?? this.name,
       contact: contact ?? this.contact,
@@ -68,7 +67,7 @@ class SupplierModel {
     );
   }
 
-  factory SupplierModel.fromMap(Map<String, Object?> m) => SupplierModel(
+  factory Supplier.fromMap(Map<String, Object?> m) => Supplier(
         id: m['id'] as int?,
         name: (m['name'] ?? '') as String,
         contact: (m['contact'] ?? '') as String,
@@ -102,7 +101,7 @@ class SupplierModel {
         'updated_at': updatedAt,
       };
 
-  /// Optional adapter for your SupplierCard (Map-based UI)
+  /// Helper for your SupplierCard (Map-based)
   Map<String, dynamic> toUiCard() => {
         'id': (id ?? '').toString(),
         'name': name,

@@ -1,6 +1,6 @@
-// lib/data/models/stockkeeper/supplier_model.dart
 import 'package:flutter/material.dart';
 
+/// Full model matching your `supplier` table.
 class SupplierModel {
   final int? id;
   final String name;
@@ -85,6 +85,7 @@ class SupplierModel {
         updatedAt: (m['updated_at'] as int?) ?? DateTime.now().millisecondsSinceEpoch,
       );
 
+  /// ✅ This is the method your repo needs.
   Map<String, Object?> toMap() => {
         'id': id,
         'name': name,
@@ -102,7 +103,7 @@ class SupplierModel {
         'updated_at': updatedAt,
       };
 
-  /// Optional adapter for your SupplierCard (Map-based UI)
+  /// Adapter for your existing SupplierCard widget (expects a Map).
   Map<String, dynamic> toUiCard() => {
         'id': (id ?? '').toString(),
         'name': name,
@@ -117,7 +118,6 @@ class SupplierModel {
                 ? 'Inactive'
                 : 'Pending',
         'color': _hexToColor(colorCode),
-        '_raw': toMap(),
       };
 
   static Color _hexToColor(String hex) {
