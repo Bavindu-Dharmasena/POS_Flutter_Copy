@@ -55,6 +55,8 @@
 //---------------------------------------------------------------------
 
 import 'dart:async';
+import 'dart:convert';                 // ADDED: for utf8 (hashing)
+import 'package:crypto/crypto.dart';   // ADDED: for sha256
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
@@ -107,6 +109,60 @@ class DatabaseHelper {
         refresh_token_hash TEXT
       );
     ''');
+
+    // ---- ADDED: seed default users (hashed passwords) ----
+    {
+      final nowUsers = DateTime.now().millisecondsSinceEpoch;
+      String hash(String s) => sha256.convert(utf8.encode(s)).toString();
+
+      final defaultUsers = [
+        {
+          'name': 'Sadeep Chathushan',
+          'email': 'sadeep@aasa.lk',
+          'contact': '+94 77 000 0001',
+          'password': hash('Admin@123'),
+          'role': 'Admin',
+          'color_code': '#7C3AED',
+          'created_at': nowUsers,
+          'updated_at': nowUsers,
+        },
+        {
+          'name': 'Hansima Perera',
+          'email': 'hansima@aasa.lk',
+          'contact': '+94 77 000 0002',
+          'password': hash('Manager@123'),
+          'role': 'Manager',
+          'color_code': '#0EA5E9',
+          'created_at': nowUsers,
+          'updated_at': nowUsers,
+        },
+        {
+          'name': 'Achintha Silva',
+          'email': 'achintha@aasa.lk',
+          'contact': '+94 77 000 0003',
+          'password': hash('Cashier@123'),
+          'role': 'Cashier',
+          'color_code': '#10B981',
+          'created_at': nowUsers,
+          'updated_at': nowUsers,
+        },
+        {
+          'name': 'Insaf Imran',
+          'email': 'insaf@aasa.lk',
+          'contact': '+94 77 000 0004',
+          'password': hash('Stock@123'),
+          'role': 'StockKeeper',
+          'color_code': '#F59E0B',
+          'created_at': nowUsers,
+          'updated_at': nowUsers,
+        },
+      ];
+
+      for (final u in defaultUsers) {
+        await db.insert('user', u);
+      }
+    }
+    // ---- END users seed ----
 
     await db.execute('''
       CREATE TABLE customer (

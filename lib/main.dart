@@ -53,9 +53,10 @@
 //     );
 //   }
 // }
-
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -72,9 +73,11 @@ Future<void> main() async {
   if (kIsWeb) {
     databaseFactory = databaseFactoryFfiWeb; // uses IndexedDB under the hood
   } else if (defaultTargetPlatform == TargetPlatform.windows ||
-             defaultTargetPlatform == TargetPlatform.linux) {
+      defaultTargetPlatform == TargetPlatform.linux||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+    
     sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;    // desktop (Windows/Linux)
+    databaseFactory = databaseFactoryFfi; // desktop (Windows/Linux)
   }
   // Android/iOS/macOS: use default sqflite factory (no changes)
 
@@ -106,17 +109,23 @@ class App extends StatelessWidget {
           theme: ThemeData(
             useMaterial3: true,
             colorSchemeSeed: Colors.indigo,
-            inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+            ),
             brightness: Brightness.light,
           ),
           darkTheme: ThemeData(
             useMaterial3: true,
             colorSchemeSeed: Colors.indigo,
-            inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+            ),
             brightness: Brightness.dark,
           ),
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaleFactor: settings.textScaleFactor),
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaleFactor: settings.textScaleFactor),
             child: child!,
           ),
           home: const SplashScreen(),
