@@ -54,17 +54,31 @@
 //   }
 // }
 
-
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 
+import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+
+import 'package:provider/provider.dart';
 import '../features/stockkeeper/settings/settings_provider.dart';
 import '../features/splashscreen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Create + preload persisted settings
+  // ---- sqflite factory per platform ----
+  if (kIsWeb) {
+    databaseFactory = databaseFactoryFfiWeb; // uses IndexedDB under the hood
+  } else if (defaultTargetPlatform == TargetPlatform.windows ||
+             defaultTargetPlatform == TargetPlatform.linux) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;    // desktop (Windows/Linux)
+  }
+  // Android/iOS/macOS: use default sqflite factory (no changes)
+
+  // ---- Settings provider ----
   final settings = SettingsController();
   await settings.load();
 
@@ -83,37 +97,29 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Rebuild MaterialApp when settings change
     return Consumer<SettingsController>(
       builder: (context, settings, _) {
         return MaterialApp(
           title: 'Flutter SQLite CRUD',
           debugShowCheckedModeBanner: false,
-          themeMode: settings.themeMode, // light/dark from SettingsController
+          themeMode: settings.themeMode,
           theme: ThemeData(
             useMaterial3: true,
             colorSchemeSeed: Colors.indigo,
-            inputDecorationTheme: const InputDecorationTheme(
-              border: OutlineInputBorder(),
-            ),
+            inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
             brightness: Brightness.light,
           ),
           darkTheme: ThemeData(
             useMaterial3: true,
             colorSchemeSeed: Colors.indigo,
-            inputDecorationTheme: const InputDecorationTheme(
-              border: OutlineInputBorder(),
-            ),
+            inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
             brightness: Brightness.dark,
           ),
-          // Apply global text scaling from settings
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              textScaleFactor: settings.textScaleFactor,
-            ),
+            data: MediaQuery.of(context).copyWith(textScaleFactor: settings.textScaleFactor),
             child: child!,
           ),
-          home: const SplashScreen(), // your existing splash → pushes to pages later
+          home: const SplashScreen(),
         );
       },
     );
