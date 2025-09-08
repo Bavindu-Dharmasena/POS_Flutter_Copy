@@ -154,27 +154,41 @@ class _UserManagementPasswordChangePageState
 
   // --------------------------------- Submit ----------------------------------
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    try {
-      final ok = await _repo.changePasswordByEmail(
-        email: _emailCtrl.text.trim(),
-        newPassword: _newPwdCtrl.text.trim(),
-      );
+  try {
+    final result = await _repo.changePasswordByEmail(
+      email: _emailCtrl.text.trim(),
+      newPassword: _newPwdCtrl.text.trim(),
+    );
+
+    // 👇👇 add these debug prints/snackbar to verify
+    debugPrint('Password change for ${result.email}: '
+        'matchedRows=${result.matchedRows}\n'
+        'before=${result.beforeHash}\n'
+        'after=${result.afterHash}\n'
+        'expected=${result.expectedHash}');
+    if (result.matchedRows == 0) {
       if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No user found for that email')),
+      );
+      return;
+    }
+    if (result.afterHash != result.expectedHash) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Warning: stored hash didn\'t match expected')),
+      );
+    }
 
-      if (!ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No user found for that email')),
-        );
-        return;
-      }
-
-      showDialog(
-        context: context,
-        builder: (c) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Container(
+    if (!mounted) return;
+    // your success dialog (unchanged)
+    showDialog(
+      context: context,
+      builder: (c) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
@@ -182,57 +196,21 @@ class _UserManagementPasswordChangePageState
                 colors: [Colors.white, Colors.grey[50]!],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-              ),
+      ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.10),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.green.withOpacity(0.20)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.check_circle, color: Colors.green),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Password changed successfully for ${_emailCtrl.text.trim()}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                FilledButton(
-                  onPressed: () => Navigator.of(c).pop(),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.deepPurple,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Done'),
-                ),
-              ],
-            ),
-          ),
         ),
-      );
-    } catch (e, st) {
-      debugPrint('changePassword error: $e\n$st');
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error changing password')),
-      );
-    }
+      ),
+    );
+
+  } catch (e, st) {
+    debugPrint('changePassword error: $e\n$st');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Error changing password')),
+    );
   }
+}
+
 
   // ----------------------------------- UI ------------------------------------
   @override
