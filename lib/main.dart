@@ -53,10 +53,16 @@
 //     );
 //   }
 // }
-import 'dart:io' show Platform;
+
+// lib/features/splashscreen.dart
+// lib/main.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/services.dart';
+
+import 'dart:io' show Platform;
+
 
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -69,30 +75,48 @@ import '../features/splashscreen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ---- sqflite factory per platform ----
+  // Show all errors
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.dumpErrorToConsole(details);
+    Zone.current.handleUncaughtError(details.exception, details.stack ?? StackTrace.current);
+  };
+  // ✅ Use the binding's dispatcher (works cross-platform)
+  WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
+    debugPrint('UNCAUGHT (PlatformDispatcher): $error\n$stack');
+    return true;
+  };
+
+  // sqflite factory per platform
   if (kIsWeb) {
-    databaseFactory = databaseFactoryFfiWeb; // uses IndexedDB under the hood
+    databaseFactory = databaseFactoryFfiWeb;
   } else if (defaultTargetPlatform == TargetPlatform.windows ||
       defaultTargetPlatform == TargetPlatform.linux||
         defaultTargetPlatform == TargetPlatform.macOS) {
     
     sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi; // desktop (Windows/Linux)
-  }
-  // Android/iOS/macOS: use default sqflite factory (no changes)
 
-  // ---- Settings provider ----
+    databaseFactory = databaseFactoryFfi; // desktop (Windows/Linux)
+
+  }
+  // Android/iOS/macOS -> default sqflite
+
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
   final settings = SettingsController();
   await settings.load();
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider<SettingsController>.value(value: settings),
-      ],
-      child: const App(),
-    ),
-  );
+  runZonedGuarded(() {
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsController>.value(value: settings),
+        ],
+        child: const App(),
+      ),
+    );
+  }, (error, stack) {
+    debugPrint('UNCAUGHT (Zone): $error\n$stack');
+  });
 }
 
 class App extends StatelessWidget {
