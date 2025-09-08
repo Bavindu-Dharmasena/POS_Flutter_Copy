@@ -21,6 +21,31 @@ class ItemModel {
     required this.colorCode,
   });
 
+  // ✅ Needed by your repository (create -> copyWith(id))
+  ItemModel copyWith({
+    int? id,
+    String? name,
+    String? barcode,
+    int? categoryId,
+    int? supplierId,
+    int? reorderLevel,
+    String? gradient,
+    String? remark,
+    String? colorCode,
+  }) {
+    return ItemModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      barcode: barcode ?? this.barcode,
+      categoryId: categoryId ?? this.categoryId,
+      supplierId: supplierId ?? this.supplierId,
+      reorderLevel: reorderLevel ?? this.reorderLevel,
+      gradient: gradient ?? this.gradient,
+      remark: remark ?? this.remark,
+      colorCode: colorCode ?? this.colorCode,
+    );
+  }
+
   factory ItemModel.fromMap(Map<String, Object?> m) => ItemModel(
         id: m['id'] as int?,
         name: m['name'] as String,
