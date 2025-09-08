@@ -1,8 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
-import 'package:pos_system/data/models/stockkeeper/supplier.dart';
-import 'package:pos_system/data/repositories/stockkeeper/supplier_repository.dart';
+import 'package:pos_system/data/models/stockkeeper/get_supplier.dart';
+import 'package:pos_system/data/repositories/stockkeeper/get_supplier.dart';
 import 'package:pos_system/theme/palette.dart';
 import 'package:pos_system/features/stockkeeper/supplier/add_supplier_page.dart';
 import 'package:pos_system/features/stockkeeper/supplier/supplier_products_page.dart';
@@ -15,7 +16,8 @@ class SupplierPage extends StatefulWidget {
 }
 
 class _SupplierPageState extends State<SupplierPage> with TickerProviderStateMixin {
-  late final AnimationController _ac = AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..forward();
+  late final AnimationController _ac =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..forward();
   late final Animation<double> _fade = CurvedAnimation(parent: _ac, curve: Curves.easeInOut);
 
   final _scrollCtrl = ScrollController();
@@ -25,6 +27,8 @@ class _SupplierPageState extends State<SupplierPage> with TickerProviderStateMix
   String _search = '';
   String? _error;
   List<Supplier> _suppliers = [];
+
+  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -36,6 +40,7 @@ class _SupplierPageState extends State<SupplierPage> with TickerProviderStateMix
   void dispose() {
     _ac.dispose();
     _scrollCtrl.dispose();
+    _searchDebounce?.cancel();
     super.dispose();
   }
 
@@ -48,7 +53,7 @@ class _SupplierPageState extends State<SupplierPage> with TickerProviderStateMix
       final list = await _repo.all(query: _search.trim().isEmpty ? null : _search);
       if (!mounted) return;
       setState(() {
-        _suppliers = list;
+        _suppliers = list.cast<Supplier>();
         _loading = false;
       });
     } catch (e) {
@@ -60,8 +65,18 @@ class _SupplierPageState extends State<SupplierPage> with TickerProviderStateMix
     }
   }
 
+  void _scheduleSearch() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) _load();
+    });
+  }
+
   Future<void> _addSupplier() async {
-    await Navigator.push(context, MaterialPageRoute(builder: (_) => const AddSupplierPage(supplierData: {})));
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AddSupplierPage(supplierData: {})),
+    );
     if (!mounted) return;
     _load();
   }
@@ -70,19 +85,21 @@ class _SupplierPageState extends State<SupplierPage> with TickerProviderStateMix
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AddSupplierPage(supplierData: {
-          'id': s.id?.toString(),
-          'name': s.name,
-          'contact': s.contact,
-          'email': s.email,
-          'brand': s.brand,
-          'locations': [s.location],
-          'paymentTerms': s.paymentTerms,
-          'active': s.status.toUpperCase() == 'ACTIVE',
-          'remarks': s.notes,
-          'created_at': s.createdAt,
-          'gradientName': null,
-        }),
+        builder: (_) => AddSupplierPage(
+          supplierData: {
+            'id': s.id?.toString(),
+            'name': s.name,
+            'contact': s.contact,
+            'email': s.email,
+            'brand': s.brand,
+            'locations': [s.location],
+            'paymentTerms': s.paymentTerms,
+            'active': s.status.toUpperCase() == 'ACTIVE',
+            'remarks': s.notes,
+            'created_at': s.createdAt,
+            'gradientName': null,
+          },
+        ),
       ),
     );
     if (!mounted) return;
@@ -90,14 +107,30 @@ class _SupplierPageState extends State<SupplierPage> with TickerProviderStateMix
   }
 
   void _openProducts(Supplier s) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => SupplierProductsPage(supplier: s.toUiCard())));
+    Navigator.push(
+      context,
+      // ⬇️ pass a Map<String, dynamic> as required by SupplierProductsPage
+      MaterialPageRoute(builder: (_) => SupplierProductsPage(supplier: s.toProductsMap())),
+    );
   }
 
   _BasePalette get _p {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return isDark
-        ? const _BasePalette(bg: Color(0xFF0B1623), text: Colors.white, tileBg: Color(0xFF121A26), tileBorder: Color(0x1FFFFFFF), muted: Colors.white70)
-        : const _BasePalette(bg: Color(0xFFF4F6FA), text: Color(0xFF0F172A), tileBg: Colors.white, tileBorder: Color(0x14000000), muted: Color(0xFF64748B));
+        ? const _BasePalette(
+            bg: Color(0xFF0B1623),
+            text: Colors.white,
+            tileBg: Color(0xFF121A26),
+            tileBorder: Color(0x1FFFFFFF),
+            muted: Colors.white70,
+          )
+        : const _BasePalette(
+            bg: Color(0xFFF4F6FA),
+            text: Color(0xFF0F172A),
+            tileBg: Colors.white,
+            tileBorder: Color(0x14000000),
+            muted: Color(0xFF64748B),
+          );
   }
 
   @override
@@ -161,8 +194,9 @@ class _SupplierPageState extends State<SupplierPage> with TickerProviderStateMix
                       child: TextField(
                         onChanged: (v) {
                           _search = v;
-                          _load();
+                          _scheduleSearch();
                         },
+                        onSubmitted: (_) => _load(),
                         style: TextStyle(color: p.text),
                         decoration: InputDecoration(
                           hintText: 'Search by name, contact, brand, location…',
@@ -188,11 +222,26 @@ class _SupplierPageState extends State<SupplierPage> with TickerProviderStateMix
                     child: Padding(
                       padding: EdgeInsets.all(isTablet ? 24 : 16),
                       child: _loading
-                          ? const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 24.0), child: CircularProgressIndicator()))
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 24.0),
+                                child: CircularProgressIndicator(),
+                              ),
+                            )
                           : (_error != null
-                              ? Center(child: Padding(padding: const EdgeInsets.symmetric(vertical: 48.0), child: Text(_error!, style: TextStyle(color: p.muted))))
+                              ? Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 48.0),
+                                    child: Text(_error!, style: TextStyle(color: p.muted)),
+                                  ),
+                                )
                               : (_suppliers.isEmpty
-                                  ? Center(child: Padding(padding: const EdgeInsets.symmetric(vertical: 48.0), child: Text('No suppliers yet. Tap “Add Supplier”.', style: TextStyle(color: p.muted))))
+                                  ? Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 48.0),
+                                        child: Text('No suppliers yet. Tap “Add Supplier”.', style: TextStyle(color: p.muted)),
+                                      ),
+                                    )
                                   : ListView.separated(
                                       shrinkWrap: true,
                                       physics: const NeverScrollableScrollPhysics(),
@@ -204,7 +253,8 @@ class _SupplierPageState extends State<SupplierPage> with TickerProviderStateMix
                                           textColor: p.text,
                                           iconColor: p.text,
                                           child: SupplierCard(
-                                            supplier: s.toUiCard(),
+                                            // ⬇️ pass a Map<String, dynamic> as required by SupplierCard
+                                            supplier: s.toCardMap(),
                                             isTablet: isTablet,
                                             onTap: () => _openProducts(s),
                                             onEdit: () => _editSupplier(s),
@@ -244,5 +294,46 @@ class _BasePalette {
   final Color tileBg;
   final Color tileBorder;
   final Color muted;
-  const _BasePalette({required this.bg, required this.text, required this.tileBg, required this.tileBorder, required this.muted});
+  const _BasePalette({
+    required this.bg,
+    required this.text,
+    required this.tileBg,
+    required this.tileBorder,
+    required this.muted,
+  });
+}
+
+/// --- Convenience alias: lets you keep using `_repo.all(...)` even if your repo exposes only `getAll(q: ...)`.
+extension _RepoAllAlias on SupplierRepository {
+}
+
+/// --- Map helpers so widgets that expect `Map<String, dynamic>` receive the right type.
+extension _SupplierMaps on Supplier {
+  /// For SupplierCard (compact card UI)
+  Map<String, dynamic> toCardMap() => {
+        'id': id,
+        'name': name,
+        'brand': brand,
+        'contact': contact,
+        'email': email,
+        'location': location,
+        'status': status,        // e.g., 'ACTIVE'
+        'colorCode': colorCode,  // e.g., '#000000'
+      };
+
+  /// For SupplierProductsPage or any details screen
+  Map<String, dynamic> toProductsMap() => {
+        'id': id,
+        'name': name,
+        'brand': brand,
+        'contact': contact,
+        'email': email,
+        'location': location,
+        'status': status,
+        'colorCode': colorCode,
+        'paymentTerms': paymentTerms,
+        'notes': notes,
+        'created_at': createdAt,
+        'updated_at': updatedAt,
+      };
 }

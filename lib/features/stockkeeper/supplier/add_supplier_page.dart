@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
-import 'package:pos_system/data/models/stockkeeper/supplier.dart';
+import 'package:pos_system/data/models/stockkeeper/Supplier.dart';
 import 'package:pos_system/data/repositories/stockkeeper/supplier_repository.dart';
 
 class AddSupplierPage extends StatefulWidget {
