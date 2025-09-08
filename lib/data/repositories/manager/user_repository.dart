@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
-import 'package:pos_system/data/db/database_helper.dart';
 import 'package:sqflite/sqflite.dart';
+import '../../db/database_helper.dart';
 
 class UserRepository {
   final Future<Database> _db = DatabaseHelper.instance.database;
 
-  /// Return minimal user rows your screen needs.
   Future<List<UserRow>> listUsers() async {
     final db = await _db;
     final rows = await db.rawQuery('''
@@ -17,12 +16,27 @@ class UserRepository {
     return rows.map((m) => UserRow.fromMap(m)).toList();
   }
 
-  /// Change password (SHA-256) by email. Returns true if updated.
-  Future<bool> changePasswordByEmail({
+  /// Returns the stored password hash (or null if no user/email).
+  Future<String?> getPasswordHashByEmail(String email) async {
+    final db = await _db;
+    final rows = await db.rawQuery(
+      'SELECT password FROM user WHERE email = ?',
+      [email.trim()],
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['password'] as String?;
+  }
+
+  /// Change password by email (SHA-256). Returns detailed result.
+  Future<PasswordChangeResult> changePasswordByEmail({
     required String email,
     required String newPassword,
   }) async {
     final db = await _db;
+    final trimmed = email.trim();
+
+    final before = await getPasswordHashByEmail(trimmed);
+
     final now = DateTime.now().millisecondsSinceEpoch;
     final hashed = sha256.convert(utf8.encode(newPassword)).toString();
 
@@ -30,11 +44,35 @@ class UserRepository {
       'user',
       {'password': hashed, 'updated_at': now},
       where: 'email = ?',
-      whereArgs: [email.trim()],
+      whereArgs: [trimmed],
       conflictAlgorithm: ConflictAlgorithm.abort,
     );
-    return count > 0;
+
+    final after = await getPasswordHashByEmail(trimmed);
+
+    return PasswordChangeResult(
+      matchedRows: count,
+      beforeHash: before,
+      afterHash: after,
+      expectedHash: hashed,
+      email: trimmed,
+    );
   }
+}
+
+class PasswordChangeResult {
+  final int matchedRows; // 0 if email not found
+  final String? beforeHash; // stored before update
+  final String? afterHash; // stored after update
+  final String expectedHash; // the hash we wrote
+  final String email;
+  const PasswordChangeResult({
+    required this.matchedRows,
+    required this.beforeHash,
+    required this.afterHash,
+    required this.expectedHash,
+    required this.email,
+  });
 }
 
 class UserRow {
@@ -53,10 +91,10 @@ class UserRow {
   });
 
   factory UserRow.fromMap(Map<String, Object?> m) => UserRow(
-        name: (m['name'] as String?) ?? '',
-        email: (m['email'] as String?) ?? '',
-        role: (m['role'] as String?) ?? 'Cashier',
-        colorCode: (m['color_code'] as String?) ?? '#7C3AED',
-        createdAt: (m['created_at'] as int?) ?? 0,
-      );
+    name: (m['name'] as String?) ?? '',
+    email: (m['email'] as String?) ?? '',
+    role: (m['role'] as String?) ?? 'Cashier',
+    colorCode: (m['color_code'] as String?) ?? '#7C3AED',
+    createdAt: (m['created_at'] as int?) ?? 0,
+  );
 }
