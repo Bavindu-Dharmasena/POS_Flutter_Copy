@@ -53,29 +53,62 @@
 //     );
 //   }
 // }
-
-
+// lib/features/splashscreen.dart
+// lib/main.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/services.dart';
 
+import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+
+import 'package:provider/provider.dart';
 import '../features/stockkeeper/settings/settings_provider.dart';
 import '../features/splashscreen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Create + preload persisted settings
+  // Show all errors
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.dumpErrorToConsole(details);
+    Zone.current.handleUncaughtError(details.exception, details.stack ?? StackTrace.current);
+  };
+  // ✅ Use the binding's dispatcher (works cross-platform)
+  WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
+    debugPrint('UNCAUGHT (PlatformDispatcher): $error\n$stack');
+    return true;
+  };
+
+  // sqflite factory per platform
+  if (kIsWeb) {
+    databaseFactory = databaseFactoryFfiWeb;
+  } else if (defaultTargetPlatform == TargetPlatform.windows ||
+             defaultTargetPlatform == TargetPlatform.linux) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+  // Android/iOS/macOS -> default sqflite
+
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
   final settings = SettingsController();
   await settings.load();
 
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider<SettingsController>.value(value: settings),
-      ],
-      child: const App(),
-    ),
-  );
+  runZonedGuarded(() {
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsController>.value(value: settings),
+        ],
+        child: const App(),
+      ),
+    );
+  }, (error, stack) {
+    debugPrint('UNCAUGHT (Zone): $error\n$stack');
+  });
 }
 
 class App extends StatelessWidget {
@@ -83,37 +116,29 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Rebuild MaterialApp when settings change
     return Consumer<SettingsController>(
       builder: (context, settings, _) {
         return MaterialApp(
           title: 'Flutter SQLite CRUD',
           debugShowCheckedModeBanner: false,
-          themeMode: settings.themeMode, // light/dark from SettingsController
+          themeMode: settings.themeMode,
           theme: ThemeData(
             useMaterial3: true,
             colorSchemeSeed: Colors.indigo,
-            inputDecorationTheme: const InputDecorationTheme(
-              border: OutlineInputBorder(),
-            ),
+            inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
             brightness: Brightness.light,
           ),
           darkTheme: ThemeData(
             useMaterial3: true,
             colorSchemeSeed: Colors.indigo,
-            inputDecorationTheme: const InputDecorationTheme(
-              border: OutlineInputBorder(),
-            ),
+            inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
             brightness: Brightness.dark,
           ),
-          // Apply global text scaling from settings
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              textScaleFactor: settings.textScaleFactor,
-            ),
+            data: MediaQuery.of(context).copyWith(textScaleFactor: settings.textScaleFactor),
             child: child!,
           ),
-          home: const SplashScreen(), // your existing splash → pushes to pages later
+          home: const SplashScreen(),
         );
       },
     );
