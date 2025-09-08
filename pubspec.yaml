@@ -12,6 +12,7 @@ dependencies:
   sqflite_common_ffi: ^2.3.3
   sqflite_common_ffi_web: ^1.0.1+1   # <-- not 0.4.x
   path: ^1.9.0
+  crypto: ^3.0.3
 
 
 
