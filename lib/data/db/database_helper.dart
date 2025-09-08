@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
@@ -8,7 +10,9 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._internal();
 
   static const _dbName = 'pos.db';
+
   // Bump version if you change schema or want to trigger seeding on existing installs
+
   static const _dbVersion = 3;
 
   Database? _db;
@@ -40,6 +44,58 @@ class DatabaseHelper {
         refresh_token_hash TEXT
       );
     ''');
+
+    // ---- Users seed (hashed) ----
+    {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      String hash(String s) => sha256.convert(utf8.encode(s)).toString();
+
+      final users = [
+        {
+          'name': 'Sadeep Chathushan',
+          'email': 'sadeep@aasa.lk',
+          'contact': '+94 77 000 0001',
+          'password': hash('Admin@123'),
+          'role': 'Admin',
+          'color_code': '#7C3AED',
+          'created_at': now,
+          'updated_at': now,
+        },
+        {
+          'name': 'Hansima Perera',
+          'email': 'hansima@aasa.lk',
+          'contact': '+94 77 000 0002',
+          'password': hash('Manager@123'),
+          'role': 'Manager',
+          'color_code': '#0EA5E9',
+          'created_at': now,
+          'updated_at': now,
+        },
+        {
+          'name': 'Achintha Silva',
+          'email': 'achintha@aasa.lk',
+          'contact': '+94 77 000 0003',
+          'password': hash('Cashier@123'),
+          'role': 'Cashier',
+          'color_code': '#10B981',
+          'created_at': now,
+          'updated_at': now,
+        },
+        {
+          'name': 'Insaf Imran',
+          'email': 'insaf@aasa.lk',
+          'contact': '+94 77 000 0004',
+          'password': hash('Stock@123'),
+          'role': 'StockKeeper',
+          'color_code': '#F59E0B',
+          'created_at': now,
+          'updated_at': now,
+        },
+      ];
+      for (final u in users) {
+        await db.insert('user', u);
+      }
+    }
 
     await db.execute('''
       CREATE TABLE customer (
@@ -168,6 +224,7 @@ class DatabaseHelper {
       );
     ''');
 
+
     // ✅ Seed 5 items (+ needed categories/suppliers/stock) on first DB create
     await _seedInitialData(db);
   }
@@ -182,6 +239,101 @@ class DatabaseHelper {
         await _seedInitialData(db);
       }
     }
+
+    // ---- BASIC INVENTORY SEED (supplier + categories + items + stock) ----
+    {
+      final now = DateTime.now().millisecondsSinceEpoch;
+
+      final supplierId = await db.insert('supplier', {
+        'name': 'Default Supplier',
+        'contact': '+94 77 000 0000',
+        'email': 'supplier@demo.lk',
+        'address': 'Colombo',
+        'brand': 'Generic',
+        'color_code': '#000000',
+        'location': 'LK',
+        'status': 'ACTIVE',
+        'preferred': 1,
+        'payment_terms': 'NET 30',
+        'notes': 'Seed supplier',
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      final catBeverages = await db.insert('category', {
+        'category': 'Beverages',
+        'color_code': '#FF5733',
+        'category_image': null,
+      });
+      final catSnacks = await db.insert('category', {
+        'category': 'Snacks',
+        'color_code': '#33FF57',
+        'category_image': null,
+      });
+      final catStationery = await db.insert('category', {
+        'category': 'Stationery',
+        'color_code': '#3357FF',
+        'category_image': null,
+      });
+
+      final itemCoke = await db.insert('item', {
+        'name': 'Coca Cola 500ml',
+        'barcode': 'BARC0001',
+        'category_id': catBeverages,
+        'supplier_id': supplierId,
+        'reorder_level': 10,
+        'color_code': '#FF0000',
+      });
+      final itemChips = await db.insert('item', {
+        'name': 'Potato Chips 100g',
+        'barcode': 'BARC0002',
+        'category_id': catSnacks,
+        'supplier_id': supplierId,
+        'reorder_level': 20,
+        'color_code': '#FFD700',
+      });
+      final itemPaper = await db.insert('item', {
+        'name': 'A4 Paper Ream',
+        'barcode': 'BARC0003',
+        'category_id': catStationery,
+        'supplier_id': supplierId,
+        'reorder_level': 5,
+        'color_code': '#FFFFFF',
+      });
+
+      await db.insert('stock', {
+        'batch_id': 'BATCH-COCA-001',
+        'item_id': itemCoke,
+        'quantity': 120,
+        'unit_price': 50.0,
+        'sell_price': 65.0,
+        'discount_amount': 0.0,
+        'supplier_id': supplierId,
+      });
+      await db.insert('stock', {
+        'batch_id': 'BATCH-CHIPS-001',
+        'item_id': itemChips,
+        'quantity': 200,
+        'unit_price': 80.0,
+        'sell_price': 100.0,
+        'discount_amount': 0.0,
+        'supplier_id': supplierId,
+      });
+      await db.insert('stock', {
+        'batch_id': 'BATCH-PAPER-001',
+        'item_id': itemPaper,
+        'quantity': 100,
+        'unit_price': 400.0,
+        'sell_price': 480.0,
+        'discount_amount': 0.0,
+        'supplier_id': supplierId,
+      });
+    }
+  }
+
+  FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // migrations go here
+
   }
 
   Future<T> runInTransaction<T>(Future<T> Function(Transaction tx) action) async {
