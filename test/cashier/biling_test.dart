@@ -631,7 +631,7 @@ void main() {
 }
 
 extension on GridView {
-  get delegate => null;
+  Null get delegate => null;
 }
 
 // Helper extension to make testing easier

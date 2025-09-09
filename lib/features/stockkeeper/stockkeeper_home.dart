@@ -221,7 +221,9 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
 
   @override
   void dispose() {
-    for (final n in _tileNodes) n.dispose();
+    for (final n in _tileNodes) {
+      n.dispose();
+    }
     super.dispose();
   }
 
@@ -243,7 +245,7 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [cs.surfaceVariant.withOpacity(0.5), cs.surface.withOpacity(0.5)],
+          colors: [cs.surfaceContainerHighest.withOpacity(0.5), cs.surface.withOpacity(0.5)],
           begin: Alignment.topLeft, end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
@@ -295,13 +297,13 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
       ),
       body: MediaQuery(
         data: MediaQuery.of(context).copyWith(
-          textScaleFactor: settings.textScaleFactor,
+          textScaler: TextScaler.linear(settings.textScaleFactor),
         ),
         child: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft, end: Alignment.bottomRight,
-              colors: [cs.surface, cs.surfaceVariant.withOpacity(.4), cs.background],
+              colors: [cs.surface, cs.surfaceContainerHighest.withOpacity(.4), cs.surface],
             ),
           ),
           child: Stack(
@@ -402,8 +404,9 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
                                         tile: _tiles[index],
                                         onActivate: () {
                                           final t = _tiles[index];
-                                          if (t.onTap != null) t.onTap!();
-                                          else if (t.pageBuilder != null) _navigateTo(context, t.pageBuilder!());
+                                          if (t.onTap != null) {
+                                            t.onTap!();
+                                          } else if (t.pageBuilder != null) _navigateTo(context, t.pageBuilder!());
                                         },
                                         onDragStarted: () => setState(() => _draggingIndex = index),
                                         onDragEnded: () => setState(() => _draggingIndex = null),
@@ -462,7 +465,7 @@ class _TileSpec {
     required this.icon,
     required this.gradientBuilder,
     this.pageBuilder,
-    this.onTap,
+    this.onTap, // <-- add this
   });
 }
 
@@ -498,11 +501,12 @@ class _DraggableGridTileState extends State<_DraggableGridTile> {
   @override
   Widget build(BuildContext context) {
     return DragTarget<int>(
-      onWillAccept: (from) => from != null && from != widget.index,
-      onAccept: (from) {
-        setState(() => _isHovering = false);
-        widget.onAccept(from);
-      },
+      onWillAcceptWithDetails: (details) => details.data != widget.index,
+onAcceptWithDetails: (details) {
+  setState(() => _isHovering = false);
+  widget.onAccept(details.data); // <-- pass the int
+},
+
       onMove: (details) => setState(() => _isHovering = true),
       onLeave: (data) => setState(() => _isHovering = false),
       builder: (context, candidateData, rejected) {
@@ -695,7 +699,7 @@ class _TileBodyState extends State<_TileBody> with SingleTickerProviderStateMixi
                             ),
                           Center(
                             child: MediaQuery(
-                              data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+                              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(1.0)),
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Semantics(

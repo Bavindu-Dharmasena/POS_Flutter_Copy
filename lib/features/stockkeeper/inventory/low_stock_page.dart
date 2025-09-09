@@ -289,12 +289,12 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
                 : FloatingActionButton.extended(
                     onPressed: visible.isEmpty ? null : () => _requestToSupplier(visible),
                     icon: const Icon(Icons.send),
-                    label: Text(_selectedCount > 0 ? 'Request (${_selectedCount})' : 'Request'),
+                    label: Text(_selectedCount > 0 ? 'Request ($_selectedCount)' : 'Request'),
                   ),
             body: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [cs.surface, cs.surfaceVariant.withOpacity(.35), cs.background],
+                  colors: [cs.surface, cs.surfaceContainerHighest.withOpacity(.35), cs.surface],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -363,9 +363,9 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
     final themed = Theme.of(context).copyWith(
       cardColor: isDark ? _kDarkCard : Theme.of(context).cardColor,
       dataTableTheme: DataTableThemeData(
-        headingRowColor: MaterialStatePropertyAll(isDark ? _kDarkHeader : cs.surfaceVariant),
-        dataRowColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.hovered) && isDark) {
+        headingRowColor: WidgetStatePropertyAll(isDark ? _kDarkHeader : cs.surfaceContainerHighest),
+        dataRowColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.hovered) && isDark) {
             return _kDarkRow.withOpacity(.95);
           }
           return isDark ? _kDarkRow : cs.surface;

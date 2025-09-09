@@ -10,7 +10,7 @@ import '../../data/models/stockkeeper/category_model.dart';
 import '../../data/models/stockkeeper/item_supplier_model.dart';
 
 class AddItemPage extends StatefulWidget {
-  const AddItemPage({Key? key}) : super(key: key);
+  const AddItemPage({super.key});
 
   @override
   State<AddItemPage> createState() => _AddItemPageState();
@@ -468,8 +468,8 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ).merge(
       ButtonStyle(
-        overlayColor: MaterialStateProperty.resolveWith(
-          (states) => Colors.white.withOpacity(states.contains(MaterialState.pressed) ? 0.08 : 0.04),
+        overlayColor: WidgetStateProperty.resolveWith(
+          (states) => Colors.white.withOpacity(states.contains(WidgetState.pressed) ? 0.08 : 0.04),
         ),
       ),
     );

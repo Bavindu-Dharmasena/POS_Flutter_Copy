@@ -289,7 +289,7 @@ class _stockkeeper_supplier_requestState
           height: double.infinity,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [cs.surface, cs.surfaceVariant.withOpacity(.35), cs.background],
+              colors: [cs.surface, cs.surfaceContainerHighest.withOpacity(.35), cs.surface],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -422,7 +422,7 @@ class _stockkeeper_supplier_requestState
                               borderRadius: BorderRadius.circular(12),
                               color: selected
                                   ? cs.primary.withOpacity(.12)
-                                  : cs.surfaceVariant.withOpacity(.25),
+                                  : cs.surfaceContainerHighest.withOpacity(.25),
                               border: Border.all(
                                 color: selected ? cs.primary : cs.outlineVariant,
                               ),

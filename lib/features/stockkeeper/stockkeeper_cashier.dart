@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class StockKeeperCashier extends StatelessWidget {
-  const StockKeeperCashier({Key? key}) : super(key: key);  // Constructor
+  const StockKeeperCashier({super.key});  // Constructor
 
   @override
   Widget build(BuildContext context) {

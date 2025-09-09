@@ -8,11 +8,11 @@ class DashboardSummaryGrid extends StatelessWidget {
   final bool isMobile;
 
   const DashboardSummaryGrid({
-    Key? key,
+    super.key,
     required this.products,
     required this.isTablet,
     required this.isMobile,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -318,10 +318,10 @@ class ModernHoverCard extends StatefulWidget {
   final Color accentColor;
 
   const ModernHoverCard({
-    Key? key,
+    super.key,
     required this.child,
     required this.accentColor,
-  }) : super(key: key);
+  });
 
   @override
   State<ModernHoverCard> createState() => _ModernHoverCardState();

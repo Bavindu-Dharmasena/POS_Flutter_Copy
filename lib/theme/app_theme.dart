@@ -76,7 +76,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
 
 /// ————————————————————————— LIGHT THEME —————————————————————————
 
-ThemeData buildLightTheme(double _baseFont) {
+ThemeData buildLightTheme(double baseFont) {
   // Colorful seed with strong harmonized palette (violet/purple/blue).
   final cs = ColorScheme.fromSeed(
     seedColor: const Color(0xFF7C3AED), // Violet-600
@@ -193,7 +193,7 @@ ThemeData buildLightTheme(double _baseFont) {
 
 /// ————————————————————————— DARK THEME —————————————————————————
 
-ThemeData buildDarkTheme(double _baseFont) {
+ThemeData buildDarkTheme(double baseFont) {
   final cs = ColorScheme.fromSeed(
     seedColor: const Color(0xFF60A5FA), // Blue-400 seed (harmonizes others)
     brightness: Brightness.dark,

@@ -134,7 +134,7 @@ void main() {
               
               expect(gradient.colors.length, 3);
               expect(gradient.colors[0], colorScheme.surface);
-              expect(gradient.colors[2], colorScheme.background);
+              expect(gradient.colors[2], colorScheme.surface);
               expect(gradient.begin, Alignment.topLeft);
               expect(gradient.end, Alignment.bottomRight);
               
