@@ -24,7 +24,7 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
   // ----------------------------- Data State -----------------------------
   late List<Creditor> _all;
   List<Creditor> _view = [];
-  bool _loading = false;
+  final bool _loading = false;
   String? _error;
 
   // Animations
@@ -65,7 +65,7 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
         name: _names[i % _names.length],
         company: _companies[i % _companies.length],
         phone: '+94 7${rng.nextInt(9)} ${rng.nextInt(900) + 100} ${rng.nextInt(900) + 100}',
-        email: 'contact${i}@example.com',
+        email: 'contact$i@example.com',
         lastInvoiceDate: lastInvoice,
         dueAmount: paid ? 0 : amount,
         paidAmount: paid ? amount : 0,

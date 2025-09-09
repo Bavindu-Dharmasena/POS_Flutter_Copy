@@ -4,7 +4,7 @@ class SupplierDetailItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  final Color color;
+  final Color? color;
   final bool isAddress;
 
   const SupplierDetailItem({
@@ -12,52 +12,35 @@ class SupplierDetailItem extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
-    required this.color,
+    this.color,
     this.isAddress = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: Colors.white, size: 16),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+    // Fixed color resolution - ensure we always have a non-null Color
+    final Color c = color ?? 
+        DefaultTextStyle.of(context).style.color ?? 
+        Theme.of(context).textTheme.bodyMedium?.color ??
+        Theme.of(context).colorScheme.onSurface;
+
+    return Row(
+      crossAxisAlignment: isAddress ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      children: [
+        Icon(icon, size: 16, color: c),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: DefaultTextStyle.of(context).style.copyWith(fontSize: 13, color: c),
+              children: [
+                TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w600)),
+                TextSpan(text: value),
+              ],
             ),
-            maxLines: isAddress ? 2 : 1,
-            overflow: TextOverflow.ellipsis,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:pos_system/data/repositories/manager/user_repository.dart';
+
 
 class UserManagementPasswordChangePage extends StatefulWidget {
   const UserManagementPasswordChangePage({super.key});
@@ -55,6 +57,9 @@ class _UserManagementPasswordChangePageState
   List<UserSummary> _allUsers = [];
   List<UserSummary> _filteredUsers = [];
 
+  // NEW: repository
+  final _repo = UserRepository();
+
   @override
   void initState() {
     super.initState();
@@ -78,51 +83,23 @@ class _UserManagementPasswordChangePageState
       _usersError = null;
     });
     try {
-      final users = await _loadUsersMock(); // <-- replace with your API
-      _allUsers = users;
+      final rows = await _repo.listUsers();
+      _allUsers = rows
+          .map((r) => UserSummary(
+                name: r.name,
+                email: r.email,
+                role: r.role,
+                colorCode: r.colorCode,
+                createdAt: DateTime.fromMillisecondsSinceEpoch(r.createdAt),
+              ))
+          .toList();
       _applyUserFilter();
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('loadUsers error: $e\n$st');
       _usersError = 'Failed to load users';
     } finally {
-      if (mounted) {
-        setState(() => _loadingUsers = false);
-      }
+      if (mounted) setState(() => _loadingUsers = false);
     }
-  }
-
-  // Replace this with your backend call (e.g., via Dio/Http)
-  Future<List<UserSummary>> _loadUsersMock() async {
-    await Future.delayed(const Duration(milliseconds: 400));
-    return [
-      UserSummary(
-        name: 'Sadeep Chathushan',
-        email: 'sadeep@aasa.lk',
-        role: 'Admin',
-        colorCode: '#7C3AED',
-        createdAt: DateTime(2025, 7, 12),
-      ),
-      UserSummary(
-        name: 'Hansima Perera',
-        email: 'hansima@aasa.lk',
-        role: 'Manager',
-        colorCode: '#0EA5E9',
-        createdAt: DateTime(2025, 6, 30),
-      ),
-      UserSummary(
-        name: 'Achintha Silva',
-        email: 'achintha@aasa.lk',
-        role: 'Cashier',
-        colorCode: '#10B981',
-        createdAt: DateTime(2025, 8, 1),
-      ),
-      UserSummary(
-        name: 'Insaf Imran',
-        email: 'insaf@aasa.lk',
-        role: 'StockKeeper',
-        colorCode: '#F59E0B',
-        createdAt: DateTime(2025, 5, 21),
-      ),
-    ];
   }
 
   void _applyUserFilter() {
@@ -149,8 +126,9 @@ class _UserManagementPasswordChangePageState
     if (RegExp(r'\d').hasMatch(password)) strength += 0.2;
     if (RegExp(
       r'''[!@#\$%^&*()_\-+={}\[\]:;'"<>,.?/\\|`~]''',
-    ).hasMatch(password))
+    ).hasMatch(password)) {
       strength += 0.2;
+    }
     return strength.clamp(0.0, 1.0);
   }
 
@@ -174,89 +152,72 @@ class _UserManagementPasswordChangePageState
   bool get _hasUpper => RegExp(r'[A-Z]').hasMatch(_newPwdCtrl.text);
   bool get _hasLower => RegExp(r'[a-z]').hasMatch(_newPwdCtrl.text);
   bool get _hasDigit => RegExp(r'\d').hasMatch(_newPwdCtrl.text);
-  bool get _hasSpecial => RegExp(
-    r'''[!@#\$%^&*()_\-+={}\[\]:;"'<>,.?/\\|`~]''',
-  ).hasMatch(_newPwdCtrl.text);
+  bool get _hasSpecial => RegExp(r'''[!@#\$%^&*()_\-+={}\[\]:;"'<>,.?/\\|`~]''').hasMatch(_newPwdCtrl.text);
 
   // --------------------------------- Submit ----------------------------------
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    // TODO: integrate your backend call here.
-    // await yourService.changePassword(_emailCtrl.text.trim(), _newPwdCtrl.text.trim());
+  try {
+    final result = await _repo.changePasswordByEmail(
+      email: _emailCtrl.text.trim(),
+      newPassword: _newPwdCtrl.text.trim(),
+    );
+
+    // 👇👇 add these debug prints/snackbar to verify
+    debugPrint('Password change for ${result.email}: '
+        'matchedRows=${result.matchedRows}\n'
+        'before=${result.beforeHash}\n'
+        'after=${result.afterHash}\n'
+        'expected=${result.expectedHash}');
+    if (result.matchedRows == 0) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No user found for that email')),
+      );
+      return;
+    }
+    if (result.afterHash != result.expectedHash) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Warning: stored hash didn\'t match expected')),
+      );
+    }
 
     if (!mounted) return;
+    // your success dialog (unchanged)
     showDialog(
       context: context,
       builder: (c) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              colors: [Colors.white, Colors.grey[50]!],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                colors: [Colors.white, Colors.grey[50]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+      ),
             ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.withOpacity(0.20)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.green),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Password changed successfully for ${_emailCtrl.text.trim()}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              FilledButton(
-                onPressed: () => Navigator.of(c).pop(),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('Done'),
-              ),
-            ],
-          ),
         ),
       ),
     );
+
+  } catch (e, st) {
+    debugPrint('changePassword error: $e\n$st');
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Error changing password')),
+    );
   }
+}
+
 
   // ----------------------------------- UI ------------------------------------
   @override
   Widget build(BuildContext context) {
-    final isWide =
-        MediaQuery.of(context).size.width >=
-        980; // slightly wider to fit users panel
+    final isWide = MediaQuery.of(context).size.width >= 980;
     final strength = _passwordStrength(_newPwdCtrl.text);
 
     return Scaffold(
@@ -332,7 +293,7 @@ class _UserManagementPasswordChangePageState
                         ? Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Left: password form + requirements stacked
+                              // Left: password form + requirements
                               Expanded(
                                 flex: 3,
                                 child: Column(
@@ -373,13 +334,8 @@ class _UserManagementPasswordChangePageState
               OutlinedButton(
                 onPressed: () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: const Text('Cancel'),
               ),
@@ -388,13 +344,8 @@ class _UserManagementPasswordChangePageState
                 onPressed: _submit,
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: const Text('Change Password'),
               ),
@@ -455,9 +406,7 @@ class _UserManagementPasswordChangePageState
           decoration: BoxDecoration(
             color: _strengthColor(strength).withOpacity(0.08),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: _strengthColor(strength).withOpacity(0.20),
-            ),
+            border: Border.all(color: _strengthColor(strength).withOpacity(0.20)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -558,7 +507,7 @@ class _UserManagementPasswordChangePageState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white, // stronger contrast than faint purple
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey[300]!),
       ),
@@ -616,83 +565,77 @@ class _UserManagementPasswordChangePageState
                     ),
                   )
                 : _loadingUsers
-                ? const Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                    onRefresh: _loadUsers,
-                    child: _filteredUsers.isEmpty
-                        ? ListView(
-                            children: const [
-                              SizedBox(height: 100),
-                              Center(child: Text('No users found')),
-                            ],
-                          )
-                        : ListView.separated(
-                            itemCount: _filteredUsers.length,
-                            separatorBuilder: (_, __) =>
-                                Divider(color: Colors.grey[300], height: 1),
-                            itemBuilder: (context, i) {
-                              final u = _filteredUsers[i];
-                              final initials = _initials(u.name);
-                              return InkWell(
-                                borderRadius: BorderRadius.circular(12),
-                                onTap: () => _emailCtrl.text = u.email,
-                                child: ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  leading: CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor: u.color, // solid color
-                                    child: Text(
-                                      initials,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
+                    ? const Center(child: CircularProgressIndicator())
+                    : RefreshIndicator(
+                        onRefresh: _loadUsers,
+                        child: _filteredUsers.isEmpty
+                            ? ListView(
+                                children: const [
+                                  SizedBox(height: 100),
+                                  Center(child: Text('No users found')),
+                                ],
+                              )
+                            : ListView.separated(
+                                itemCount: _filteredUsers.length,
+                                separatorBuilder: (_, __) =>
+                                    Divider(color: Colors.grey[300], height: 1),
+                                itemBuilder: (context, i) {
+                                  final u = _filteredUsers[i];
+                                  final initials = _initials(u.name);
+                                  return InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () => _emailCtrl.text = u.email,
+                                    child: ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
                                       ),
-                                    ),
-                                  ),
-                                  title: Text(
-                                    u.name,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87, // stronger
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    '${u.email} • ${u.role} • Joined ${_ymd(u.createdAt)}',
-                                    style: TextStyle(color: Colors.grey[700]),
-                                  ),
-                                  trailing: TextButton.icon(
-                                    onPressed: () {
-                                      _emailCtrl.text = u.email;
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Selected ${u.email}'),
+                                      leading: CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: u.color,
+                                        child: Text(
+                                          initials,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
-                                      );
-                                    },
-                                    icon: const Icon(
-                                      Icons.person_add_alt_1,
-                                      color: Colors.deepPurple,
-                                    ),
-                                    label: const Text(
-                                      'Select',
-                                      style: TextStyle(
-                                        color: Colors.deepPurple,
+                                      ),
+                                      title: Text(
+                                        u.name,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        '${u.email} • ${u.role} • Joined ${_ymd(u.createdAt)}',
+                                        style: TextStyle(color: Colors.grey[700]),
+                                      ),
+                                      trailing: TextButton.icon(
+                                        onPressed: () {
+                                          _emailCtrl.text = u.email;
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Selected ${u.email}')),
+                                          );
+                                        },
+                                        icon: const Icon(
+                                          Icons.person_add_alt_1,
+                                          color: Colors.deepPurple,
+                                        ),
+                                        label: const Text(
+                                          'Select',
+                                          style: TextStyle(color: Colors.deepPurple),
+                                        ),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.deepPurple,
+                                        ),
                                       ),
                                     ),
-                                    style: TextButton.styleFrom(
-                                      foregroundColor: Colors.deepPurple,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
+                                  );
+                                },
+                              ),
+                      ),
           ),
         ],
       ),
@@ -709,8 +652,7 @@ class _UserManagementPasswordChangePageState
       final s = parts.first;
       return (s.isEmpty ? '?' : s.characters.take(2).toString().toUpperCase());
     }
-    return (parts.first.characters.first + parts.last.characters.first)
-        .toUpperCase();
+    return (parts.first.characters.first + parts.last.characters.first).toUpperCase();
   }
 
   Widget _reqItem(String text, bool ok) {
@@ -755,7 +697,6 @@ class _UserManagementPasswordChangePageState
       onChanged: onChanged,
       keyboardType: keyboardType,
       style: const TextStyle(
-        // 👈 makes entered text clearly visible
         color: Colors.black,
         fontSize: 16,
         fontWeight: FontWeight.w500,

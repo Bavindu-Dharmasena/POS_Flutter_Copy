@@ -7,7 +7,7 @@ class BottomActionBar extends StatelessWidget {
   final VoidCallback onCancel;
   final bool enabled;
 
-  BottomActionBar({
+  const BottomActionBar({
     super.key,
     required this.onSave,
     required this.onSaveNew,
