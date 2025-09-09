@@ -1,79 +1,76 @@
-// lib/data/repositories/stockkeeper/Supplier_repository.dart
 import 'package:sqflite/sqflite.dart';
-// Adjust if your helper lives elsewhere:
 import 'package:pos_system/data/db/database_helper.dart';
-
-import 'package:pos_system/data/models/stockkeeper/Supplier.dart';
+import 'package:pos_system/data/models/stockkeeper/supplier_model.dart' as model;
+import 'package:pos_system/data/models/stockkeeper/supplier_db_maps.dart';
 
 class SupplierRepository {
-  SupplierRepository._internal();
-  static final SupplierRepository instance = SupplierRepository._internal();
+  SupplierRepository._();
+  static final SupplierRepository instance = SupplierRepository._();
 
-  static const _table = 'supplier';
+  Future<Database> get _db => DatabaseHelper.instance.database;
 
-  Future<Database> get _db async => DatabaseHelper.instance.database;
-
-  // ---------- READ ----------
-  /// Method your SupplierPage calls
-  Future<List<Supplier>> all({String? query}) => getAll(q: query);
-
-  /// Under-the-hood impl (you may call this directly too)
-  Future<List<Supplier>> getAll({String? q}) async {
-    final db = await _db;
-    List<Map<String, Object?>> rows;
-
-    if (q != null && q.trim().isNotEmpty) {
-      final like = '%${q.trim().toLowerCase()}%';
-      rows = await db.query(
-        _table,
-        where:
-            'LOWER(name) LIKE ? OR LOWER(contact) LIKE ? OR LOWER(brand) LIKE ? OR LOWER(location) LIKE ?',
-        whereArgs: [like, like, like, like],
-        orderBy: 'updated_at DESC',
-      );
-    } else {
-      rows = await db.query(_table, orderBy: 'updated_at DESC');
-    }
-
-    return rows.map(Supplier.fromMap).toList();
-  }
-
-  // ---------- CREATE ----------
-  Future<Supplier> create(Supplier supplier) async {
+  Future<model.Supplier> create(model.Supplier supplier) async {
     final db = await _db;
     final id = await db.insert(
-      _table,
-      supplier.toMap(forInsert: true),
+      'supplier',
+      supplier.toInsertMap(),
       conflictAlgorithm: ConflictAlgorithm.abort,
     );
     return supplier.copyWith(id: id);
   }
 
-  // ---------- UPDATE ----------
-  Future<int> update(Supplier supplier) async {
+  Future<int> update(model.Supplier supplier) async {
     if (supplier.id == null) {
-      throw ArgumentError('Supplier.id is required for update');
+      throw ArgumentError('Supplier id is required for update');
     }
     final db = await _db;
     return db.update(
-      _table,
-      supplier.toMap(forInsert: false),
+      'supplier',
+      supplier.toUpdateMap(),
       where: 'id = ?',
       whereArgs: [supplier.id],
       conflictAlgorithm: ConflictAlgorithm.abort,
     );
   }
 
-  // ---------- FIND / DELETE ----------
-  Future<Supplier?> findById(int id) async {
-    final db = await _db;
-    final rows = await db.query(_table, where: 'id = ?', whereArgs: [id], limit: 1);
-    if (rows.isEmpty) return null;
-    return Supplier.fromMap(rows.first);
-  }
-
   Future<int> delete(int id) async {
     final db = await _db;
-    return db.delete(_table, where: 'id = ?', whereArgs: [id]);
+    return db.delete('supplier', where: 'id = ?', whereArgs: [id]);
   }
+
+  Future<model.Supplier?> findById(int id) async {
+    final db = await _db;
+    final rows = await db.query('supplier', where: 'id = ?', whereArgs: [id], limit: 1);
+    if (rows.isEmpty) return null;
+    return model.Supplier.fromMap(rows.first);
+  }
+
+  Future<List<model.Supplier>> all({String? query, int? limit, int? offset}) async {
+    final db = await _db;
+
+    String? where;
+    List<Object?>? whereArgs;
+
+    if ((query ?? '').trim().isNotEmpty) {
+      final q = '%${query!.trim()}%';
+      where = '(name LIKE ? COLLATE NOCASE'
+          ' OR contact LIKE ? COLLATE NOCASE'
+          ' OR brand LIKE ? COLLATE NOCASE'
+          ' OR location LIKE ? COLLATE NOCASE)';
+      whereArgs = [q, q, q, q];
+    }
+
+    final rows = await db.query(
+      'supplier',
+      where: where,
+      whereArgs: whereArgs,
+      orderBy: 'updated_at DESC, id DESC',
+      limit: limit,
+      offset: offset,
+    );
+
+    return rows.map((r) => model.Supplier.fromMap(r)).toList();
+  }
+
+  Future<List<model.Supplier>> getAll({String? q}) => all(query: q);
 }

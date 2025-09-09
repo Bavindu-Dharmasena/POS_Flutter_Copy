@@ -1,13 +1,13 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
-import 'package:pos_system/data/models/stockkeeper/get_supplier.dart';
-import 'package:pos_system/data/repositories/stockkeeper/get_supplier.dart';
+import 'package:pos_system/data/models/stockkeeper/supplier_model.dart' as model;
+import 'package:pos_system/data/models/stockkeeper/supplier_db_maps.dart'; // for toUiMap()
+import 'package:pos_system/data/repositories/stockkeeper/supplier_repository.dart';
 import 'package:pos_system/theme/palette.dart';
-import 'package:pos_system/features/stockkeeper/supplier/add_supplier_page.dart';
-import 'package:pos_system/features/stockkeeper/supplier/supplier_products_page.dart';
-import 'package:pos_system/widget/suppliers/supplier_card.dart';
+
+// alias the supplier card import
+import 'package:pos_system/widget/suppliers/supplier_card.dart' as cards;
 
 class SupplierPage extends StatefulWidget {
   const SupplierPage({super.key});
@@ -15,325 +15,127 @@ class SupplierPage extends StatefulWidget {
   State<SupplierPage> createState() => _SupplierPageState();
 }
 
-class _SupplierPageState extends State<SupplierPage> with TickerProviderStateMixin {
-  late final AnimationController _ac =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 700))..forward();
-  late final Animation<double> _fade = CurvedAnimation(parent: _ac, curve: Curves.easeInOut);
-
-  final _scrollCtrl = ScrollController();
+class _SupplierPageState extends State<SupplierPage> {
   final _repo = SupplierRepository.instance;
+  final _searchCtrl = TextEditingController();
 
-  bool _loading = true;
-  String _search = '';
-  String? _error;
-  List<Supplier> _suppliers = [];
-
-  Timer? _searchDebounce;
+  Future<List<model.Supplier>>? _future;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _future = _repo.getAll(); // load all suppliers initially
   }
 
   @override
   void dispose() {
-    _ac.dispose();
-    _scrollCtrl.dispose();
-    _searchDebounce?.cancel();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _load() async {
+  void _runSearch(String q) {
     setState(() {
-      _loading = true;
-      _error = null;
+      final query = q.trim();
+      _future = _repo.getAll(q: query.isEmpty ? null : query);
     });
-    try {
-      final list = await _repo.all(query: _search.trim().isEmpty ? null : _search);
-      if (!mounted) return;
-      setState(() {
-        _suppliers = list.cast<Supplier>();
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'Failed to load suppliers';
-      });
-    }
-  }
-
-  void _scheduleSearch() {
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
-      if (mounted) _load();
-    });
-  }
-
-  Future<void> _addSupplier() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AddSupplierPage(supplierData: {})),
-    );
-    if (!mounted) return;
-    _load();
-  }
-
-  Future<void> _editSupplier(Supplier s) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AddSupplierPage(
-          supplierData: {
-            'id': s.id?.toString(),
-            'name': s.name,
-            'contact': s.contact,
-            'email': s.email,
-            'brand': s.brand,
-            'locations': [s.location],
-            'paymentTerms': s.paymentTerms,
-            'active': s.status.toUpperCase() == 'ACTIVE',
-            'remarks': s.notes,
-            'created_at': s.createdAt,
-            'gradientName': null,
-          },
-        ),
-      ),
-    );
-    if (!mounted) return;
-    _load();
-  }
-
-  void _openProducts(Supplier s) {
-    Navigator.push(
-      context,
-      // ⬇️ pass a Map<String, dynamic> as required by SupplierProductsPage
-      MaterialPageRoute(builder: (_) => SupplierProductsPage(supplier: s.toProductsMap())),
-    );
-  }
-
-  _BasePalette get _p {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return isDark
-        ? const _BasePalette(
-            bg: Color(0xFF0B1623),
-            text: Colors.white,
-            tileBg: Color(0xFF121A26),
-            tileBorder: Color(0x1FFFFFFF),
-            muted: Colors.white70,
-          )
-        : const _BasePalette(
-            bg: Color(0xFFF4F6FA),
-            text: Color(0xFF0F172A),
-            tileBg: Colors.white,
-            tileBorder: Color(0x14000000),
-            muted: Color(0xFF64748B),
-          );
   }
 
   @override
   Widget build(BuildContext context) {
-    final p = _p;
-    final isTablet = MediaQuery.of(context).size.width > 600;
-    final canPop = ModalRoute.of(context)?.canPop ?? false;
+    final isTablet = MediaQuery.of(context).size.width >= 700;
 
-    final themed = Theme.of(context).copyWith(
-      scaffoldBackgroundColor: p.bg,
-      canvasColor: p.bg,
-      cardColor: p.tileBg,
-      cardTheme: Theme.of(context).cardTheme.copyWith(
-        color: p.tileBg,
+    return Scaffold(
+      backgroundColor: Palette.kBg,
+      appBar: AppBar(
+        backgroundColor: Palette.kBg,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: p.tileBorder),
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('Suppliers', style: TextStyle(color: Colors.white)),
       ),
-      dividerColor: p.tileBorder,
-      iconTheme: Theme.of(context).iconTheme.copyWith(color: p.text),
-      textTheme: Theme.of(context).textTheme.apply(bodyColor: p.text, displayColor: p.text),
-    );
-
-    return Theme(
-      data: themed,
-      child: Scaffold(
-        backgroundColor: p.bg,
-        body: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: _load,
-            child: CustomScrollView(
-              controller: _scrollCtrl,
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverAppBar(
-                  expandedHeight: 120,
-                  pinned: true,
-                  backgroundColor: p.bg,
-                  automaticallyImplyLeading: false,
-                  leading: canPop
-                      ? Container(
-                          margin: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: p.bg, borderRadius: BorderRadius.circular(12)),
-                          child: IconButton(
-                            onPressed: () => Navigator.of(context).maybePop(),
-                            icon: Icon(Feather.arrow_left, color: p.text, size: 20),
-                          ),
-                        )
-                      : null,
-                  flexibleSpace: FlexibleSpaceBar(
-                    titlePadding: EdgeInsets.only(left: canPop ? 72 : 16, bottom: 16),
-                    centerTitle: false,
-                    title: Text('Suppliers', style: TextStyle(color: p.text, fontWeight: FontWeight.bold, fontSize: 20)),
-                  ),
-                  bottom: PreferredSize(
-                    preferredSize: const Size.fromHeight(64),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                      child: TextField(
-                        onChanged: (v) {
-                          _search = v;
-                          _scheduleSearch();
-                        },
-                        onSubmitted: (_) => _load(),
-                        style: TextStyle(color: p.text),
-                        decoration: InputDecoration(
-                          hintText: 'Search by name, contact, brand, location…',
-                          prefixIcon: const Icon(Feather.search),
-                          filled: true,
-                          fillColor: p.tileBg,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: p.tileBorder),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide(color: p.tileBorder),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {/* TODO: open add */},
+        backgroundColor: Palette.kInfo,
+        icon: const Icon(Feather.plus, color: Colors.white),
+        label: const Text('Add Supplier', style: TextStyle(color: Colors.white)),
+      ),
+      body: Column(
+        children: [
+          // Search
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: _runSearch,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Search by name, contact, brand, location…',
+                hintStyle: const TextStyle(color: Colors.white60),
+                prefixIcon: const Icon(Feather.search, color: Colors.white70),
+                filled: true,
+                fillColor: Palette.kSurface,
+                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Palette.kBorder),
                 ),
-                SliverToBoxAdapter(
-                  child: FadeTransition(
-                    opacity: _fade,
-                    child: Padding(
-                      padding: EdgeInsets.all(isTablet ? 24 : 16),
-                      child: _loading
-                          ? const Center(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(vertical: 24.0),
-                                child: CircularProgressIndicator(),
-                              ),
-                            )
-                          : (_error != null
-                              ? Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 48.0),
-                                    child: Text(_error!, style: TextStyle(color: p.muted)),
-                                  ),
-                                )
-                              : (_suppliers.isEmpty
-                                  ? Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 48.0),
-                                        child: Text('No suppliers yet. Tap “Add Supplier”.', style: TextStyle(color: p.muted)),
-                                      ),
-                                    )
-                                  : ListView.separated(
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      itemCount: _suppliers.length,
-                                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                                      itemBuilder: (_, i) {
-                                        final s = _suppliers[i];
-                                        return ListTileTheme(
-                                          textColor: p.text,
-                                          iconColor: p.text,
-                                          child: SupplierCard(
-                                            // ⬇️ pass a Map<String, dynamic> as required by SupplierCard
-                                            supplier: s.toCardMap(),
-                                            isTablet: isTablet,
-                                            onTap: () => _openProducts(s),
-                                            onEdit: () => _editSupplier(s),
-                                          ),
-                                        );
-                                      },
-                                    ))),
-                    ),
-                  ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Palette.kInfo),
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-        floatingActionButton: Container(
-          decoration: BoxDecoration(
-            color: Palette.kInfo,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Palette.kInfo.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 4))],
+
+          // List
+          Expanded(
+            child: FutureBuilder<List<model.Supplier>>(
+              future: _future,
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snap.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Text(
+                        'Failed to load suppliers:\n${snap.error}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  );
+                }
+
+                final data = snap.data ?? const <model.Supplier>[];
+                if (data.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: Text('No suppliers yet', style: TextStyle(color: Colors.white70)),
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                  itemCount: data.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, i) {
+                    final s = data[i];
+                    return cards.SupplierCard(
+                      supplier: s.toUiMap(), // safe, colorless map
+                      isTablet: isTablet,
+                      onTap: () {/* TODO: open products */},
+                      onEdit: () {/* TODO: open edit */},
+                    );
+                  },
+                );
+              },
+            ),
           ),
-          child: FloatingActionButton.extended(
-            onPressed: _addSupplier,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            icon: const Icon(Feather.plus, color: Colors.white, size: 20),
-            label: Text('Add Supplier', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: isTablet ? 17 : 16)),
-          ),
-        ),
+        ],
       ),
     );
   }
-}
-
-class _BasePalette {
-  final Color bg;
-  final Color text;
-  final Color tileBg;
-  final Color tileBorder;
-  final Color muted;
-  const _BasePalette({
-    required this.bg,
-    required this.text,
-    required this.tileBg,
-    required this.tileBorder,
-    required this.muted,
-  });
-}
-
-/// --- Convenience alias: lets you keep using `_repo.all(...)` even if your repo exposes only `getAll(q: ...)`.
-extension _RepoAllAlias on SupplierRepository {
-}
-
-/// --- Map helpers so widgets that expect `Map<String, dynamic>` receive the right type.
-extension _SupplierMaps on Supplier {
-  /// For SupplierCard (compact card UI)
-  Map<String, dynamic> toCardMap() => {
-        'id': id,
-        'name': name,
-        'brand': brand,
-        'contact': contact,
-        'email': email,
-        'location': location,
-        'status': status,        // e.g., 'ACTIVE'
-        'colorCode': colorCode,  // e.g., '#000000'
-      };
-
-  /// For SupplierProductsPage or any details screen
-  Map<String, dynamic> toProductsMap() => {
-        'id': id,
-        'name': name,
-        'brand': brand,
-        'contact': contact,
-        'email': email,
-        'location': location,
-        'status': status,
-        'colorCode': colorCode,
-        'paymentTerms': paymentTerms,
-        'notes': notes,
-        'created_at': createdAt,
-        'updated_at': updatedAt,
-      };
 }

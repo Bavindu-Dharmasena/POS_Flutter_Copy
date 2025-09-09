@@ -3,7 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../db/database_helper.dart';
 import '../../models/stockkeeper/category_model.dart';
 import '../../models/stockkeeper/item_model.dart';
-import '../../models/stockkeeper/supplier_model.dart';
+import '../../models/stockkeeper/item_supplier_model.dart';
 
 class ItemRepository {
   ItemRepository._();

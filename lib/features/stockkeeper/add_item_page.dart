@@ -7,7 +7,7 @@ import '../../common/barcode_scanner_page.dart';
 import '../../data/repositories/stockkeeper/item_repository.dart';
 import '../../data/models/stockkeeper/item_model.dart';
 import '../../data/models/stockkeeper/category_model.dart';
-import '../../data/models/stockkeeper/supplier_model.dart';
+import '../../data/models/stockkeeper/item_supplier_model.dart';
 
 class AddItemPage extends StatefulWidget {
   const AddItemPage({Key? key}) : super(key: key);
