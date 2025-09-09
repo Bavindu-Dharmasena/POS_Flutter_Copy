@@ -331,10 +331,10 @@ class DatabaseHelper {
     }
   }
 
-  FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // migrations go here
+  // FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  //   // migrations go here
 
-  }
+  // }
 
   Future<T> runInTransaction<T>(Future<T> Function(Transaction tx) action) async {
     final db = await database;

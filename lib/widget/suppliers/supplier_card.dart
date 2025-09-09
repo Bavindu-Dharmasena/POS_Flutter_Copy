@@ -5,8 +5,8 @@ import 'package:pos_system/widget/suppliers/supplier_detail_item.dart';
 
 class SupplierCard extends StatelessWidget {
   final Map<String, dynamic> supplier;
-  final VoidCallback onTap; // open products (card tap)
-  final VoidCallback onEdit; // open edit dialog
+  final VoidCallback onTap;   // open products (card tap)
+  final VoidCallback onEdit;  // open edit dialog
   final bool isTablet;
 
   const SupplierCard({
@@ -19,9 +19,26 @@ class SupplierCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color supplierColor = supplier['color'] as Color;
-    final bool hasImage = supplier['image'] != null;
-    final bool isActive = supplier['status'] == 'Active';
+    // fixed neutral accent (we do NOT read pplier color)
+    const Color accent = Color(0xFF2D2F36);
+
+    final String statusRaw = _s(supplier['status']);
+    final bool isActive = _isActive(statusRaw);
+    final String statusLabel = statusRaw.isEmpty ? (isActive ? 'ACTIVE' : 'INACTIVE') : statusRaw;
+
+    final bool hasImage = _s(supplier['image']).isNotEmpty;
+
+    final String name     = _s(supplier['name']);
+    final String brand    = _s(supplier['brand']);
+    final String phone    = _s(supplier['phone'] ?? supplier['contact']);
+    final String email    = _s(supplier['email']);
+    final String location = _s(supplier['location']);
+    final String address  = _s(supplier['address']);
+
+    final String subtitle = [
+      if (brand.isNotEmpty) brand,
+      if (phone.isNotEmpty) phone,
+    ].join(' • ');
 
     return Container(
       margin: EdgeInsets.only(bottom: isTablet ? 20 : 16),
@@ -46,20 +63,20 @@ class SupplierCard extends StatelessWidget {
             padding: EdgeInsets.all(isTablet ? 24 : 20),
             child: Column(
               children: [
-                // Header
                 Row(
                   children: [
                     Stack(
+                      clipBehavior: Clip.none,
                       children: [
                         Container(
                           width: isTablet ? 72 : 64,
                           height: isTablet ? 72 : 64,
                           decoration: BoxDecoration(
-                            color: supplierColor,
+                            color: accent,
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: supplierColor.withOpacity(0.4),
+                                color: Colors.black.withOpacity(0.25),
                                 blurRadius: 16,
                                 offset: const Offset(0, 6),
                               ),
@@ -68,16 +85,9 @@ class SupplierCard extends StatelessWidget {
                           child: hasImage
                               ? ClipRRect(
                                   borderRadius: BorderRadius.circular(16),
-                                  child: Image.asset(
-                                    supplier['image'],
-                                    fit: BoxFit.cover,
-                                  ),
+                                  child: Image.asset(_s(supplier['image']), fit: BoxFit.cover),
                                 )
-                              : Icon(
-                                  Feather.briefcase,
-                                  color: Colors.white,
-                                  size: isTablet ? 32 : 28,
-                                ),
+                              : const Icon(Feather.briefcase, color: Colors.white),
                         ),
                         if (!isActive)
                           Positioned(
@@ -96,11 +106,7 @@ class SupplierCard extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              child: const Icon(
-                                Feather.pause,
-                                color: Colors.white,
-                                size: 12,
-                              ),
+                              child: const Icon(Feather.pause, color: Colors.white, size: 12),
                             ),
                           ),
                       ],
@@ -111,12 +117,11 @@ class SupplierCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: Text(
-                                  supplier['name'],
+                                  name.isEmpty ? 'Unnamed supplier' : name,
                                   style: TextStyle(
                                     fontSize: isTablet ? 20 : 18,
                                     fontWeight: FontWeight.bold,
@@ -128,29 +133,20 @@ class SupplierCard extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: isActive
-                                      ? Palette.kSuccess
-                                      : Palette.kDanger,
+                                  color: isActive ? Palette.kSuccess : Palette.kDanger,
                                   borderRadius: BorderRadius.circular(12),
                                   boxShadow: [
                                     BoxShadow(
-                                      color:
-                                          (isActive
-                                                  ? Palette.kSuccess
-                                                  : Palette.kDanger)
-                                              .withOpacity(0.3),
+                                      color: (isActive ? Palette.kSuccess : Palette.kDanger).withOpacity(0.3),
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
                                 child: Text(
-                                  supplier['status'],
+                                  statusLabel,
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,
@@ -162,7 +158,7 @@ class SupplierCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            supplier['contactPerson'],
+                            subtitle.isEmpty ? '—' : subtitle,
                             style: TextStyle(
                               fontSize: isTablet ? 16 : 14,
                               color: Palette.kTextMuted,
@@ -178,7 +174,7 @@ class SupplierCard extends StatelessWidget {
 
                 SizedBox(height: isTablet ? 20 : 16),
 
-                // Details (responsive)
+                // Details
                 if (isTablet)
                   Column(
                     children: [
@@ -188,8 +184,8 @@ class SupplierCard extends StatelessWidget {
                             child: SupplierDetailItem(
                               icon: Feather.phone,
                               label: 'Phone',
-                              value: supplier['phone'],
-                              color: Colors.black,
+                              value: phone.isEmpty ? '—' : phone,
+                              color: Colors.white70,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -197,8 +193,8 @@ class SupplierCard extends StatelessWidget {
                             child: SupplierDetailItem(
                               icon: Feather.mail,
                               label: 'Email',
-                              value: supplier['email'],
-                              color: Colors.black,
+                              value: email.isEmpty ? '—' : email,
+                              color: Colors.white70,
                             ),
                           ),
                         ],
@@ -210,8 +206,8 @@ class SupplierCard extends StatelessWidget {
                             child: SupplierDetailItem(
                               icon: Feather.map_pin,
                               label: 'Location',
-                              value: supplier['location'],
-                              color: Colors.black,
+                              value: location.isEmpty ? '—' : location,
+                              color: Colors.white70,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -219,8 +215,8 @@ class SupplierCard extends StatelessWidget {
                             child: SupplierDetailItem(
                               icon: Feather.map,
                               label: 'Address',
-                              value: supplier['address'],
-                              color: Colors.black,
+                              value: address.isEmpty ? '—' : address,
+                              color: Colors.white70,
                               isAddress: true,
                             ),
                           ),
@@ -234,15 +230,15 @@ class SupplierCard extends StatelessWidget {
                       SupplierDetailItem(
                         icon: Feather.phone,
                         label: 'Phone',
-                        value: supplier['phone'],
-                        color: Colors.black,
+                        value: phone.isEmpty ? '—' : phone,
+                        color: Colors.white70,
                       ),
                       const SizedBox(height: 8),
                       SupplierDetailItem(
                         icon: Feather.mail,
                         label: 'Email',
-                        value: supplier['email'],
-                        color: Colors.black,
+                        value: email.isEmpty ? '—' : email,
+                        color: Colors.white70,
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -251,8 +247,8 @@ class SupplierCard extends StatelessWidget {
                             child: SupplierDetailItem(
                               icon: Feather.map_pin,
                               label: 'Location',
-                              value: supplier['location'],
-                              color: Colors.black,
+                              value: location.isEmpty ? '—' : location,
+                              color: Colors.white70,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -260,8 +256,8 @@ class SupplierCard extends StatelessWidget {
                             child: SupplierDetailItem(
                               icon: Feather.map,
                               label: 'Address',
-                              value: supplier['address'],
-                              color: Colors.black,
+                              value: address.isEmpty ? '—' : address,
+                              color: Colors.white70,
                               isAddress: true,
                             ),
                           ),
@@ -272,7 +268,7 @@ class SupplierCard extends StatelessWidget {
 
                 SizedBox(height: isTablet ? 20 : 16),
 
-                // Action Row: ONLY Edit (you asked to remove View button)
+                // Edit button
                 Row(
                   children: [
                     Expanded(
@@ -281,7 +277,7 @@ class SupplierCard extends StatelessWidget {
                         child: ElevatedButton(
                           onPressed: onEdit,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: supplierColor,
+                            backgroundColor: accent,
                             elevation: 0,
                             shadowColor: Colors.transparent,
                             shape: RoundedRectangleBorder(
@@ -291,11 +287,7 @@ class SupplierCard extends StatelessWidget {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(
-                                Feather.edit_3,
-                                color: Colors.white,
-                                size: 18,
-                              ),
+                              const Icon(Feather.edit_3, color: Colors.white, size: 18),
                               const SizedBox(width: 8),
                               Text(
                                 'Edit',
@@ -319,4 +311,16 @@ class SupplierCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _s(dynamic v) => (v == null) ? '' : v.toString().trim();
+
+bool _isActive(String status) {
+  if (status.isEmpty) return true;
+  final s = status.trim().toUpperCase();
+  if (s == 'ACTIVE') return true;
+  if (s == 'INACTIVE' || s == 'PENDING' || s == 'DISABLED') return false;
+  if (s == 'TRUE' || s == '1' || s == 'YES') return true;
+  if (s == 'FALSE' || s == '0' || s == 'NO') return false;
+  return true;
 }
