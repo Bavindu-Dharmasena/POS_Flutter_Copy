@@ -184,7 +184,7 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
       );
 
       if (mounted) Navigator.pop(context, saved);
-    } catch (e, st) {
+    } catch (e) {
       // log if needed
       // debugPrint('Save supplier failed: $e\n$st');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save: $e')));

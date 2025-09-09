@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'settings_provider.dart';
 
 class StockKeeperSetting extends StatelessWidget {
-  const StockKeeperSetting({Key? key}) : super(key: key);
+  const StockKeeperSetting({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +139,7 @@ class _PreviewBlock extends StatelessWidget {
       margin: const EdgeInsets.only(top: 8, bottom: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: scheme.surfaceVariant.withOpacity(.3),
+        color: scheme.surfaceContainerHighest.withOpacity(.3),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: scheme.outlineVariant.withOpacity(.5)),
       ),

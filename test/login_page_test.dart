@@ -1,6 +1,5 @@
 // File: test/login_page_test.dart
 
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

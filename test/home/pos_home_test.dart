@@ -18,7 +18,7 @@ class RecordingNavigatorObserver extends NavigatorObserver {
 }
 
 void main() {
-  Widget _app(Widget home) {
+  Widget app(Widget home) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: home,
@@ -28,7 +28,7 @@ void main() {
   group('POSHomePage - Rendering', () {
     testWidgets('renders shop title, 4 role cards, and footer',
         (WidgetTester tester) async {
-      await tester.pumpWidget(_app(const POSHomePage()));
+      await tester.pumpWidget(app(const POSHomePage()));
 
       // Title
       expect(find.text('Tharu Shop'), findsOneWidget);
@@ -51,7 +51,7 @@ void main() {
 
     testWidgets('role cards use expected flat colors',
         (WidgetTester tester) async {
-      await tester.pumpWidget(_app(const POSHomePage()));
+      await tester.pumpWidget(app(const POSHomePage()));
 
       Future<void> expectCardColor(String title, Color expected) async {
         final titleFinder = find.text(title);
@@ -79,7 +79,7 @@ void main() {
         MaterialApp(
           debugShowCheckedModeBanner: false,
           home: MediaQuery(
-            data: const MediaQueryData(textScaleFactor: 2.6),
+            data: const MediaQueryData(textScaler: TextScaler.linear(2.6)),
             child: const POSHomePage(),
           ),
         ),
@@ -97,7 +97,7 @@ void main() {
   group('RoleCard - Interaction & Navigation', () {
     testWidgets('each RoleCard is tappable (InkWell with onTap)',
         (WidgetTester tester) async {
-      await tester.pumpWidget(_app(const POSHomePage()));
+      await tester.pumpWidget(app(const POSHomePage()));
 
       final inkwells = find.byType(InkWell);
       expect(inkwells, findsNWidgets(4));
@@ -185,7 +185,7 @@ void main() {
   group('Layout Sanity', () {
     testWidgets('tiles are 150x150 and include FittedBox',
         (WidgetTester tester) async {
-      await tester.pumpWidget(_app(const POSHomePage()));
+      await tester.pumpWidget(app(const POSHomePage()));
 
       // Find the InkWell that wraps the "StockKeeper" tile.
       final inkwell = find.ancestor(

@@ -1,3 +1,5 @@
+// lib/data/repositories/stockkeeper/item_repository.dart
+
 import 'package:sqflite/sqflite.dart';
 
 import '../../db/database_helper.dart';
@@ -12,6 +14,7 @@ class ItemRepository {
   Future<Database> get _db async => DatabaseHelper.instance.database;
 
   // ---------- Lookups ----------
+
   Future<List<CategoryModel>> fetchCategories() async {
     final db = await _db;
     final rows = await db.query(
@@ -32,19 +35,20 @@ class ItemRepository {
 
   // ---------- Items CRUD ----------
 
-  /// Your UI calls this: checks if a barcode already exists.
+  /// Check if a barcode already exists (for uniqueness validation).
   Future<bool> barcodeExists(String barcode) async {
     final db = await _db;
     final count = Sqflite.firstIntValue(
-      await db.rawQuery(
-        'SELECT COUNT(*) FROM item WHERE barcode = ?',
-        [barcode],
-      ),
-    ) ?? 0;
+          await db.rawQuery(
+            'SELECT COUNT(*) FROM item WHERE barcode = ?',
+            [barcode],
+          ),
+        ) ??
+        0;
     return count > 0;
   }
 
-  /// Your UI calls this: inserts an item and returns the new row id.
+  /// Inserts an item and returns the new row id.
   Future<int> insertItem(ItemModel item) async {
     final db = await _db;
     return db.insert(
@@ -79,17 +83,17 @@ class ItemRepository {
     return db.delete('item', where: 'id = ?', whereArgs: [id]);
   }
 
-  /// Optional: get all raw items (no joins)
+  /// Get all raw items (no joins)
   Future<List<ItemModel>> getAllItems() async {
     final db = await _db;
     final rows = await db.query('item', orderBy: 'name COLLATE NOCASE ASC');
     return rows.map((e) => ItemModel.fromMap(e)).toList();
   }
 
-  /// ---------- ALL ITEMS for Inventory (joins + computed fields) ----------
-  ///
-  /// Returns one row per item with:
-  /// id, name, barcode, category_name, supplier_name, min_stock, current_stock, unit_sell_price
+  // ---------- Inventory / Aggregates ----------
+
+  /// One row per item with: id, name, barcode, category_name, supplier_name,
+  /// min_stock, current_stock (sum of stock), unit_sell_price (latest).
   Future<List<Map<String, Object?>>> fetchItemsForInventory() async {
     final db = await _db;
 
@@ -121,6 +125,49 @@ class ItemRepository {
       FROM item i
       JOIN category c ON c.id = i.category_id
       JOIN supplier s ON s.id = i.supplier_id
+      ORDER BY i.name COLLATE NOCASE ASC
+    ''');
+
+    return rows;
+  }
+
+  /// 🔹 Tailored for the "Total Items" page/table.
+  /// Returns: id, name, qty (sum of stock.quantity),
+  /// unit_cost (latest stock.unit_price), sales_price (latest stock.sell_price)
+  Future<List<Map<String, Object?>>> fetchItemsForTotals() async {
+    final db = await _db;
+
+    final rows = await db.rawQuery('''
+      SELECT
+        i.id,
+        i.name,
+
+        -- Total qty across all batches
+        COALESCE((
+          SELECT SUM(st.quantity)
+          FROM stock st
+          WHERE st.item_id = i.id
+        ), 0) AS qty,
+
+        -- Latest unit cost (purchase)
+        COALESCE((
+          SELECT st2.unit_price
+          FROM stock st2
+          WHERE st2.item_id = i.id
+          ORDER BY st2.id DESC
+          LIMIT 1
+        ), 0.0) AS unit_cost,
+
+        -- Latest sales price
+        COALESCE((
+          SELECT st3.sell_price
+          FROM stock st3
+          WHERE st3.item_id = i.id
+          ORDER BY st3.id DESC
+          LIMIT 1
+        ), 0.0) AS sales_price
+
+      FROM item i
       ORDER BY i.name COLLATE NOCASE ASC
     ''');
 
