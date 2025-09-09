@@ -53,12 +53,16 @@
 //     );
 //   }
 // }
+
 // lib/features/splashscreen.dart
 // lib/main.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart';
+
+import 'dart:io' show Platform;
+
 
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -86,9 +90,13 @@ Future<void> main() async {
   if (kIsWeb) {
     databaseFactory = databaseFactoryFfiWeb;
   } else if (defaultTargetPlatform == TargetPlatform.windows ||
-             defaultTargetPlatform == TargetPlatform.linux) {
+      defaultTargetPlatform == TargetPlatform.linux||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+    
     sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
+
+    databaseFactory = databaseFactoryFfi; // desktop (Windows/Linux)
+
   }
   // Android/iOS/macOS -> default sqflite
 
@@ -125,13 +133,17 @@ class App extends StatelessWidget {
           theme: ThemeData(
             useMaterial3: true,
             colorSchemeSeed: Colors.indigo,
-            inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+            ),
             brightness: Brightness.light,
           ),
           darkTheme: ThemeData(
             useMaterial3: true,
             colorSchemeSeed: Colors.indigo,
-            inputDecorationTheme: const InputDecorationTheme(border: OutlineInputBorder()),
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+            ),
             brightness: Brightness.dark,
           ),
           builder: (context, child) => MediaQuery(
