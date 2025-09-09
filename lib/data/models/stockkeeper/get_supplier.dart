@@ -1,5 +1,6 @@
 // lib/data/models/stockkeeper/Supplier.dart
 
+/// DB-backed Supplier entity
 class Supplier {
   final int? id;
   final String name;
@@ -11,14 +12,14 @@ class Supplier {
   final String location;
   /// 'ACTIVE' | 'INACTIVE' | 'PENDING'
   final String status;
-  final bool preferred; // DB: INTEGER (0/1)
+  final bool preferred; // DB: INTEGER(0/1)
   final String? paymentTerms; // DB: payment_terms
   final String? notes;
   /// millisecondsSinceEpoch
   final int createdAt; // DB: created_at
   final int updatedAt; // DB: updated_at
 
-  Supplier({
+  const Supplier({
     this.id,
     required this.name,
     required this.contact,
@@ -114,7 +115,7 @@ class Supplier {
     return s == '1' || s == 'true';
   }
 
-  /// Used by SupplierPage → SupplierCard/SupplierProductsPage
+  /// What your screen passes into SupplierCard / SupplierProductsPage
   SupplierCardData toUiCard() => SupplierCardData(
         id: id,
         name: name,
@@ -127,7 +128,7 @@ class Supplier {
       );
 }
 
-/// Minimal DTO many cards/screens can consume.
+/// Lightweight DTO used by UI cards/pages
 class SupplierCardData {
   final int? id;
   final String name;
@@ -135,7 +136,7 @@ class SupplierCardData {
   final String contact;
   final String? email;
   final String location;
-  final String status; // ACTIVE/INACTIVE/PENDING
+  final String status;   // ACTIVE / INACTIVE / PENDING
   final String colorCode;
 
   const SupplierCardData({
