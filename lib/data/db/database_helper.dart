@@ -10,7 +10,9 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._internal();
 
   static const _dbName = 'pos.db';
-  // ↑ BUMPED so seeds run on devices that already have a DB
+
+  // Bump version if you change schema or want to trigger seeding on existing installs
+
   static const _dbVersion = 3;
 
   Database? _db;
@@ -222,6 +224,22 @@ class DatabaseHelper {
       );
     ''');
 
+
+    // ✅ Seed 5 items (+ needed categories/suppliers/stock) on first DB create
+    await _seedInitialData(db);
+  }
+
+  FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // If upgrading to v3 or later, seed only if no items exist (avoids duplicates).
+    if (oldVersion < 3) {
+      final cnt = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM item'),
+      ) ?? 0;
+      if (cnt == 0) {
+        await _seedInitialData(db);
+      }
+    }
+
     // ---- BASIC INVENTORY SEED (supplier + categories + items + stock) ----
     {
       final now = DateTime.now().millisecondsSinceEpoch;
@@ -315,10 +333,233 @@ class DatabaseHelper {
 
   FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     // migrations go here
+
   }
 
   Future<T> runInTransaction<T>(Future<T> Function(Transaction tx) action) async {
     final db = await database;
     return db.transaction<T>(action);
+  }
+
+  // -------------------- SEEDER --------------------
+  Future<void> _seedInitialData(Database db) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    await db.transaction((tx) async {
+      // ---------- Categories ----------
+      final beveragesId = await tx.insert('category', {
+        'category': 'Beverages',
+        'color_code': '#3B82F6',
+        'category_image': null,
+      });
+      final snacksId = await tx.insert('category', {
+        'category': 'Snacks',
+        'color_code': '#F59E0B',
+        'category_image': null,
+      });
+      final dairyId = await tx.insert('category', {
+        'category': 'Dairy',
+        'color_code': '#10B981',
+        'category_image': null,
+      });
+      final householdId = await tx.insert('category', {
+        'category': 'Household',
+        'color_code': '#EF4444',
+        'category_image': null,
+      });
+      final stationeryId = await tx.insert('category', {
+        'category': 'Stationery',
+        'color_code': '#6366F1',
+        'category_image': null,
+      });
+
+      // ---------- Suppliers ----------
+      final cocaId = await tx.insert('supplier', {
+        'name': 'Coca Cola Lanka',
+        'contact': '0770000000',
+        'email': null,
+        'address': 'Colombo 01',
+        'brand': 'CocaCola',
+        'color_code': '#EF4444',
+        'location': 'Colombo',
+        'status': 'ACTIVE',
+        'preferred': 1,
+        'payment_terms': 'CASH',
+        'notes': null,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      final malibanId = await tx.insert('supplier', {
+        'name': 'Maliban Foods',
+        'contact': '0771111111',
+        'email': null,
+        'address': 'Ratmalana',
+        'brand': 'Maliban',
+        'color_code': '#F59E0B',
+        'location': 'Colombo',
+        'status': 'ACTIVE',
+        'preferred': 0,
+        'payment_terms': 'NET 15',
+        'notes': null,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      final fonterraId = await tx.insert('supplier', {
+        'name': 'Fonterra Lanka',
+        'contact': '0772222222',
+        'email': null,
+        'address': 'Biyagama',
+        'brand': 'Anchor',
+        'color_code': '#10B981',
+        'location': 'Gampaha',
+        'status': 'ACTIVE',
+        'preferred': 0,
+        'payment_terms': 'NET 30',
+        'notes': null,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      final hemasId = await tx.insert('supplier', {
+        'name': 'Hemas',
+        'contact': '0773333333',
+        'email': null,
+        'address': 'Colombo 02',
+        'brand': 'Sunlight',
+        'color_code': '#F43F5E',
+        'location': 'Colombo',
+        'status': 'ACTIVE',
+        'preferred': 0,
+        'payment_terms': 'NET 7',
+        'notes': null,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      final atlasId = await tx.insert('supplier', {
+        'name': 'Atlas',
+        'contact': '0774444444',
+        'email': null,
+        'address': 'Peliyagoda',
+        'brand': 'Atlas',
+        'color_code': '#6366F1',
+        'location': 'Gampaha',
+        'status': 'ACTIVE',
+        'preferred': 0,
+        'payment_terms': 'CASH',
+        'notes': null,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      // ---------- 5 Items ----------
+      final cokeId = await tx.insert('item', {
+        'name': 'Coca Cola 500ml',
+        'barcode': 'BARC0001',
+        'category_id': beveragesId,
+        'supplier_id': cocaId,
+        'reorder_level': 10,
+        'gradient': null,
+        'remark': 'Popular',
+        'color_code': '#EF4444',
+      });
+
+      final crackersId = await tx.insert('item', {
+        'name': 'Cream Crackers 190g',
+        'barcode': 'BARC0002',
+        'category_id': snacksId,
+        'supplier_id': malibanId,
+        'reorder_level': 8,
+        'gradient': null,
+        'remark': 'Fast moving',
+        'color_code': '#F59E0B',
+      });
+
+      final milkPowderId = await tx.insert('item', {
+        'name': 'Anchor Milk Powder 400g',
+        'barcode': 'BARC0003',
+        'category_id': dairyId,
+        'supplier_id': fonterraId,
+        'reorder_level': 12,
+        'gradient': null,
+        'remark': 'High demand',
+        'color_code': '#10B981',
+      });
+
+      final sunlightId = await tx.insert('item', {
+        'name': 'Sunlight Soap 200g',
+        'barcode': 'BARC0004',
+        'category_id': householdId,
+        'supplier_id': hemasId,
+        'reorder_level': 6,
+        'gradient': null,
+        'remark': 'Household',
+        'color_code': '#F43F5E',
+      });
+
+      final bookId = await tx.insert('item', {
+        'name': 'Atlas Exercise Book 80p',
+        'barcode': 'BARC0005',
+        'category_id': stationeryId,
+        'supplier_id': atlasId,
+        'reorder_level': 5,
+        'gradient': null,
+        'remark': 'School',
+        'color_code': '#6366F1',
+      });
+
+      // ---------- Stock (batches) ----------
+      await tx.insert('stock', {
+        'batch_id': 'COKE-2025-01',
+        'item_id': cokeId,
+        'quantity': 100,
+        'unit_price': 120.0,
+        'sell_price': 150.0,
+        'discount_amount': 0.0,
+        'supplier_id': cocaId,
+      });
+
+      await tx.insert('stock', {
+        'batch_id': 'CRACK-2025-01',
+        'item_id': crackersId,
+        'quantity': 60,
+        'unit_price': 140.0,
+        'sell_price': 180.0,
+        'discount_amount': 0.0,
+        'supplier_id': malibanId,
+      });
+
+      await tx.insert('stock', {
+        'batch_id': 'MILK-2025-01',
+        'item_id': milkPowderId,
+        'quantity': 40,
+        'unit_price': 680.0,
+        'sell_price': 850.0,
+        'discount_amount': 0.0,
+        'supplier_id': fonterraId,
+      });
+
+      await tx.insert('stock', {
+        'batch_id': 'SUN-2025-01',
+        'item_id': sunlightId,
+        'quantity': 80,
+        'unit_price': 180.0,
+        'sell_price': 220.0,
+        'discount_amount': 0.0,
+        'supplier_id': hemasId,
+      });
+
+      await tx.insert('stock', {
+        'batch_id': 'BOOK-2025-01',
+        'item_id': bookId,
+        'quantity': 120,
+        'unit_price': 70.0,
+        'sell_price': 100.0,
+        'discount_amount': 0.0,
+        'supplier_id': atlasId,
+      });
+    });
   }
 }
