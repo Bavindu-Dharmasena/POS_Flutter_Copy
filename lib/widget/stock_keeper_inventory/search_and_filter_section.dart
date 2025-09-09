@@ -12,7 +12,7 @@ class SearchAndFilterSection extends StatefulWidget {
   final bool isMobile;
 
   const SearchAndFilterSection({
-    Key? key,
+    super.key,
     required this.searchNode,
     required this.selectedCategory,
     required this.selectedStockStatus,
@@ -21,7 +21,7 @@ class SearchAndFilterSection extends StatefulWidget {
     required this.onCategoryChanged,
     required this.onStockStatusChanged,
     required this.isMobile,
-  }) : super(key: key);
+  });
 
   @override
   State<SearchAndFilterSection> createState() => _SearchAndFilterSectionState();

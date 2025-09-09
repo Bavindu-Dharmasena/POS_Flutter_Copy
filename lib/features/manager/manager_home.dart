@@ -279,7 +279,6 @@ class _ManagerCard extends StatefulWidget {
   final VoidCallback onTap;
 
   const _ManagerCard({
-    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,

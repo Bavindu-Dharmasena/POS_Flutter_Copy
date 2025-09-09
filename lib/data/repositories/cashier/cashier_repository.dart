@@ -1,6 +1,4 @@
-import 'package:sqflite/sqflite.dart';
 import '../../db/database_helper.dart';
-import '../../models/cashier/cashier.dart';
 
 class CashierRepository {
   final _table = 'todos';

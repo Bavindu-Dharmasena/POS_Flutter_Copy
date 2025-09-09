@@ -75,23 +75,23 @@ ThemeData buildLightTheme() {
     iconTheme: const IconThemeData(color: AppColors.textPrimaryLight),
 
     checkboxTheme: CheckboxThemeData(
-      fillColor: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.selected)) return cs.primary;
+      fillColor: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) return cs.primary;
         return AppColors.panelBorderLight;
       }),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
     ),
 
     radioTheme: RadioThemeData(
-      fillColor: MaterialStateProperty.all(cs.primary),
+      fillColor: WidgetStateProperty.all(cs.primary),
     ),
 
     switchTheme: SwitchThemeData(
-      thumbColor: MaterialStateProperty.resolveWith(
-        (s) => s.contains(MaterialState.selected) ? cs.primary : Colors.white,
+      thumbColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected) ? cs.primary : Colors.white,
       ),
-      trackColor: MaterialStateProperty.resolveWith(
-        (s) => s.contains(MaterialState.selected) ? cs.primary.withOpacity(.35) : Colors.black26,
+      trackColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected) ? cs.primary.withOpacity(.35) : Colors.black26,
       ),
     ),
 
@@ -124,8 +124,8 @@ ThemeData buildLightTheme() {
 
     dropdownMenuTheme: DropdownMenuThemeData(
       menuStyle: MenuStyle(
-        backgroundColor: MaterialStateProperty.all(AppColors.cardLight),
-        shape: MaterialStateProperty.all(
+        backgroundColor: WidgetStateProperty.all(AppColors.cardLight),
+        shape: WidgetStateProperty.all(
           RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: AppColors.panelBorderLight),

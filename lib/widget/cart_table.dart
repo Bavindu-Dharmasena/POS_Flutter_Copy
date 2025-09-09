@@ -163,7 +163,7 @@ class _CartTableState extends State<CartTable> {
     final double itemHeight = 120.0; // Increased height for larger fonts
     final double containerHeight = itemHeight * 2 + 32;
 
-    return Container(
+    return SizedBox(
       height: containerHeight,
       child: SingleChildScrollView(
         scrollDirection: Axis.vertical,

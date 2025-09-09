@@ -9,7 +9,7 @@ import 'secure_storage_service.dart';
 typedef Json = Map<String, dynamic>;
 
 class ApiClient {
-  ApiClient._(this.baseOrigin, {this.timeout = const Duration(seconds: 25)});
+  ApiClient._(this.baseOrigin);
 
   /// ✅ Auto pick the right origin per platform
   factory ApiClient.auto() {

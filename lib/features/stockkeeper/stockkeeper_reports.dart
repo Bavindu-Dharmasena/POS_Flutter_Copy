@@ -9,7 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 class StockKeeperReports extends StatefulWidget {
-  const StockKeeperReports({Key? key}) : super(key: key);
+  const StockKeeperReports({super.key});
 
   @override
   State<StockKeeperReports> createState() => _StockKeeperReportsState();
@@ -132,7 +132,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         if (body['change'] is String) changeText = body['change'] as String;
         if (body['changePct'] is num) {
           final pct = (body['changePct'] as num).toDouble() * 100.0;
-          changeText = (pct >= 0 ? '+' : '') + pct.toStringAsFixed(0) + '%';
+          changeText = '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(0)}%';
         }
       } else {
         throw Exception('Unexpected response');

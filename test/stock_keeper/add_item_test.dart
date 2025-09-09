@@ -66,7 +66,7 @@ void debugPrintWidgets(WidgetTester tester) {
 }
 
 extension on TextFormField {
-   get decoration => null;
+   Null get decoration => null;
 }
 
 Future<void> enterTextByIndex(WidgetTester tester, int index, String text) async {
