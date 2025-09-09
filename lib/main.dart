@@ -147,9 +147,7 @@ class App extends StatelessWidget {
             brightness: Brightness.dark,
           ),
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaleFactor: settings.textScaleFactor),
+            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(settings.textScaleFactor)),
             child: child!,
           ),
           home: const SplashScreen(),

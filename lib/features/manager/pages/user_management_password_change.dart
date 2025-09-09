@@ -124,7 +124,9 @@ class _UserManagementPasswordChangePageState
     if (RegExp(r'[A-Z]').hasMatch(password)) strength += 0.2;
     if (RegExp(r'[a-z]').hasMatch(password)) strength += 0.2;
     if (RegExp(r'\d').hasMatch(password)) strength += 0.2;
-    if (RegExp(r'''[!@#\$%^&*()_\-+={}\[\]:;'"<>,.?/\\|`~]''').hasMatch(password)) {
+    if (RegExp(
+      r'''[!@#\$%^&*()_\-+={}\[\]:;'"<>,.?/\\|`~]''',
+    ).hasMatch(password)) {
       strength += 0.2;
     }
     return strength.clamp(0.0, 1.0);

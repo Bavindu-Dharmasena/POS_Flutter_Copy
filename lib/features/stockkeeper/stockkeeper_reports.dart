@@ -9,7 +9,7 @@ import 'package:pos_system/data/repositories/stockkeeper/insight/insight_reposit
 
 
 class StockKeeperReports extends StatefulWidget {
-  const StockKeeperReports({Key? key}) : super(key: key);
+  const StockKeeperReports({super.key});
 
   @override
   State<StockKeeperReports> createState() => _StockKeeperReportsState();
@@ -92,7 +92,35 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     });
 
     try {
+
+      // final periodKey = _mapPeriod(selectedPeriod); // period support
+      // final uri = Uri.parse('${_apiBase()}/insight/total-sales?period=$periodKey');
+      final uri = Uri.parse('${_apiBase()}/insight/total-sales');
+
+      final res = await http.get(uri, headers: {'Accept': 'application/json'});
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw Exception('HTTP ${res.statusCode}: ${res.body}');
+      }
+
+      final body = res.body.trim().isEmpty ? null : jsonDecode(res.body);
+      double total = 0.0;
+      String? changeText;
+
+      if (body is num) {
+        total = body.toDouble();
+      } else if (body is Map<String, dynamic>) {
+        total = _extractDouble(body, ['totalSales', 'total', 'amount', 'value']);
+        if (body['change'] is String) changeText = body['change'] as String;
+        if (body['changePct'] is num) {
+          final pct = (body['changePct'] as num).toDouble() * 100.0;
+          changeText = '${pct >= 0 ? '+' : ''}${pct.toStringAsFixed(0)}%';
+        }
+      } else {
+        throw Exception('Unexpected response');
+      }
+
       final total = await _repo.totalSales(_period);
+
       setState(() {
         _totalSales = total;
         _loadingTotal = false;

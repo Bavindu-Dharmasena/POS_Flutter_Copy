@@ -199,7 +199,7 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     filled: true,
-                    fillColor: Theme.of(context).colorScheme.background,
+                    fillColor: Theme.of(context).colorScheme.surface,
                   ),
                   onChanged: (value) => setState(() => searchQuery = value),
                 ),
@@ -217,7 +217,7 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           filled: true,
-                          fillColor: Theme.of(context).colorScheme.background,
+                          fillColor: Theme.of(context).colorScheme.surface,
                         ),
                         items: ['All', 'SUCCESS', 'FAILED']
                             .map((status) => DropdownMenuItem(
@@ -238,7 +238,7 @@ class _AuditLogsPageState extends State<AuditLogsPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           filled: true,
-                          fillColor: Theme.of(context).colorScheme.background,
+                          fillColor: Theme.of(context).colorScheme.surface,
                         ),
                         items: ['All', 'LOGIN', 'UPDATE', 'DELETE', 'CREATE']
                             .map((action) => DropdownMenuItem(

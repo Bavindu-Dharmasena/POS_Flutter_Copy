@@ -594,5 +594,5 @@ class AddSupplierPageTestHelpers {
 }
 
 extension on TextFormField {
-  get decoration => null;
+  Null get decoration => null;
 }

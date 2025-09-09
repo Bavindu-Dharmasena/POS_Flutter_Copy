@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
-import 'package:pos_system/data/models/stockkeeper/Supplier.dart';
+import 'package:pos_system/data/models/stockkeeper/supplier_model.dart';
 import 'package:pos_system/data/repositories/stockkeeper/supplier_repository.dart';
 
 class AddSupplierPage extends StatefulWidget {
@@ -184,7 +184,7 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
       );
 
       if (mounted) Navigator.pop(context, saved);
-    } catch (e, st) {
+    } catch (e) {
       // log if needed
       // debugPrint('Save supplier failed: $e\n$st');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save: $e')));

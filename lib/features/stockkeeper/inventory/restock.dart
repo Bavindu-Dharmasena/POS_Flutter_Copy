@@ -397,8 +397,10 @@ class _RestockPageState extends State<RestockPage> {
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Card(
-                      color: cs.surfaceVariant.withOpacity(.25),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      color: cs.surfaceContainerHighest.withOpacity(.25),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(20),
                         child: Column(
@@ -507,7 +509,7 @@ class _FormCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Card(
-      color: cs.surfaceVariant.withOpacity(.25),
+      color: cs.surfaceContainerHighest.withOpacity(.25),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -838,7 +840,7 @@ class _EntryCard extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: cs.surfaceVariant.withOpacity(.3),
+        color: cs.surfaceContainerHighest.withOpacity(.3),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: cs.outline.withOpacity(.2)),
       ),

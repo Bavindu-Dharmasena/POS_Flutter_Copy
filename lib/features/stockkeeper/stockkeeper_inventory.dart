@@ -20,7 +20,7 @@ LinearGradient themedHeaderGradient(ColorScheme cs) => LinearGradient(
 LinearGradient themedBackgroundSheen(ColorScheme cs) => LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
-  colors: [cs.surface, cs.surfaceVariant.withOpacity(.35), cs.background],
+  colors: [cs.surface, cs.surfaceContainerHighest.withOpacity(.35), cs.surface],
 );
 
 // ===== Product model =====

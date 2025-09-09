@@ -143,7 +143,7 @@ class CashierInsightsPage extends StatelessWidget {
                           },
                         ),
                       );
-                    }).toList(),
+                    }),
                     if (sales.isEmpty)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
