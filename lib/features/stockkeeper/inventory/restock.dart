@@ -85,12 +85,17 @@ class RestockPage extends StatefulWidget {
   State<RestockPage> createState() => _RestockPageState();
 }
 
-class _RestockPageState extends State<RestockPage> {
+class _RestockPageState extends State<RestockPage> with WidgetsBindingObserver {
   // Local list holds items you scanned this session (for preview/update math)
   late List<Product> _all;
 
   // ---- barcode scan state ----
   final TextEditingController _barcodeCtl = TextEditingController();
+  final FocusNode _barcodeFocus = FocusNode();
+  final GlobalKey _barcodeFieldKey = GlobalKey(); // << for ensureVisible
+
+  // ---- scrolling (for keyboard-safe movement) ----
+  final ScrollController _scrollCtl = ScrollController();
 
   // ---- current form selection ----
   Product? _selectedProduct;
@@ -105,7 +110,6 @@ class _RestockPageState extends State<RestockPage> {
 
   // ESC focus
   final FocusNode _focus = FocusNode();
-  final FocusNode _barcodeFocus = FocusNode();
 
   // SQLite repo
   final ItemLookupRepository _repo = ItemLookupRepository();
@@ -119,9 +123,19 @@ class _RestockPageState extends State<RestockPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _all = []; // start empty: only real DB items
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _barcodeFocus.requestFocus();
+
+      // scroll when barcode field gains focus
+      _barcodeFocus.addListener(() {
+        if (_barcodeFocus.hasFocus) {
+          _ensureBarcodeVisible();
+        }
+      });
+
       // scanners often send newline
       _barcodeCtl.addListener(() {
         final t = _barcodeCtl.text;
@@ -136,7 +150,28 @@ class _RestockPageState extends State<RestockPage> {
   }
 
   @override
+  void didChangeMetrics() {
+    // Called when keyboard shows/hides; gently ensure the barcode field is visible
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureBarcodeVisible());
+  }
+
+  void _ensureBarcodeVisible() {
+    if (!_barcodeFocus.hasFocus) return;
+    final ctx = _barcodeFieldKey.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        alignment: 0.08, // keep it near the top of the viewport
+      );
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _focus.dispose();
     _barcodeFocus.dispose();
     _barcodeCtl.dispose();
@@ -144,6 +179,7 @@ class _RestockPageState extends State<RestockPage> {
     _salePriceCtl.dispose();
     _discountCtl.dispose();
     _qtyCtl.dispose();
+    _scrollCtl.dispose();
     super.dispose();
   }
 
@@ -166,6 +202,7 @@ class _RestockPageState extends State<RestockPage> {
       _qtyCtl.text = '1';
     });
     _barcodeFocus.requestFocus();
+    _ensureBarcodeVisible();
   }
 
   void _submitForm() {
@@ -173,6 +210,7 @@ class _RestockPageState extends State<RestockPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please scan a product first.')),
       );
+      _ensureBarcodeVisible();
       return;
     }
     if (!_formKey.currentState!.validate()) return;
@@ -324,6 +362,7 @@ class _RestockPageState extends State<RestockPage> {
           const SnackBar(content: Text('No item matched this code')),
         );
         _barcodeCtl.clear();
+        _ensureBarcodeVisible();
         return;
       }
 
@@ -349,6 +388,7 @@ class _RestockPageState extends State<RestockPage> {
 
       _pickProduct(product);
       _barcodeCtl.clear();
+      _ensureBarcodeVisible();
     } catch (e, st) {
       debugPrint('SQLite lookup error: $e\n$st');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -393,71 +433,95 @@ class _RestockPageState extends State<RestockPage> {
             body: SafeArea(
               child: Column(
                 children: [
-                  // BARCODE SECTION
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Card(
-                      color: cs.surfaceContainerHighest.withOpacity(.25),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            Icon(FontAwesome.barcode, size: 48, color: _primaryColor),
-                            const SizedBox(height: 16),
-                            Text('Scan or Enter Product Code',
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: cs.onSurface)),
-                            const SizedBox(height: 8),
-                            Text('Use barcode scanner or manually type product ID/barcode',
-                                style: TextStyle(color: cs.onSurface.withOpacity(.7)), textAlign: TextAlign.center),
-                            const SizedBox(height: 20),
-                            TextField(
-                              controller: _barcodeCtl,
-                              focusNode: _barcodeFocus,
-                              textInputAction: TextInputAction.done,
-                              onSubmitted: (v) async => _onBarcodeSubmit(v),
-                              decoration: InputDecoration(
-                                hintText: 'Scan barcode or enter product ID',
-                                prefixIcon: const Icon(FontAwesome.barcode),
-                                filled: true,
-                                fillColor: cs.surface,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
+                  // <<<<< SCROLLABLE AREA (barcode + form) >>>>>
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: _scrollCtl,
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        children: [
+                          // BARCODE SECTION
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Card(
+                              color: cs.surfaceContainerHighest.withOpacity(.25),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  children: [
+                                    Icon(FontAwesome.barcode, size: 48, color: _primaryColor),
+                                    const SizedBox(height: 16),
+                                    Text('Scan or Enter Product Code',
+                                        style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w800,
+                                            color: cs.onSurface)),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Use barcode scanner or manually type product ID/barcode',
+                                      style: TextStyle(color: cs.onSurface.withOpacity(.7)),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 20),
+                                    // Keyed for ensureVisible when keyboard opens
+                                    KeyedSubtree(
+                                      key: _barcodeFieldKey,
+                                      child: TextField(
+                                        controller: _barcodeCtl,
+                                        focusNode: _barcodeFocus,
+                                        textInputAction: TextInputAction.done,
+                                        onSubmitted: (v) async => _onBarcodeSubmit(v),
+                                        // Important: ensure scroll has room when keyboard appears
+                                        scrollPadding: EdgeInsets.only(
+                                          bottom: MediaQuery.of(context).viewInsets.bottom + 120,
+                                        ),
+                                        decoration: InputDecoration(
+                                          hintText: 'Scan barcode or enter product ID',
+                                          prefixIcon: const Icon(FontAwesome.barcode),
+                                          filled: true,
+                                          fillColor: cs.surface,
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          contentPadding: const EdgeInsets.symmetric(
+                                              horizontal: 16, vertical: 16),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                contentPadding:
-                                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+
+                          // FORM SECTION
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: _FormCard(
+                              product: _selectedProduct,
+                              formKey: _formKey,
+                              unitCtrl: _unitPriceCtl,
+                              saleCtrl: _salePriceCtl,
+                              discCtrl: _discountCtl,
+                              qtyCtrl: _qtyCtl,
+                              onCancel: _clearForm,
+                              onSubmit: _submitForm,
+                              primaryColor: _primaryColor,
+                              warningColor: _warningColor,
+                              successColor: _successColor,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
 
-                  // FORM SECTION
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _FormCard(
-                        product: _selectedProduct,
-                        formKey: _formKey,
-                        unitCtrl: _unitPriceCtl,
-                        saleCtrl: _salePriceCtl,
-                        discCtrl: _discountCtl,
-                        qtyCtrl: _qtyCtl,
-                        onCancel: _clearForm,
-                        onSubmit: _submitForm,
-                        primaryColor: _primaryColor,
-                        warningColor: _warningColor,
-                        successColor: _successColor,
-                      ),
-                    ),
-                  ),
-
-                  // BOTTOM ENTRIES BAR
+                  // BOTTOM ENTRIES BAR (pinned; layout still adjusts with keyboard)
                   _BottomEntriesBar(
                     entries: _entries,
                     onRemove: _removeEntry,
@@ -526,7 +590,9 @@ class _FormCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             if (product == null)
-              Expanded(
+              // NOTE: no Expanded here so card works inside scroll view
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -548,68 +614,65 @@ class _FormCard extends StatelessWidget {
                 ),
               )
             else
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _ProductHeader(product: product!),
-                      const SizedBox(height: 20),
-                      Form(
-                        key: formKey,
-                        child: Column(
+              // keep inner scroll for long forms if needed
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _ProductHeader(product: product!),
+                  const SizedBox(height: 20),
+                  Form(
+                    key: formKey,
+                    child: Column(
+                      children: [
+                        Row(
                           children: [
-                            Row(
-                              children: [
-                                Expanded(child: _numField('Unit Price (Optional)', unitCtrl)),
-                                const SizedBox(width: 12),
-                                Expanded(child: _numField('Sale Price (Optional)', saleCtrl)),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(child: _numField('Discount (Optional)', discCtrl)),
-                                const SizedBox(width: 12),
-                                Expanded(child: _intField('Quantity to Add', qtyCtrl)),
-                              ],
-                            ),
-                            const SizedBox(height: 24),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: onCancel,
-                                    icon: const Icon(Feather.x),
-                                    label: const Text('Clear & Scan Next'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: warningColor,
-                                      side: BorderSide(color: warningColor),
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                    ),
-                                  ),
+                            Expanded(child: _numField('Unit Price (Optional)', unitCtrl)),
+                            const SizedBox(width: 12),
+                            Expanded(child: _numField('Sale Price (Optional)', saleCtrl)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(child: _numField('Discount (Optional)', discCtrl)),
+                            const SizedBox(width: 12),
+                            Expanded(child: _intField('Quantity to Add', qtyCtrl)),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: onCancel,
+                                icon: const Icon(Feather.x),
+                                label: const Text('Clear & Scan Next'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: warningColor,
+                                  side: BorderSide(color: warningColor),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: FilledButton.icon(
-                                    onPressed: onSubmit,
-                                    icon: const Icon(Feather.plus),
-                                    label: const Text('Add to Updates'),
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                    ),
-                                  ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FilledButton.icon(
+                                onPressed: onSubmit,
+                                icon: const Icon(Feather.plus),
+                                label: const Text('Add to Updates'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: primaryColor,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
-                              ],
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
           ],
         ),
@@ -744,7 +807,12 @@ class _BottomEntriesBar extends StatelessWidget {
         color: cs.surface,
         border: Border(top: BorderSide(color: cs.outline.withOpacity(.2))),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: 16 - MediaQuery.of(context).viewInsets.bottom.clamp(0.0, 16.0), // subtle lift when keyboard shows
+      ),
       child: entries.isNotEmpty
           ? Column(
               mainAxisSize: MainAxisSize.min,
@@ -895,4 +963,8 @@ class _EntryCard extends StatelessWidget {
 // ---- Simple "Esc" action intent ----
 class ActivateIntent extends Intent {
   const ActivateIntent();
+}
+
+class EscapeIntent extends Intent {
+  const EscapeIntent();
 }
