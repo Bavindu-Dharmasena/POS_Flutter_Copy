@@ -1,6 +1,7 @@
 import 'supplier_model.dart';
 
 extension SupplierDbMaps on Supplier {
+  /// Map for INSERT. Includes created_at & updated_at.
   Map<String, Object?> toInsertMap() => {
         'name': name,
         'contact': contact,
@@ -17,6 +18,7 @@ extension SupplierDbMaps on Supplier {
         'updated_at': updatedAt,
       };
 
+  /// Map for UPDATE. ❗Does NOT touch created_at.
   Map<String, Object?> toUpdateMap() => {
         'name': name,
         'contact': contact,
@@ -29,11 +31,10 @@ extension SupplierDbMaps on Supplier {
         'preferred': preferred ? 1 : 0,
         'payment_terms': paymentTerms,
         'notes': notes,
-        'created_at': createdAt,
         'updated_at': updatedAt,
       };
 
-  /// Colorless map for UI (what you pass to SupplierCard)
+  /// Colorless map for UI (what you pass to SupplierCard / products page).
   Map<String, dynamic> toUiMap() => {
         'id': id,
         'name': name,
@@ -42,7 +43,7 @@ extension SupplierDbMaps on Supplier {
         'email': email,
         'address': address,
         'brand': brand,
-        // 'color' and 'colorCode' intentionally omitted
+        // color intentionally omitted
         'location': location,
         'status': status,
         'preferred': preferred,

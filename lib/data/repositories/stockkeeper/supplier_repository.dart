@@ -9,6 +9,8 @@ class SupplierRepository {
 
   Future<Database> get _db => DatabaseHelper.instance.database;
 
+  /// Create a supplier.
+  /// Expects createdAt/updatedAt to be set by the caller (your Add page already does).
   Future<model.Supplier> create(model.Supplier supplier) async {
     final db = await _db;
     final id = await db.insert(
@@ -19,14 +21,18 @@ class SupplierRepository {
     return supplier.copyWith(id: id);
   }
 
+  /// Update a supplier.
+  /// We force-update `updated_at` here to keep ordering and recency correct.
   Future<int> update(model.Supplier supplier) async {
     if (supplier.id == null) {
       throw ArgumentError('Supplier id is required for update');
     }
     final db = await _db;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final payload = supplier.copyWith(updatedAt: now).toUpdateMap();
     return db.update(
       'supplier',
-      supplier.toUpdateMap(),
+      payload,
       where: 'id = ?',
       whereArgs: [supplier.id],
       conflictAlgorithm: ConflictAlgorithm.abort,
@@ -45,6 +51,7 @@ class SupplierRepository {
     return model.Supplier.fromMap(rows.first);
   }
 
+  /// Core list loader with optional search + paging.
   Future<List<model.Supplier>> all({String? query, int? limit, int? offset}) async {
     final db = await _db;
 
@@ -72,5 +79,6 @@ class SupplierRepository {
     return rows.map((r) => model.Supplier.fromMap(r)).toList();
   }
 
+  /// Convenience wrapper used by the page.
   Future<List<model.Supplier>> getAll({String? q}) => all(query: q);
 }
