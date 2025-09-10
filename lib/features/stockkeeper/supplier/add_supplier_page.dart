@@ -6,6 +6,7 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:pos_system/data/models/stockkeeper/supplier_model.dart';
 import 'package:pos_system/data/repositories/stockkeeper/supplier_repository.dart';
 
+
 class AddSupplierPage extends StatefulWidget {
   const AddSupplierPage({super.key, required this.supplierData});
   /// Pass {} for add, or a filled map for edit
