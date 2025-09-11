@@ -8,7 +8,7 @@ class Supplier {
   final String? email;
   final String? address;
   final String brand;
-  final String colorCode;     // DB: color_code (kept for DB; UI ignores it)
+  final String colorCode;     // DB: color_code
   final String location;
   final String status;        // 'ACTIVE' | 'INACTIVE' | 'PENDING'
   final bool preferred;       // INTEGER 0/1
@@ -75,7 +75,7 @@ class Supplier {
         email: row['email'] as String?,
         address: row['address'] as String?,
         brand: (row['brand'] ?? '') as String,
-        colorCode: (row['color_code'] ?? '#000000') as String, // kept in DB only
+        colorCode: (row['color_code'] ?? '#000000') as String,
         location: (row['location'] ?? 'N/A') as String,
         status: (row['status'] ?? 'ACTIVE') as String,
         preferred: ((row['preferred'] ?? 0) as int) == 1,
@@ -84,4 +84,37 @@ class Supplier {
         createdAt: (row['created_at'] ?? 0) as int,
         updatedAt: (row['updated_at'] ?? 0) as int,
       );
+
+  /// Map for INSERT. Includes both created_at & updated_at.
+  Map<String, Object?> toInsertMap() => {
+        'name': name,
+        'contact': contact,
+        'email': email,
+        'address': address,
+        'brand': brand,
+        'color_code': colorCode,
+        'location': location,
+        'status': status,
+        'preferred': preferred ? 1 : 0,
+        'payment_terms': paymentTerms,
+        'notes': notes,
+        'created_at': createdAt,
+        'updated_at': updatedAt,
+      };
+
+  /// Map for UPDATE. Does **not** touch created_at.
+  Map<String, Object?> toUpdateMap() => {
+        'name': name,
+        'contact': contact,
+        'email': email,
+        'address': address,
+        'brand': brand,
+        'color_code': colorCode,
+        'location': location,
+        'status': status,
+        'preferred': preferred ? 1 : 0,
+        'payment_terms': paymentTerms,
+        'notes': notes,
+        'updated_at': updatedAt,
+      };
 }

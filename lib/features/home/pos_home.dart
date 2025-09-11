@@ -5,7 +5,7 @@ import '../auth/login_page.dart'; // Adjust the import path
 class POSHomePage extends StatelessWidget {
   const POSHomePage({super.key});
 
-  static const String shopName = "Tharu Shop";
+  static const String shopName = "Shop Name";
 
   @override
   Widget build(final BuildContext context) {

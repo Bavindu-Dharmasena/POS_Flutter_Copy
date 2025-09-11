@@ -11,25 +11,33 @@ class DatabaseHelper {
 
   static const _dbName = 'pos.db';
 
-  // Bump version if you change schema or want to trigger seeding on existing installs
-
-  static const _dbVersion = 3;
+  /// ⬆️ Bump to trigger migration and ensure supplier_request tables + seeds.
+  static const _dbVersion = 4;
 
   Database? _db;
   Future<Database> get database async => _db ??= await _initDB();
 
   Future<Database> _initDB() async {
-    final String dbPath = kIsWeb ? _dbName : p.join(await getDatabasesPath(), _dbName);
+    final String dbPath =
+        kIsWeb ? _dbName : p.join(await getDatabasesPath(), _dbName);
+
     return openDatabase(
       dbPath,
       version: _dbVersion,
-      onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON;'),
+      onConfigure: (db) async {
+        await db.execute('PRAGMA foreign_keys = ON;');
+      },
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
+
   FutureOr<void> _onCreate(Database db, int version) async {
+    // --- Users ---
     await db.execute('''
       CREATE TABLE user (
         id                 INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,7 +53,7 @@ class DatabaseHelper {
       );
     ''');
 
-    // ---- Users seed (hashed) ----
+    // Seed users (hashed)
     {
       final now = DateTime.now().millisecondsSinceEpoch;
       String hash(String s) => sha256.convert(utf8.encode(s)).toString();
@@ -92,11 +100,13 @@ class DatabaseHelper {
           'updated_at': now,
         },
       ];
+
       for (final u in users) {
         await db.insert('user', u);
       }
     }
 
+    // --- Customer ---
     await db.execute('''
       CREATE TABLE customer (
         id       INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -105,6 +115,7 @@ class DatabaseHelper {
       );
     ''');
 
+    // --- Supplier ---
     await db.execute('''
       CREATE TABLE supplier (
         id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -124,6 +135,7 @@ class DatabaseHelper {
       );
     ''');
 
+    // --- Category ---
     await db.execute('''
       CREATE TABLE category (
         id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -133,6 +145,7 @@ class DatabaseHelper {
       );
     ''');
 
+    // --- Item ---
     await db.execute('''
       CREATE TABLE item (
         id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -149,6 +162,7 @@ class DatabaseHelper {
       );
     ''');
 
+    // --- Stock ---
     await db.execute('''
       CREATE TABLE stock (
         id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -165,6 +179,7 @@ class DatabaseHelper {
       );
     ''');
 
+    // --- Sale ---
     await db.execute('''
       CREATE TABLE sale (
         id       INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -175,6 +190,7 @@ class DatabaseHelper {
       );
     ''');
 
+    // --- Invoice ---
     await db.execute('''
       CREATE TABLE invoice (
         id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -186,8 +202,10 @@ class DatabaseHelper {
         FOREIGN KEY (sale_invoice_id) REFERENCES sale(id)  ON DELETE CASCADE  ON UPDATE CASCADE
       );
     ''');
-    await db.execute('CREATE INDEX idx_invoice_sale_invoice_id ON invoice(sale_invoice_id);');
+    await db.execute(
+        'CREATE INDEX idx_invoice_sale_invoice_id ON invoice(sale_invoice_id);');
 
+    // --- Payment ---
     await db.execute('''
       CREATE TABLE payment (
         id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -204,8 +222,10 @@ class DatabaseHelper {
         FOREIGN KEY (customer_contact)  REFERENCES customer(contact) ON DELETE SET NULL ON UPDATE CASCADE
       );
     ''');
-    await db.execute('CREATE INDEX idx_payment_sale_invoice_id ON payment(sale_invoice_id);');
+    await db.execute(
+        'CREATE INDEX idx_payment_sale_invoice_id ON payment(sale_invoice_id);');
 
+    // --- Extra supplier tables (legacy) ---
     await db.execute('''
       CREATE TABLE supplier_request_details (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -224,124 +244,99 @@ class DatabaseHelper {
       );
     ''');
 
+    // --- Supplier Request (header + lines) ---
+    await _createSupplierRequestTables(db);
 
-    // ✅ Seed 5 items (+ needed categories/suppliers/stock) on first DB create
+    // --- Seed inventory + supplier requests ---
     await _seedInitialData(db);
   }
 
-  FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // If upgrading to v3 or later, seed only if no items exist (avoids duplicates).
+  FutureOr<void> _onUpgrade(
+      Database db, int oldVersion, int newVersion) async {
+    // If upgrading to v3+, seed inventory only when items table is empty.
     if (oldVersion < 3) {
       final cnt = Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM item'),
-      ) ?? 0;
+            await db.rawQuery('SELECT COUNT(*) FROM item'),
+          ) ??
+          0;
       if (cnt == 0) {
         await _seedInitialData(db);
       }
     }
 
-    // ---- BASIC INVENTORY SEED (supplier + categories + items + stock) ----
-    {
-      final now = DateTime.now().millisecondsSinceEpoch;
+    // v4: ensure supplier_request tables exist and seed if empty
+    if (oldVersion < 4) {
+      await _createSupplierRequestTables(db);
 
-      final supplierId = await db.insert('supplier', {
-        'name': 'Default Supplier',
-        'contact': '+94 77 000 0000',
-        'email': 'supplier@demo.lk',
-        'address': 'Colombo',
-        'brand': 'Generic',
-        'color_code': '#000000',
-        'location': 'LK',
-        'status': 'ACTIVE',
-        'preferred': 1,
-        'payment_terms': 'NET 30',
-        'notes': 'Seed supplier',
-        'created_at': now,
-        'updated_at': now,
-      });
-
-      final catBeverages = await db.insert('category', {
-        'category': 'Beverages',
-        'color_code': '#FF5733',
-        'category_image': null,
-      });
-      final catSnacks = await db.insert('category', {
-        'category': 'Snacks',
-        'color_code': '#33FF57',
-        'category_image': null,
-      });
-      final catStationery = await db.insert('category', {
-        'category': 'Stationery',
-        'color_code': '#3357FF',
-        'category_image': null,
-      });
-
-      final itemCoke = await db.insert('item', {
-        'name': 'Coca Cola 500ml',
-        'barcode': 'BARC0001',
-        'category_id': catBeverages,
-        'supplier_id': supplierId,
-        'reorder_level': 10,
-        'color_code': '#FF0000',
-      });
-      final itemChips = await db.insert('item', {
-        'name': 'Potato Chips 100g',
-        'barcode': 'BARC0002',
-        'category_id': catSnacks,
-        'supplier_id': supplierId,
-        'reorder_level': 20,
-        'color_code': '#FFD700',
-      });
-      final itemPaper = await db.insert('item', {
-        'name': 'A4 Paper Ream',
-        'barcode': 'BARC0003',
-        'category_id': catStationery,
-        'supplier_id': supplierId,
-        'reorder_level': 5,
-        'color_code': '#FFFFFF',
-      });
-
-      await db.insert('stock', {
-        'batch_id': 'BATCH-COCA-001',
-        'item_id': itemCoke,
-        'quantity': 120,
-        'unit_price': 50.0,
-        'sell_price': 65.0,
-        'discount_amount': 0.0,
-        'supplier_id': supplierId,
-      });
-      await db.insert('stock', {
-        'batch_id': 'BATCH-CHIPS-001',
-        'item_id': itemChips,
-        'quantity': 200,
-        'unit_price': 80.0,
-        'sell_price': 100.0,
-        'discount_amount': 0.0,
-        'supplier_id': supplierId,
-      });
-      await db.insert('stock', {
-        'batch_id': 'BATCH-PAPER-001',
-        'item_id': itemPaper,
-        'quantity': 100,
-        'unit_price': 400.0,
-        'sell_price': 480.0,
-        'discount_amount': 0.0,
-        'supplier_id': supplierId,
-      });
+      final srCount = Sqflite.firstIntValue(
+            await db.rawQuery('SELECT COUNT(*) FROM supplier_request'),
+          ) ??
+          0;
+      if (srCount == 0) {
+        await _seedSupplierRequestsForExistingDb(db);
+      }
     }
   }
 
-  // FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-  //   // migrations go here
+  // ---------------------------------------------------------------------------
+  // Public helper
+  // ---------------------------------------------------------------------------
 
-  // }
-
-  Future<T> runInTransaction<T>(Future<T> Function(Transaction tx) action) async {
+  Future<T> runInTransaction<T>(
+    Future<T> Function(Transaction tx) action,
+  ) async {
     final db = await database;
     return db.transaction<T>(action);
   }
 
-  // -------------------- SEEDER --------------------
+  // ---------------------------------------------------------------------------
+  // Schema helpers
+  // ---------------------------------------------------------------------------
+
+  Future<void> _createSupplierRequestTables(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS supplier_request (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        supplier_id INTEGER NOT NULL,
+        created_at  INTEGER NOT NULL,
+        status      TEXT    NOT NULL DEFAULT 'PENDING'
+          CHECK (status IN ('PENDING','ACCEPTED','REJECTED','RESENT')),
+        FOREIGN KEY (supplier_id) REFERENCES supplier(id)
+          ON DELETE CASCADE ON UPDATE CASCADE
+      );
+    ''');
+
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_supplier_request_created_at ON supplier_request(created_at);');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_supplier_request_supplier_id ON supplier_request(supplier_id);');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS supplier_request_item (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        request_id       INTEGER NOT NULL,
+        item_id          INTEGER NOT NULL,
+        requested_amount INTEGER NOT NULL,
+        quantity         INTEGER NOT NULL,
+        unit_price       REAL    NOT NULL,
+        sale_price       REAL    NOT NULL,
+        FOREIGN KEY (request_id) REFERENCES supplier_request(id)
+          ON DELETE CASCADE ON UPDATE CASCADE,
+        FOREIGN KEY (item_id)    REFERENCES item(id)
+          ON DELETE RESTRICT ON UPDATE CASCADE
+      );
+    ''');
+
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sri_request_id ON supplier_request_item(request_id);');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_sri_item_id ON supplier_request_item(item_id);');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Seeders
+  // ---------------------------------------------------------------------------
+
   Future<void> _seedInitialData(Database db) async {
     final now = DateTime.now().millisecondsSinceEpoch;
 
@@ -454,7 +449,7 @@ class DatabaseHelper {
         'updated_at': now,
       });
 
-      // ---------- 5 Items ----------
+      // ---------- Items ----------
       final cokeId = await tx.insert('item', {
         'name': 'Coca Cola 500ml',
         'barcode': 'BARC0001',
@@ -510,7 +505,7 @@ class DatabaseHelper {
         'color_code': '#6366F1',
       });
 
-      // ---------- Stock (batches) ----------
+      // ---------- Stock ----------
       await tx.insert('stock', {
         'batch_id': 'COKE-2025-01',
         'item_id': cokeId,
@@ -560,6 +555,123 @@ class DatabaseHelper {
         'discount_amount': 0.0,
         'supplier_id': atlasId,
       });
+
+      // ---------- Supplier Requests (3 demo rows) ----------
+      final req1 = await tx.insert('supplier_request', {
+        'supplier_id': cocaId,
+        'created_at': now - const Duration(days: 1).inMilliseconds,
+        'status': 'PENDING',
+      });
+      await tx.insert('supplier_request_item', {
+        'request_id': req1,
+        'item_id': cokeId,
+        'requested_amount': 60,
+        'quantity': 60,
+        'unit_price': 120.0,
+        'sale_price': 150.0,
+      });
+
+      final req2 = await tx.insert('supplier_request', {
+        'supplier_id': malibanId,
+        'created_at': now - const Duration(days: 5).inMilliseconds,
+        'status': 'PENDING',
+      });
+      await tx.insert('supplier_request_item', {
+        'request_id': req2,
+        'item_id': crackersId,
+        'requested_amount': 30,
+        'quantity': 30,
+        'unit_price': 140.0,
+        'sale_price': 180.0,
+      });
+
+      final req3 = await tx.insert('supplier_request', {
+        'supplier_id': fonterraId,
+        'created_at': now - const Duration(days: 10).inMilliseconds,
+        'status': 'PENDING',
+      });
+      await tx.insert('supplier_request_item', {
+        'request_id': req3,
+        'item_id': milkPowderId,
+        'requested_amount': 25,
+        'quantity': 25,
+        'unit_price': 680.0,
+        'sale_price': 850.0,
+      });
+    });
+  }
+
+  Future<void> _seedSupplierRequestsForExistingDb(Database db) async {
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    int? _firstInt(List<Map<String, Object?>> rows) =>
+        rows.isEmpty ? null : rows.first.values.first as int?;
+
+    Future<int?> _lookup(DatabaseExecutor ex, String sql) async =>
+        _firstInt(await ex.rawQuery(sql));
+
+    final cocaId = await _lookup(
+        db, "SELECT id FROM supplier WHERE name='Coca Cola Lanka' LIMIT 1");
+    final malibanId = await _lookup(
+        db, "SELECT id FROM supplier WHERE name='Maliban Foods' LIMIT 1");
+    final fonterraId = await _lookup(
+        db, "SELECT id FROM supplier WHERE name='Fonterra Lanka' LIMIT 1");
+
+    final cokeId =
+        await _lookup(db, "SELECT id FROM item WHERE barcode='BARC0001' LIMIT 1");
+    final crackersId =
+        await _lookup(db, "SELECT id FROM item WHERE barcode='BARC0002' LIMIT 1");
+    final milkPowderId =
+        await _lookup(db, "SELECT id FROM item WHERE barcode='BARC0003' LIMIT 1");
+
+    await db.transaction((tx) async {
+      if (cocaId != null && cokeId != null) {
+        final req1 = await tx.insert('supplier_request', {
+          'supplier_id': cocaId,
+          'created_at': now - const Duration(days: 1).inMilliseconds,
+          'status': 'PENDING',
+        });
+        await tx.insert('supplier_request_item', {
+          'request_id': req1,
+          'item_id': cokeId,
+          'requested_amount': 60,
+          'quantity': 60,
+          'unit_price': 120.0,
+          'sale_price': 150.0,
+        });
+      }
+
+      if (malibanId != null && crackersId != null) {
+        final req2 = await tx.insert('supplier_request', {
+          'supplier_id': malibanId,
+          'created_at': now - const Duration(days: 5).inMilliseconds,
+          'status': 'PENDING',
+        });
+        await tx.insert('supplier_request_item', {
+          'request_id': req2,
+          'item_id': crackersId,
+          'requested_amount': 30,
+          'quantity': 30,
+          'unit_price': 140.0,
+          'sale_price': 180.0,
+        });
+      }
+
+      if (fonterraId != null && milkPowderId != null) {
+        final req3 = await tx.insert('supplier_request', {
+          'supplier_id': fonterraId,
+          'created_at': now - const Duration(days: 10).inMilliseconds,
+          'status': 'PENDING',
+        });
+        await tx.insert('supplier_request_item', {
+          'request_id': req3,
+          'item_id': milkPowderId,
+          'requested_amount': 25,
+          'quantity': 25,
+          'unit_price': 680.0,
+          'sale_price': 850.0,
+        });
+      }
     });
   }
 }
