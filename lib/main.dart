@@ -63,7 +63,6 @@ import 'package:flutter/services.dart';
 
 import 'dart:io' show Platform;
 
-
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
@@ -71,6 +70,8 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:provider/provider.dart';
 import '../features/stockkeeper/settings/settings_provider.dart';
 import '../features/splashscreen.dart';
+// Add this import for your routes
+import 'routes/app_routes.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -150,6 +151,42 @@ class App extends StatelessWidget {
             data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(settings.textScaleFactor)),
             child: child!,
           ),
+          
+          // ✅ Add route configuration here
+          initialRoute: '/',
+          
+          // ✅ Configure the route generator
+          onGenerateRoute: (RouteSettings settings) {
+            return AppRoutes.generateRoute(settings, context);
+          },
+          
+          // ✅ Optional: Handle unknown routes gracefully
+          onUnknownRoute: (RouteSettings settings) {
+            return MaterialPageRoute(
+              builder: (context) => Scaffold(
+                appBar: AppBar(title: const Text('Page Not Found')),
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Route "${settings.name}" not found',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pushReplacementNamed('/'),
+                        child: const Text('Go Home'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+          
           home: const SplashScreen(),
         );
       },
