@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 // Auth
 import '../features/auth/login_page.dart';
-import '../features/auth/auth_guard.dart';
+// import '../features/auth/auth_guard.dart'; // Temporarily commented out
 
 // Cashier / StockKeeper
 import '../features/cashier/cashier_view_page.dart';
@@ -23,86 +23,109 @@ import '../features/manager/pages/create_creditor.dart';
 
 class AppRoutes {
   static Route<dynamic> generateRoute(RouteSettings settings, BuildContext context) {
+    print('🚀 Navigating to: ${settings.name}'); // Debug log
+    
     switch (settings.name) {
       // ---------- Auth ----------
       case '/':
       case '/login':
+        print('✅ Loading LoginPage');
         return MaterialPageRoute(builder: (_) => const LoginPage());
 
       // ---------- Cashier ----------
-      // case '/cashier':
-      //   return MaterialPageRoute(
-      //     builder: (_) => AuthGuard(
-      //       allowedRoles: const ['Cashier'],
-      //       builder: (ctx) => const CashierViewPage(),
-      //     ),
-      //   );
+      case '/cashier':
+        print('✅ Loading CashierViewPage');
+        return MaterialPageRoute(builder: (_) => const StockKeeperHome());
 
       // ---------- StockKeeper ----------
       case '/stockkeeper':
-        return MaterialPageRoute(
-          builder: (_) => AuthGuard(
-            allowedRoles: const ['StockKeeper'],
-            builder: (ctx) => const StockKeeperHome(),
-          ),
-        );
+        print('✅ Loading StockKeeperHome');
+        return MaterialPageRoute(builder: (_) => const StockKeeperHome());
 
       // ---------- Manager: Home ----------
       case '/manager':
-        return _manager(const ManagerHomePage());
+        print('✅ Loading ManagerHomePage');
+        return MaterialPageRoute(builder: (_) => const ManagerHomePage());
 
-      // ---------- Manager: User management (your page shows password change list) ----------
+      // ---------- Manager: User management ----------
       case '/manager/user-management':
-        return _manager(const UserManagementPasswordChangePage());
+        print('✅ Loading UserManagementPasswordChangePage');
+        return MaterialPageRoute(builder: (_) => const UserManagementPasswordChangePage());
 
       // ---------- Manager: Reports ----------
       case '/manager/reports/sales-summaries':
-        return _manager(const SalesSummariesReportPage());
+        print('✅ Loading SalesSummariesReportPage');
+        return MaterialPageRoute(builder: (_) => const SalesSummariesReportPage());
+        
       case '/manager/reports/trending-items':
-        return _manager(const TrendingItemsReportPage());
+        print('✅ Loading TrendingItemsReportPage');
+        return MaterialPageRoute(builder: (_) => const TrendingItemsReportPage());
+        
       case '/manager/reports/profit-margins':
-        return _manager(const ProfitMarginsReportPage());
+        print('✅ Loading ProfitMarginsReportPage');
+        return MaterialPageRoute(builder: (_) => const ProfitMarginsReportPage());
+        
       case '/manager/reports/creditors':
-        return _manager(const CreditorsReportPage());
+        print('✅ Loading CreditorsReportPage');
+        return MaterialPageRoute(builder: (_) => const CreditorsReportPage());
 
       // ---------- Manager: Other ----------
       case '/manager/audit-logs':
-        return _manager(const AuditLogsPage());
+        print('✅ Loading AuditLogsPage');
+        return MaterialPageRoute(builder: (_) => const AuditLogsPage());
+        
       case '/manager/price-rules':
-        return _manager(const PriceRulesPage());
+        print('✅ Loading PriceRulesPage');
+        return MaterialPageRoute(builder: (_) => const PriceRulesPage());
+        
       case '/manager/create-creditor':
-        return _manager(const CreateCreditorPage());
+        print('✅ Loading CreateCreditorPage');
+        return MaterialPageRoute(builder: (_) => const CreateCreditorPage());
 
-      // ---------- (Optional) Admin stub so login doesn't bounce to /login ----------
+      // ---------- Admin stub ----------
       case '/admin':
+        print('✅ Loading Admin Stub');
         return MaterialPageRoute(builder: (_) => const _Stub(title: 'Admin (stub)'));
 
       // ---------- Unknown ----------
       default:
-        // Show 404-style page instead of silently sending to Login
+        print('❌ Unknown route: ${settings.name}');
         return MaterialPageRoute(
-          builder: (_) => const _Stub(title: '404 • Page not found'),
+          builder: (_) => _Stub(title: '404 • Route "${settings.name}" not found'),
         );
     }
-  }
-
-  // Small helper to avoid repeating the guard
-  static MaterialPageRoute _manager(Widget child) {
-    return MaterialPageRoute(
-      builder: (_) => AuthGuard(
-        allowedRoles: const ['Manager'],
-        builder: (ctx) => child,
-      ),
-    );
   }
 }
 
 class _Stub extends StatelessWidget {
   final String title;
   const _Stub({super.key, required this.title});
+  
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: Text(title)),
-        body: Center(child: Text(title)),
+        appBar: AppBar(
+          title: Text(title),
+          backgroundColor: Colors.grey[700],
+          foregroundColor: Colors.white,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.construction, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
       );
 }
