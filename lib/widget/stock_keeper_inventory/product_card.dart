@@ -10,12 +10,12 @@ class ProductCard extends StatefulWidget {
   final FocusNode? focusNode;
 
   const ProductCard({
-    Key? key,
+    super.key,
     required this.product,
     required this.onTap,
     required this.onMore,
     this.focusNode,
-  }) : super(key: key);
+  });
 
   @override
   State<ProductCard> createState() => _ProductCardState();
@@ -70,8 +70,9 @@ class _ProductCardState extends State<ProductCard>
     
     // Determine accent color based on stock status
     Color accentColor = Colors.blue[400]!;
-    if (isOutOfStock) accentColor = Colors.red[400]!;
-    else if (isLowStock) accentColor = Colors.orange[400]!;
+    if (isOutOfStock) {
+      accentColor = Colors.red[400]!;
+    } else if (isLowStock) accentColor = Colors.orange[400]!;
     else accentColor = Colors.green[400]!;
 
     return BoxDecoration(

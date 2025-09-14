@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pos_system/features/auth/logout_service.dart';
+import '../../core/services/api_client.dart';
 
 class ManagerHomePage extends StatefulWidget {
   const ManagerHomePage({super.key});
@@ -13,11 +15,86 @@ class _ManagerHomePageState extends State<ManagerHomePage> {
   int _focusedIndex = 0;
   int _cols = 2; // updated in LayoutBuilder
   bool _compact = false;
+  LogoutService? _logoutService; // Made nullable to avoid initialization issues
+  bool _isLoggingOut = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // LogoutService will be initialized lazily in _handleLogout method
+  }
 
   @override
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleLogout() async {
+    if (_isLoggingOut) return;
+
+    // Initialize logout service lazily to handle nullable ApiClient
+    if (ApiClient.instance == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to logout: API client not available'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    _logoutService ??= LogoutService(ApiClient.instance!);
+
+    // Show confirmation dialog
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true) {
+      setState(() => _isLoggingOut = true);
+
+      try {
+        await _logoutService!.signOut();
+        
+        // Navigate to login screen - adjust route name as needed
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/login', // Adjust this route name based on your app
+            (route) => false,
+          );
+        }
+      } catch (e) {
+        // Handle logout error
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Logout failed: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoggingOut = false);
+        }
+      }
+    }
   }
 
   List<_Tile> get _allTiles => <_Tile>[
@@ -30,7 +107,7 @@ class _ManagerHomePageState extends State<ManagerHomePage> {
         _Tile('Price Rules', 'Create / schedule promos', Icons.price_change, '/manager/price-rules', Colors.pink),
         _Tile('Stock Keeper', 'Inventory, restock & POs', Icons.inventory_2, '/stockkeeper', Colors.amber),
         _Tile('Cashier', 'Invoices, payments, refunds', Icons.receipt_long, '/cashier', Colors.cyan),
-        _Tile('Add Creditor', 'Create creditor record', Icons.person_add_alt_1, '/manager/create-creditor', Colors.red),
+        // _Tile('Add Creditor', 'Create creditor record', Icons.person_add_alt_1, '/manager/create-creditor', Colors.red),
       ];
 
   @override
@@ -70,6 +147,25 @@ class _ManagerHomePageState extends State<ManagerHomePage> {
             onPressed: () => setState(() => _compact = !_compact),
             icon: Icon(_compact ? Icons.grid_view_rounded : Icons.dashboard_customize_rounded, color: Colors.white),
           ),
+          const SizedBox(width: 8),
+          // Logout button
+          _isLoggingOut
+              ? const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                )
+              : IconButton(
+                  tooltip: 'Logout',
+                  onPressed: _handleLogout,
+                  icon: const Icon(Icons.logout, color: Colors.white),
+                ),
           const SizedBox(width: 6),
         ],
       ),
@@ -279,7 +375,6 @@ class _ManagerCard extends StatefulWidget {
   final VoidCallback onTap;
 
   const _ManagerCard({
-    super.key,
     required this.title,
     required this.subtitle,
     required this.icon,

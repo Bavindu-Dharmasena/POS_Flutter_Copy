@@ -8,16 +8,19 @@ Future<void> showSupplierEditDialog({
   required Map<String, dynamic> supplier,
   required void Function(Map<String, dynamic> updated) onSave,
 }) async {
-  // controllers
-  final nameController = TextEditingController(text: supplier['name']);
-  final contactPersonController = TextEditingController(text: supplier['contactPerson']);
-  final phoneController = TextEditingController(text: supplier['phone']);
-  final emailController = TextEditingController(text: supplier['email']);
-  final locationController = TextEditingController(text: supplier['location']);
-  final addressController = TextEditingController(text: supplier['address']);
+  // controllers (safe defaults)
+  final nameController = TextEditingController(text: _str(supplier['name']));
+  final contactPersonController =
+      TextEditingController(text: _nonEmpty(_str(supplier['contactPerson']), _str(supplier['contact'])));
+  final phoneController = TextEditingController(text: _nonEmpty(_str(supplier['phone']), _str(supplier['contact'])));
+  final emailController = TextEditingController(text: _str(supplier['email']));
+  final locationController = TextEditingController(text: _str(supplier['location']));
+  final addressController = TextEditingController(text: _str(supplier['address']));
 
-  String currentStatus = supplier['status'];
-  final Color supplierColor = supplier['color'] as Color;
+  String currentStatus = _str(supplier['status']).isEmpty ? 'Active' : _str(supplier['status']);
+
+  // NO color cast; fixed accent
+  const Color accent = Color(0xFF3B82F6); // or Palette.kInfo
 
   await showDialog(
     context: context,
@@ -59,16 +62,17 @@ Future<void> showSupplierEditDialog({
                             child: Row(
                               children: [
                                 Container(
-                                  width: 48, height: 48,
+                                  width: 48,
+                                  height: 48,
                                   decoration: BoxDecoration(
-                                    color: supplierColor,
+                                    color: accent,
                                     borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [BoxShadow(color: supplierColor.withOpacity(0.4), blurRadius: 12, offset: const Offset(0,4))],
+                                    boxShadow: [BoxShadow(color: accent.withOpacity(0.4), blurRadius: 12, offset: const Offset(0,4))],
                                   ),
-                                  child: supplier['image'] != null
+                                  child: (_str(supplier['image']).isNotEmpty)
                                       ? ClipRRect(
                                           borderRadius: BorderRadius.circular(12),
-                                          child: Image.asset(supplier['image'], fit: BoxFit.cover),
+                                          child: Image.asset(_str(supplier['image']), fit: BoxFit.cover),
                                         )
                                       : const Icon(Feather.briefcase, color: Colors.white, size: 24),
                                 ),
@@ -78,7 +82,7 @@ Future<void> showSupplierEditDialog({
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       const Text('Edit Supplier', style: TextStyle(color: Palette.kText, fontWeight: FontWeight.bold, fontSize: 18)),
-                                      Text(supplier['name'], style: const TextStyle(color: Palette.kTextMuted, fontSize: 14), overflow: TextOverflow.ellipsis),
+                                      Text(_str(supplier['name']), style: const TextStyle(color: Palette.kTextMuted, fontSize: 14), overflow: TextOverflow.ellipsis),
                                     ],
                                   ),
                                 ),
@@ -207,7 +211,8 @@ Future<void> showSupplierEditDialog({
                                 onPressed: () => Navigator.pop(context),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF334155),
-                                  elevation: 0, shadowColor: Colors.transparent,
+                                  elevation: 0,
+                                  shadowColor: Colors.transparent,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
                                 child: const Text('Cancel', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
@@ -222,12 +227,12 @@ Future<void> showSupplierEditDialog({
                               child: ElevatedButton(
                                 onPressed: () {
                                   final updated = Map<String, dynamic>.from(supplier);
-                                  updated['name'] = nameController.text;
-                                  updated['contactPerson'] = contactPersonController.text;
-                                  updated['phone'] = phoneController.text;
-                                  updated['email'] = emailController.text;
-                                  updated['location'] = locationController.text;
-                                  updated['address'] = addressController.text;
+                                  updated['name'] = nameController.text.trim();
+                                  updated['contactPerson'] = contactPersonController.text.trim();
+                                  updated['phone'] = phoneController.text.trim();
+                                  updated['email'] = emailController.text.trim();
+                                  updated['location'] = locationController.text.trim();
+                                  updated['address'] = addressController.text.trim();
                                   updated['status'] = currentStatus;
 
                                   onSave(updated);
@@ -255,7 +260,8 @@ Future<void> showSupplierEditDialog({
                                             const Icon(Feather.check_circle, color: Colors.white, size: 20),
                                             const SizedBox(width: 12),
                                             Flexible(
-                                              child: Text('${nameController.text} updated successfully!',
+                                              child: Text(
+                                                '${nameController.text} updated successfully!',
                                                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
@@ -267,8 +273,9 @@ Future<void> showSupplierEditDialog({
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: supplierColor,
-                                  elevation: 0, shadowColor: Colors.transparent,
+                                  backgroundColor: accent,
+                                  elevation: 0,
+                                  shadowColor: Colors.transparent,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
                                 child: const Row(
@@ -325,3 +332,6 @@ Widget _field(String label, TextEditingController c, IconData icon) {
     ],
   );
 }
+
+String _str(dynamic v) => (v == null) ? '' : v.toString().trim();
+String _nonEmpty(String a, String b) => a.isNotEmpty ? a : b;

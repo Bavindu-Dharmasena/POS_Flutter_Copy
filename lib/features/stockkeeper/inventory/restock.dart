@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
-// ===== Product model =====
+import 'package:pos_system/data/repositories/stockkeeper/restock/item_lookup_repository.dart';
+import 'package:pos_system/data/models/stockkeeper/restock/item_scan_model.dart';
+import 'package:pos_system/data/repositories/stockkeeper/restock/stock_repository.dart';
+
 class Product {
   final String id;
   final String name;
@@ -56,9 +59,9 @@ class Product {
   }
 }
 
-// ===== Update entry DTO =====
 class RestockEntry {
   final Product product;
+  String batchId;
   double unitPrice;
   double salePrice;
   double permanentDiscount;
@@ -66,6 +69,7 @@ class RestockEntry {
 
   RestockEntry({
     required this.product,
+    required this.batchId,
     required this.unitPrice,
     required this.salePrice,
     required this.permanentDiscount,
@@ -77,117 +81,107 @@ class RestockEntry {
 }
 
 class RestockPage extends StatefulWidget {
-  const RestockPage({super.key, this.products});
-  final List<Product>? products;
-
+  const RestockPage({super.key});
   @override
   State<RestockPage> createState() => _RestockPageState();
 }
 
-class _RestockPageState extends State<RestockPage> {
-  // --- demo data (replace with live data) ---
-  List<Product> get _demo => const [
-        Product(
-          id: '001',
-          name: 'Cadbury Dairy Milk',
-          category: 'Chocolates',
-          currentStock: 6,
-          minStock: 20,
-          maxStock: 100,
-          price: 250.00,
-          barcode: '123456789',
-          supplier: 'Cadbury Lanka',
-        ),
-        Product(
-          id: '002',
-          name: 'Maliban Cream Crackers',
-          category: 'Biscuits',
-          currentStock: 10,
-          minStock: 15,
-          maxStock: 80,
-          price: 180.00,
-          barcode: '987654321',
-          supplier: 'Maliban Biscuits',
-        ),
-        Product(
-          id: '003',
-          name: 'Coca Cola 330ml',
-          category: 'Beverages',
-          currentStock: 0,
-          minStock: 25,
-          maxStock: 120,
-          price: 150.00,
-          barcode: '456789123',
-          supplier: 'Coca Cola Lanka',
-        ),
-        Product(
-          id: '004',
-          name: 'Anchor Milk Powder 400g',
-          category: 'Dairy',
-          currentStock: 8,
-          minStock: 10,
-          maxStock: 50,
-          price: 850.00,
-          barcode: '789123456',
-          supplier: 'Fonterra Lanka',
-        ),
-      ];
-
+class _RestockPageState extends State<RestockPage> with WidgetsBindingObserver {
   late List<Product> _all;
 
-  // ---- barcode scan state ----
   final TextEditingController _barcodeCtl = TextEditingController();
+  final FocusNode _barcodeFocus = FocusNode();
+  final GlobalKey _barcodeFieldKey = GlobalKey();
 
-  // ---- current form selection ----
+  final ScrollController _scrollCtl = ScrollController();
+
   Product? _selectedProduct;
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _batchIdCtl = TextEditingController();
   final TextEditingController _unitPriceCtl = TextEditingController();
   final TextEditingController _salePriceCtl = TextEditingController();
   final TextEditingController _discountCtl = TextEditingController(text: '0');
   final TextEditingController _qtyCtl = TextEditingController(text: '1');
 
-  // ---- added entries list ----
   final List<RestockEntry> _entries = [];
-
-  // ESC focus
   final FocusNode _focus = FocusNode();
-  final FocusNode _barcodeFocus = FocusNode();
 
-  // Color Palette
-  final Color _primaryColor = Color(0xFF0A74DA);
-  final Color _accentColor = Color(0xFFF59E0B);
-  final Color _backgroundColor = Color(0xFF121212);
-  final Color _cardColor = Color(0xFF1F1F1F);
-  final Color _textColor = Colors.white;
-  final Color _successColor = Color(0xFF10B981);
-  final Color _warningColor = Color(0xFFF59E0B);
-  final Color _errorColor = Color(0xFFEF4444);
+  final ItemLookupRepository _repo = ItemLookupRepository();
+  final StockRepository _stockRepo = StockRepository();
+
+  final Color _primaryColor = const Color(0xFF0A74DA);
+  final Color _successColor = const Color(0xFF10B981);
+  final Color _warningColor = const Color(0xFFF59E0B);
+  final Color _errorColor = const Color(0xFFEF4444);
 
   @override
   void initState() {
     super.initState();
-    _all = [...(widget.products ?? _demo)];
-    // Auto-focus barcode field for immediate scanning
+    WidgetsBinding.instance.addObserver(this);
+    _all = [];
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _barcodeFocus.requestFocus();
+
+      _barcodeFocus.addListener(() {
+        if (_barcodeFocus.hasFocus) _ensureBarcodeVisible();
+      });
+
+      _barcodeCtl.addListener(() {
+        final t = _barcodeCtl.text;
+        if (t.contains('\n')) {
+          final clean = t.replaceAll('\n', '');
+          _barcodeCtl.text = clean;
+          _barcodeCtl.selection = TextSelection.collapsed(offset: clean.length);
+          _onBarcodeSubmit(clean);
+        }
+      });
     });
   }
 
   @override
+  void didChangeMetrics() {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureBarcodeVisible());
+  }
+
+  void _ensureBarcodeVisible() {
+    if (!_barcodeFocus.hasFocus) return;
+    final ctx = _barcodeFieldKey.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        alignment: 0.08,
+      );
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _focus.dispose();
     _barcodeFocus.dispose();
     _barcodeCtl.dispose();
+    _batchIdCtl.dispose();
     _unitPriceCtl.dispose();
     _salePriceCtl.dispose();
     _discountCtl.dispose();
     _qtyCtl.dispose();
+    _scrollCtl.dispose();
     super.dispose();
+  }
+
+  String _defaultBatchIdFor(Product p) {
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    return 'RESTOCK-${p.id}-$ts';
   }
 
   void _pickProduct(Product p) {
     setState(() {
       _selectedProduct = p;
+      _batchIdCtl.text = _defaultBatchIdFor(p);
       _unitPriceCtl.text = p.price.toStringAsFixed(2);
       _salePriceCtl.text = p.price.toStringAsFixed(2);
       _discountCtl.text = '0';
@@ -198,13 +192,14 @@ class _RestockPageState extends State<RestockPage> {
   void _clearForm() {
     setState(() {
       _selectedProduct = null;
+      _batchIdCtl.clear();
       _unitPriceCtl.clear();
       _salePriceCtl.clear();
       _discountCtl.text = '0';
       _qtyCtl.text = '1';
     });
-    // Refocus barcode field for next scan
     _barcodeFocus.requestFocus();
+    _ensureBarcodeVisible();
   }
 
   void _submitForm() {
@@ -212,15 +207,23 @@ class _RestockPageState extends State<RestockPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please scan a product first.')),
       );
+      _ensureBarcodeVisible();
       return;
     }
     if (!_formKey.currentState!.validate()) return;
 
+    final batchId = _batchIdCtl.text.trim();
     final unitPrice = double.tryParse(_unitPriceCtl.text.trim()) ?? 0;
     final salePrice = double.tryParse(_salePriceCtl.text.trim()) ?? 0;
     final discount = double.tryParse(_discountCtl.text.trim()) ?? 0;
     final qty = int.tryParse(_qtyCtl.text.trim()) ?? 0;
 
+    if (batchId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Batch ID is required')),
+      );
+      return;
+    }
     if (qty <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Quantity must be at least 1')),
@@ -230,6 +233,7 @@ class _RestockPageState extends State<RestockPage> {
 
     final entry = RestockEntry(
       product: _selectedProduct!,
+      batchId: batchId,
       unitPrice: unitPrice,
       salePrice: salePrice,
       permanentDiscount: discount,
@@ -237,7 +241,9 @@ class _RestockPageState extends State<RestockPage> {
     );
 
     setState(() {
-      final idx = _entries.indexWhere((e) => e.product.id == entry.product.id);
+      final idx = _entries.indexWhere(
+        (e) => e.product.id == entry.product.id && e.batchId == entry.batchId,
+      );
       if (idx >= 0) {
         _entries[idx] = entry;
       } else {
@@ -253,10 +259,11 @@ class _RestockPageState extends State<RestockPage> {
   }
 
   void _removeEntry(RestockEntry e) {
-    setState(() => _entries.removeWhere((x) => x.product.id == e.product.id));
+    setState(() => _entries.removeWhere(
+        (x) => x.product.id == e.product.id && x.batchId == e.batchId));
   }
 
-  void _applyUpdates() async {
+  Future<void> _applyUpdates() async {
     if (_entries.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Add at least one item to update.')),
@@ -280,6 +287,7 @@ class _RestockPageState extends State<RestockPage> {
                   dense: true,
                   title: Text(e.product.name),
                   subtitle: Text(
+                    'Batch: ${e.batchId}\n'
                     'Current: ${e.product.currentStock}  •  +${e.quantity}  →  New: ${e.newStock}\n'
                     'Unit Rs.${e.unitPrice.toStringAsFixed(2)} • Sale Rs.${e.salePrice.toStringAsFixed(2)} • Disc Rs.${e.permanentDiscount.toStringAsFixed(2)}',
                   ),
@@ -307,17 +315,88 @@ class _RestockPageState extends State<RestockPage> {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _applyEntriesToLocalProducts();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Applied ${_entries.length} stock update(s).',
+            onPressed: () async {
+              Navigator.pop(context); // close confirm
+
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Dialog(
+                  insetPadding: EdgeInsets.symmetric(horizontal: 80),
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(width: 16),
+                        Text('Applying updates...'),
+                      ],
+                    ),
                   ),
                 ),
               );
-              setState(() => _entries.clear());
+
+              try {
+                final inputs = _entries.map((e) {
+                  return StockUpdateInput(
+                    itemId: int.parse(e.product.id),
+                    batchId: e.batchId,
+                    quantityToAdd: e.quantity,
+                    unitPrice: e.unitPrice,
+                    sellPrice: e.salePrice,
+                    discountAmount: e.permanentDiscount,
+                  );
+                }).toList();
+
+                await _stockRepo.applyRestockEntries(inputs);
+
+                if (mounted) Navigator.of(context).pop(); // close progress
+
+                // Fast UI reflection:
+                _applyEntriesToLocalProducts();
+
+                // Optional: refresh from DB to ensure UI matches real data
+                final ids = _entries.map((e) => e.product.id).toSet().toList();
+                for (final id in ids) {
+                  final item = await _repo.findByBarcodeOrId(id); // id works too
+                  if (item != null) {
+                    final i = _all.indexWhere((p) => p.id == '$id');
+                    final p = Product(
+                      id: item.id.toString(),
+                      name: item.name,
+                      category: item.category,
+                      currentStock: item.currentStock,
+                      minStock: item.reorderLevel,
+                      maxStock: item.reorderLevel * 5,
+                      price: item.price,
+                      barcode: item.barcode,
+                      image: null,
+                      supplier: item.supplier,
+                    );
+                    if (i == -1) {
+                      _all.add(p);
+                    } else {
+                      _all[i] = p;
+                    }
+                  }
+                }
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Applied ${_entries.length} stock update(s).')),
+                  );
+                  setState(() => _entries.clear());
+                }
+              } catch (e, st) {
+                debugPrint('Restock apply error: $e\n$st');
+                if (mounted) Navigator.of(context).pop(); // close progress
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to update stock.')),
+                  );
+                }
+              }
             },
             style: FilledButton.styleFrom(
               backgroundColor: _successColor,
@@ -335,18 +414,26 @@ class _RestockPageState extends State<RestockPage> {
     setState(() {
       final updated = <Product>[];
       for (final p in _all) {
-        final entry = _entries.firstWhere(
+        final totalAdded = _entries
+            .where((e) => e.product.id == p.id)
+            .fold<int>(0, (s, e) => s + e.quantity);
+        final lastPrice = _entries.lastWhere(
           (e) => e.product.id == p.id,
           orElse: () => RestockEntry(
             product: p,
+            batchId: '',
             unitPrice: 0,
-            salePrice: 0,
+            salePrice: p.price,
             permanentDiscount: 0,
             quantity: 0,
           ),
-        );
-        if (entry.quantity > 0) {
-          updated.add(p.copyWith(currentStock: p.currentStock + entry.quantity));
+        ).salePrice;
+
+        if (totalAdded > 0) {
+          updated.add(p.copyWith(
+            currentStock: p.currentStock + totalAdded,
+            price: lastPrice,
+          ));
         } else {
           updated.add(p);
         }
@@ -355,46 +442,58 @@ class _RestockPageState extends State<RestockPage> {
     });
   }
 
-  // Barcode enter -> pick item
-  void _onBarcodeSubmit(String code) {
+  Future<void> _onBarcodeSubmit(String code) async {
     final trimmed = code.trim();
     if (trimmed.isEmpty) return;
 
-    final p = _all.firstWhere(
-      (e) => e.barcode == trimmed || e.id.toLowerCase() == trimmed.toLowerCase(),
-      orElse: () => const Product(
-        id: '',
-        name: '',
-        category: '',
-        currentStock: 0,
-        minStock: 0,
-        maxStock: 0,
-        price: 0,
-        barcode: '',
-        supplier: '',
-      ),
-    );
+    try {
+      final ItemScanModel? item = await _repo.findByBarcodeOrId(trimmed);
+      if (item == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No item matched this code')),
+        );
+        _barcodeCtl.clear();
+        _ensureBarcodeVisible();
+        return;
+      }
 
-    if (p.id.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No item matched this code')),
+      final product = Product(
+        id: item.id.toString(),
+        name: item.name,
+        category: item.category,
+        currentStock: item.currentStock,
+        minStock: item.reorderLevel,
+        maxStock: item.reorderLevel * 5,
+        price: item.price,
+        barcode: item.barcode,
+        image: null,
+        supplier: item.supplier,
       );
+
+      final idx = _all.indexWhere((p) => p.id == product.id);
+      if (idx == -1) {
+        _all.add(product);
+      } else {
+        _all[idx] = product;
+      }
+
+      _pickProduct(product);
       _barcodeCtl.clear();
-    } else {
-      _pickProduct(p);
-      _barcodeCtl.clear();
+      _ensureBarcodeVisible();
+    } catch (e, st) {
+      debugPrint('SQLite lookup error: $e\n$st');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lookup error')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDesktop = MediaQuery.of(context).size.width >= 900;
 
     return Shortcuts(
-      shortcuts: {
-        LogicalKeySet(LogicalKeyboardKey.escape): const ActivateIntent(),
-      },
+      shortcuts: { LogicalKeySet(LogicalKeyboardKey.escape): const ActivateIntent(), },
       child: Actions(
         actions: {
           ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
@@ -412,104 +511,90 @@ class _RestockPageState extends State<RestockPage> {
               backgroundColor: cs.surface,
               elevation: 0,
               centerTitle: true,
-              title: const Text(
-                'Update Stock',
-                style: TextStyle(fontWeight: FontWeight.w800),
-              ),
+              title: const Text('Update Stock', style: TextStyle(fontWeight: FontWeight.w800)),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
                 tooltip: 'Back (Esc)',
                 onPressed: () => Navigator.of(context).pop(),
-                style: IconButton.styleFrom(
-                  foregroundColor: _primaryColor,
-                ),
+                style: IconButton.styleFrom(foregroundColor: _primaryColor),
               ),
             ),
             body: SafeArea(
               child: Column(
                 children: [
-                  // ===== BARCODE SCANNER SECTION =====
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Card(
-                      color: cs.surfaceVariant.withOpacity(.25),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            Icon(
-                              FontAwesome.barcode,
-                              size: 48,
-                              color: _primaryColor,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Scan or Enter Product Code',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: cs.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Use barcode scanner or manually type product ID/barcode',
-                              style: TextStyle(
-                                color: cs.onSurface.withOpacity(.7),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 20),
-                            TextField(
-                              controller: _barcodeCtl,
-                              focusNode: _barcodeFocus,
-                              textInputAction: TextInputAction.done,
-                              onSubmitted: _onBarcodeSubmit,
-                              decoration: InputDecoration(
-                                hintText: 'Scan barcode or enter product ID',
-                                prefixIcon: const Icon(FontAwesome.barcode),
-                                filled: true,
-                                fillColor: cs.surface,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide.none,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // ===== FORM SECTION =====
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: _FormCard(
-                        product: _selectedProduct,
-                        formKey: _formKey,
-                        unitCtrl: _unitPriceCtl,
-                        saleCtrl: _salePriceCtl,
-                        discCtrl: _discountCtl,
-                        qtyCtrl: _qtyCtl,
-                        onCancel: _clearForm,
-                        onSubmit: _submitForm,
-                        primaryColor: _primaryColor,
-                        warningColor: _warningColor,
-                        successColor: _successColor,
+                    child: SingleChildScrollView(
+                      controller: _scrollCtl,
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Card(
+                              color: cs.surfaceContainerHighest.withOpacity(.25),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  children: [
+                                    Icon(FontAwesome.barcode, size: 48, color: _primaryColor),
+                                    const SizedBox(height: 16),
+                                    Text('Scan or Enter Product Code',
+                                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: cs.onSurface)),
+                                    const SizedBox(height: 8),
+                                    Text('Use barcode scanner or manually type product ID/barcode',
+                                        style: TextStyle(color: cs.onSurface.withOpacity(.7)), textAlign: TextAlign.center),
+                                    const SizedBox(height: 20),
+                                    KeyedSubtree(
+                                      key: _barcodeFieldKey,
+                                      child: TextField(
+                                        controller: _barcodeCtl,
+                                        focusNode: _barcodeFocus,
+                                        textInputAction: TextInputAction.done,
+                                        onSubmitted: (v) async => _onBarcodeSubmit(v),
+                                        scrollPadding: EdgeInsets.only(
+                                          bottom: MediaQuery.of(context).viewInsets.bottom + 120,
+                                        ),
+                                        decoration: InputDecoration(
+                                          hintText: 'Scan barcode or enter product ID',
+                                          prefixIcon: const Icon(FontAwesome.barcode),
+                                          filled: true,
+                                          fillColor: cs.surface,
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: _FormCard(
+                              product: _selectedProduct,
+                              formKey: _formKey,
+                              batchCtrl: _batchIdCtl,
+                              unitCtrl: _unitPriceCtl,
+                              saleCtrl: _salePriceCtl,
+                              discCtrl: _discountCtl,
+                              qtyCtrl: _qtyCtl,
+                              onCancel: _clearForm,
+                              onSubmit: _submitForm,
+                              primaryColor: _primaryColor,
+                              warningColor: _warningColor,
+                              successColor: _successColor,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-
-                  // ===== BOTTOM ENTRIES BAR =====
                   _BottomEntriesBar(
                     entries: _entries,
                     onRemove: _removeEntry,
@@ -528,12 +613,11 @@ class _RestockPageState extends State<RestockPage> {
   }
 }
 
-// ========== FORM WIDGET ==========
-
 class _FormCard extends StatelessWidget {
   const _FormCard({
     required this.product,
     required this.formKey,
+    required this.batchCtrl,
     required this.unitCtrl,
     required this.saleCtrl,
     required this.discCtrl,
@@ -547,6 +631,7 @@ class _FormCard extends StatelessWidget {
 
   final Product? product;
   final GlobalKey<FormState> formKey;
+  final TextEditingController batchCtrl;
   final TextEditingController unitCtrl;
   final TextEditingController saleCtrl;
   final TextEditingController discCtrl;
@@ -562,7 +647,7 @@ class _FormCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Card(
-      color: cs.surfaceVariant.withOpacity(.25),
+      color: cs.surfaceContainerHighest.withOpacity(.25),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -573,123 +658,92 @@ class _FormCard extends StatelessWidget {
               children: [
                 Icon(Feather.edit, size: 20, color: cs.primary),
                 const SizedBox(width: 8),
-                const Text(
-                  'Stock Update Details',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+                const Text('Stock Update Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
               ],
             ),
             const SizedBox(height: 16),
             if (product == null)
-              Expanded(
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Feather.package,
-                        size: 64,
-                        color: cs.onSurface.withOpacity(.3),
-                      ),
+                      Icon(Feather.package, size: 64, color: cs.onSurface.withOpacity(.3)),
                       const SizedBox(height: 16),
-                      Text(
-                        'No Product Selected',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface.withOpacity(.7),
-                        ),
-                      ),
+                      Text('No Product Selected',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface.withOpacity(.7))),
                       const SizedBox(height: 8),
-                      Text(
-                        'Scan a barcode or enter a product ID above to begin',
-                        style: TextStyle(
-                          color: cs.onSurface.withOpacity(.5),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
+                      Text('Scan a barcode or enter a product ID above to begin',
+                          style: TextStyle(color: cs.onSurface.withOpacity(.5)), textAlign: TextAlign.center),
                     ],
                   ),
                 ),
               )
             else
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _ProductHeader(product: product!),
-                      const SizedBox(height: 20),
-                      Form(
-                        key: formKey,
-                        child: Column(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _ProductHeader(product: product!),
+                  const SizedBox(height: 20),
+                  Form(
+                    key: formKey,
+                    child: Column(
+                      children: [
+                        _textField('Batch ID (Required)', batchCtrl, validator: (v) {
+                          if ((v ?? '').trim().isEmpty) return 'Batch ID is required';
+                          return null;
+                        }),
+                        const SizedBox(height: 12),
+                        Row(
                           children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _numField('Unit Price (Optional)', unitCtrl),
+                            Expanded(child: _numField('Unit Price (Optional)', unitCtrl)),
+                            const SizedBox(width: 12),
+                            Expanded(child: _numField('Sale Price (Optional)', saleCtrl)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(child: _numField('Discount (Optional)', discCtrl)),
+                            const SizedBox(width: 12),
+                            Expanded(child: _intField('Quantity to Add', qtyCtrl)),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: onCancel,
+                                icon: const Icon(Feather.x),
+                                label: const Text('Clear & Scan Next'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: warningColor,
+                                  side: BorderSide(color: warningColor),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _numField('Sale Price (Optional)', saleCtrl),
-                                ),
-                              ],
+                              ),
                             ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _numField('Discount (Optional)', discCtrl),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FilledButton.icon(
+                                onPressed: onSubmit,
+                                icon: const Icon(Feather.plus),
+                                label: const Text('Add to Updates'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: primaryColor,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _intField('Quantity to Add', qtyCtrl),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 24),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: onCancel,
-                                    icon: const Icon(Feather.x),
-                                    label: const Text('Clear & Scan Next'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: warningColor,
-                                      side: BorderSide(color: warningColor),
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: FilledButton.icon(
-                                    onPressed: onSubmit,
-                                    icon: const Icon(Feather.plus),
-                                    label: const Text('Add to Updates'),
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: primaryColor,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
           ],
         ),
@@ -697,13 +751,19 @@ class _FormCard extends StatelessWidget {
     );
   }
 
+  Widget _textField(String label, TextEditingController c, {String? Function(String?)? validator}) {
+    return TextFormField(
+      controller: c,
+      decoration: _fieldDecoration(label),
+      validator: validator,
+    );
+  }
+
   Widget _numField(String label, TextEditingController c) {
     return TextFormField(
       controller: c,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-      ],
+      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
       decoration: _fieldDecoration(label),
       validator: (v) {
         final t = (v ?? '').trim();
@@ -753,87 +813,35 @@ class _ProductHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: cs.primary.withOpacity(.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: cs.primary.withOpacity(.3),
-        ),
+        border: Border.all(color: cs.primary.withOpacity(.3)),
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: cs.primary,
-            child: Icon(
-              Feather.package,
-              color: cs.onPrimary,
-            ),
-          ),
+          CircleAvatar(radius: 24, backgroundColor: cs.primary, child: Icon(Feather.package, color: cs.onPrimary)),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${product.category} • ID: ${product.id}',
-                  style: TextStyle(
-                    color: cs.onSurface.withOpacity(.7),
-                    fontSize: 12,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: cs.surface,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'Current Stock: ${product.currentStock}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                'Rs.${product.price.toStringAsFixed(2)}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(product.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              Text('${product.category} • ID: ${product.id}', style: TextStyle(color: cs.onSurface.withOpacity(.7), fontSize: 12)),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(color: cs.surface, borderRadius: BorderRadius.circular(20)),
+                child: Text('Current Stock: ${product.currentStock}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
               ),
-              Text(
-                'Current Price',
-                style: TextStyle(
-                  color: cs.onSurface.withOpacity(.6),
-                  fontSize: 10,
-                ),
-              ),
-            ],
+            ]),
           ),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text('Rs.${product.price.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            Text('Current Price', style: TextStyle(color: cs.onSurface.withOpacity(.6), fontSize: 10)),
+          ]),
         ],
       ),
     );
   }
 }
 
-// ===== Bottom entries bar =====
 class _BottomEntriesBar extends StatelessWidget {
   const _BottomEntriesBar({
     required this.entries,
@@ -858,45 +866,26 @@ class _BottomEntriesBar extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      decoration: BoxDecoration(
-        color: cs.surface,
-        border: Border(
-          top: BorderSide(color: cs.outline.withOpacity(.2)),
-        ),
+      decoration: BoxDecoration(color: cs.surface, border: Border(top: BorderSide(color: cs.outline.withOpacity(.2)))),
+      padding: EdgeInsets.only(
+        left: 16, right: 16, top: 16,
+        bottom: 16 - MediaQuery.of(context).viewInsets.bottom.clamp(0.0, 16.0),
       ),
-      padding: const EdgeInsets.all(16),
       child: entries.isNotEmpty
           ? Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  children: [
-                    Icon(Feather.list, size: 18, color: cs.primary),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Items to Update',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${entries.length} item${entries.length == 1 ? '' : 's'}',
-                      style: TextStyle(
-                        color: cs.onSurface.withOpacity(.7),
-                      ),
-                    ),
-                  ],
-                ),
+                Row(children: [
+                  Icon(Feather.list, size: 18, color: cs.primary),
+                  const SizedBox(width: 8),
+                  const Text('Items to Update', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                  const Spacer(),
+                  Text('${entries.length} item${entries.length == 1 ? '' : 's'}', style: TextStyle(color: cs.onSurface.withOpacity(.7))),
+                ]),
                 const SizedBox(height: 12),
                 if (entries.length == 1)
-                  _EntryCard(
-                    entry: entries.first,
-                    onRemove: () => onRemove(entries.first),
-                    errorColor: errorColor,
-                  )
+                  _EntryCard(entry: entries.first, onRemove: () => onRemove(entries.first), errorColor: errorColor)
                 else
                   SizedBox(
                     height: 80,
@@ -906,51 +895,28 @@ class _BottomEntriesBar extends StatelessWidget {
                       separatorBuilder: (_, __) => const SizedBox(width: 8),
                       itemBuilder: (context, i) {
                         final e = entries[i];
-                        return _EntryCard(
-                          entry: e,
-                          onRemove: () => onRemove(e),
-                          isCompact: true,
-                          errorColor: errorColor,
-                        );
+                        return _EntryCard(entry: e, onRemove: () => onRemove(e), isCompact: true, errorColor: errorColor);
                       },
                     ),
                   ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Total Impact: Rs.${total.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                Row(children: [
+                  Expanded(child: Text('Total Impact: Rs.${total.toStringAsFixed(2)}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
+                  FilledButton.icon(
+                    onPressed: onApply,
+                    icon: const Icon(Feather.check),
+                    label: const Text('Apply Updates'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: successColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     ),
-                    FilledButton.icon(
-                      onPressed: onApply,
-                      icon: const Icon(Feather.check),
-                      label: const Text('Apply Updates'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: successColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ]),
               ],
             )
-          : Text(
-              'No items added yet. Scan products and add quantities to update stock.',
-              style: TextStyle(
-                color: cs.onSurface.withOpacity(.7),
-              ),
-              textAlign: TextAlign.center,
-            ),
+          : Text('No items added yet. Scan products and add quantities to update stock.',
+              style: TextStyle(color: cs.onSurface.withOpacity(.7)), textAlign: TextAlign.center),
     );
   }
 }
@@ -973,82 +939,42 @@ class _EntryCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Container(
-      constraints: BoxConstraints(
-        minWidth: isCompact ? 200 : double.infinity,
-        maxWidth: isCompact ? 280 : double.infinity,
-      ),
+      constraints: BoxConstraints(minWidth: isCompact ? 200 : double.infinity, maxWidth: isCompact ? 280 : double.infinity),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: cs.surfaceVariant.withOpacity(.3),
+        color: cs.surfaceContainerHighest.withOpacity(.3),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: cs.outline.withOpacity(.2)),
       ),
       child: Row(
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  entry.product.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text(entry.product.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              const SizedBox(height: 2),
+              Text('Batch: ${entry.batchId}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(.6))),
+              const SizedBox(height: 4),
+              Text('Current: ${entry.product.currentStock} → New: ${entry.newStock} (+${entry.quantity})',
+                  style: TextStyle(fontSize: 11, color: cs.onSurface.withOpacity(.7))),
+              if (!isCompact) ...[
                 const SizedBox(height: 4),
-                Text(
-                  'Current: ${entry.product.currentStock} → New: ${entry.newStock} (+${entry.quantity})',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: cs.onSurface.withOpacity(.7),
-                  ),
-                ),
-                if (!isCompact) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Rs.${entry.lineTotal.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
+                Text('Rs.${entry.lineTotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
               ],
-            ),
+            ]),
           ),
           if (isCompact) ...[
             const SizedBox(width: 8),
-            Text(
-              'Rs.${entry.lineTotal.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 11,
-              ),
-            ),
+            Text('Rs.${entry.lineTotal.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11)),
           ],
           const SizedBox(width: 8),
           IconButton(
             visualDensity: VisualDensity.compact,
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(
-              minWidth: 32,
-              minHeight: 32,
-            ),
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             tooltip: 'Remove',
             onPressed: onRemove,
-            icon: Icon(
-              Feather.trash_2,
-              size: 16,
-              color: errorColor,
-            ),
-            style: IconButton.styleFrom(
-              foregroundColor: errorColor,
-              backgroundColor: errorColor.withOpacity(0.1),
-            ),
+            icon: Icon(Feather.trash_2, size: 16, color: errorColor),
+            style: IconButton.styleFrom(foregroundColor: errorColor, backgroundColor: errorColor.withOpacity(0.1)),
           ),
         ],
       ),
@@ -1056,7 +982,6 @@ class _EntryCard extends StatelessWidget {
   }
 }
 
-// ---- Simple "Esc" action intent ----
 class ActivateIntent extends Intent {
   const ActivateIntent();
 }

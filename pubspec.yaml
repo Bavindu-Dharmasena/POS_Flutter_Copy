@@ -8,8 +8,13 @@ environment:
   sdk: ">=3.8.1 <4.0.0"
 
 dependencies:
-  flutter:
-    sdk: flutter
+  sqflite: ^2.3.3+1
+  sqflite_common_ffi: ^2.3.3
+  sqflite_common_ffi_web: ^1.0.1+1   # <-- not 0.4.x
+  path: ^1.9.0
+  crypto: ^3.0.3
+
+
 
   # ---- Core UI / Utils ----
   cupertino_icons: ^1.0.8
@@ -28,10 +33,13 @@ dependencies:
   http: ^1.2.2
   provider: ^6.1.2
   dio: ^5.7.0
-  path: ^1.9.0
   drift: ^2.20.0
-  sqflite: ^2.3.3+1    # bundles SQLite for Android/iOS/macOS/Windows
   flutter_secure_storage: ^9.2.2
+
+  # url_launcher: ^6.3.2
+
+   
+
 
 
 dev_dependencies:

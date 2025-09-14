@@ -1,24 +1,22 @@
-import 'dart:math' as math; // still used for effects
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+
 import '../../common/barcode_scanner_page.dart';
+import '../../data/repositories/stockkeeper/item_repository.dart';
+import '../../data/models/stockkeeper/item_model.dart';
+import '../../data/models/stockkeeper/category_model.dart';
+import '../../data/models/stockkeeper/item_supplier_model.dart';
 
 class AddItemPage extends StatefulWidget {
-  const AddItemPage({Key? key}) : super(key: key);
+  const AddItemPage({super.key});
 
   @override
   State<AddItemPage> createState() => _AddItemPageState();
 }
 
 class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin {
-  // ========= CONFIG =========
-  static const String apiBaseUrl = 'http://localhost:3000'; // POST for items (unchanged)
-  static const String createItemEndpoint = '/stock/items';  // POST
-  static const String categoriesUrl = 'http://localhost:3001/stock/categories'; // <-- NEW (GET)
-
   // ========= THEME =========
   static const Color kBg = Color(0xFF0B1623);
   static const Color kSurface = Color(0xFF121A26);
@@ -43,38 +41,30 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
   final TextEditingController _reorderCtrl = TextEditingController(text: '0');
   final TextEditingController _remarkCtrl = TextEditingController();
   final TextEditingController _gradientCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
 
   // IDs per schema
   int? _selectedCategoryId;
   int? _selectedSupplierId;
 
-  // Category data now comes from backend (list of maps with id/name/colorCode)
-  List<Map<String, dynamic>> _categories = [];
-  bool _loadingCats = true;
-  String? _catError;
-
-  // Suppliers (local for now)
-  final List<Map<String, dynamic>> _suppliers = const [
-    {'id': 1, 'name': 'Default Supplier'},
-    {'id': 2, 'name': 'AAA Traders'},
-    {'id': 3, 'name': 'FreshCo'},
-    {'id': 4, 'name': 'Kandy Foods'},
-  ];
+  // Lookups from SQLite
+  bool _loadingLookups = true;
+  String? _lookupError;
+  List<CategoryModel> _categories = [];
+  List<SupplierModel> _suppliers = [];
 
   // Optional flat color (sent as colorCode)
   final List<Color> _colorPalette = const [
-    Color(0xFF3B82F6), // Blue
-    Color(0xFFF97316), // Orange
-    Color(0xFF10B981), // Green
-    Color(0xFFEC4899), // Pink
-    Color(0xFF6366F1), // Indigo
-    Color(0xFF06B6D4), // Cyan
-    Color(0xFF84CC16), // Lime
-    Color(0xFF475569), // Slate
+    Color(0xFF3B82F6),
+    Color(0xFFF97316),
+    Color(0xFF10B981),
+    Color(0xFFEC4899),
+    Color(0xFF6366F1),
+    Color(0xFF06B6D4),
+    Color(0xFF84CC16),
+    Color(0xFF475569),
   ];
-  Color? _selectedColor; // maps to colorCode (#RRGGBB)
-
-  final _scrollCtrl = ScrollController();
+  Color? _selectedColor;
 
   @override
   void initState() {
@@ -87,7 +77,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
         .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeInOut));
     _animationController.forward();
 
-    _fetchCategories(); // <-- load from backend
+    _loadLookups();
   }
 
   @override
@@ -102,48 +92,25 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
     super.dispose();
   }
 
-  // ========= BACKEND CALLS =========
-  Future<void> _fetchCategories() async {
+  // ========= SQLite lookups =========
+  Future<void> _loadLookups() async {
     setState(() {
-      _loadingCats = true;
-      _catError = null;
+      _loadingLookups = true;
+      _lookupError = null;
     });
-
     try {
-      final res = await http.get(Uri.parse(categoriesUrl));
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        final body = json.decode(res.body);
-        if (body is List) {
-          // Map backend fields -> UI fields
-          final fetched = body.map<Map<String, dynamic>>((e) {
-            final m = (e as Map<String, dynamic>);
-            return {
-              'id': m['id'],
-              'name': m['category'],      // backend 'category' -> UI 'name'
-              'colorCode': (m['colorCode'] ?? '#475569'),
-            };
-          }).toList();
-
-          setState(() {
-            _categories = fetched;
-            _loadingCats = false;
-          });
-        } else {
-          setState(() {
-            _catError = 'Unexpected response shape';
-            _loadingCats = false;
-          });
-        }
-      } else {
-        setState(() {
-          _catError = _extractError(res.body);
-          _loadingCats = false;
-        });
-      }
+      final repo = ItemRepository.instance;
+      final cats = await repo.fetchCategories();
+      final sups = await repo.fetchSuppliers();
+      setState(() {
+        _categories = cats;
+        _suppliers = sups;
+        _loadingLookups = false;
+      });
     } catch (e) {
       setState(() {
-        _catError = 'Network error: $e';
-        _loadingCats = false;
+        _lookupError = 'Failed to load lookups: $e';
+        _loadingLookups = false;
       });
     }
   }
@@ -162,9 +129,11 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
 
   Color? _categoryDefaultColor(int? categoryId) {
     if (categoryId == null) return null;
-    final m = _categories.firstWhere((e) => e['id'] == categoryId, orElse: () => {});
-    if (m.isEmpty || m['colorCode'] == null) return null;
-    final code = (m['colorCode'] as String).replaceFirst('#', '');
+    final m = _categories.firstWhere(
+      (e) => e.id == categoryId,
+      orElse: () => const CategoryModel(category: '', colorCode: '#475569'),
+    );
+    final code = m.colorCode.replaceFirst('#', '');
     if (code.length == 6) {
       return Color(int.parse('FF$code', radix: 16));
     }
@@ -185,67 +154,70 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
     return null;
   }
 
-  // ========= SUBMIT =========
+  // ========= SUBMIT (SQLite) =========
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) {
       _scrollToFirstError();
       return;
     }
-    if (_loadingCats) {
-      _showSnack(icon: Feather.alert_triangle, color: kWarn, text: 'Categories are still loading…');
+    if (_loadingLookups) {
+      _showSnack(icon: Feather.alert_triangle, color: kWarn, text: 'Lookups are still loading…');
       return;
     }
     if (_categories.isEmpty) {
-      _showSnack(icon: Feather.alert_triangle, color: kDanger, text: 'No categories available');
+      _showSnack(icon: Feather.alert_triangle, color: kDanger, text: 'No categories found in DB');
+      return;
+    }
+    if (_selectedCategoryId == null || _selectedSupplierId == null) {
+      _showSnack(icon: Feather.alert_triangle, color: kDanger, text: 'Select category & supplier');
+      return;
+    }
+
+    final repo = ItemRepository.instance;
+
+    // Unique barcode guard
+    final barcode = _barcodeCtrl.text.trim();
+    final exists = await repo.barcodeExists(barcode);
+    if (exists) {
+      _showSnack(
+        icon: Feather.alert_triangle,
+        color: kDanger,
+        text: 'Barcode already exists',
+      );
       return;
     }
 
     final Color fallback = _selectedColor ?? _categoryDefaultColor(_selectedCategoryId) ?? const Color(0xFF000000);
     final String colorHex = _colorToHex(fallback);
 
-    final payload = {
-      'name': _nameCtrl.text.trim(),
-      'barcode': _barcodeCtrl.text.trim(),
-      'categoryId': _selectedCategoryId,
-      'supplierId': _selectedSupplierId,
-      'reorderLevel': int.tryParse(_reorderCtrl.text.trim()) ?? 0,
-      'gradient': _gradientCtrl.text.trim().isEmpty ? null : _gradientCtrl.text.trim(),
-      'remark': _remarkCtrl.text.trim().isEmpty ? null : _remarkCtrl.text.trim(),
-      'colorCode': colorHex,
-    };
+    final item = ItemModel(
+      name: _nameCtrl.text.trim(),
+      barcode: barcode,
+      categoryId: _selectedCategoryId!,
+      supplierId: _selectedSupplierId!,
+      reorderLevel: int.tryParse(_reorderCtrl.text.trim()) ?? 0,
+      gradient: _gradientCtrl.text.trim().isEmpty ? null : _gradientCtrl.text.trim(),
+      remark: _remarkCtrl.text.trim().isEmpty ? null : _remarkCtrl.text.trim(),
+      colorCode: colorHex,
+    );
 
     try {
-      final uri = Uri.parse('$apiBaseUrl$createItemEndpoint');
-      final res = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
+      final id = await repo.insertItem(item);
+      _showSnack(
+        icon: Feather.check_circle,
+        color: kSuccess,
+        text: 'Item saved (ID: $id)',
       );
-
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        _showSnack(
-          icon: Feather.check_circle,
-          color: kSuccess,
-          text: 'Item created: ${payload['name']}',
-        );
-        _resetForm();
-      } else {
-        final msg = _extractError(res.body);
-        _showSnack(icon: Feather.alert_triangle, color: kDanger, text: 'Failed: $msg');
-      }
+      _resetForm();
+    } on Exception catch (e) {
+      // Handle UNIQUE constraint or FK failures nicely
+      final msg = e.toString().contains('UNIQUE constraint')
+          ? 'Barcode already exists'
+          : e.toString();
+      _showSnack(icon: Feather.alert_triangle, color: kDanger, text: msg);
     } catch (e) {
-      _showSnack(icon: Feather.alert_triangle, color: kDanger, text: 'Network error: $e');
+      _showSnack(icon: Feather.alert_triangle, color: kDanger, text: 'Save failed: $e');
     }
-  }
-
-  String _extractError(String body) {
-    try {
-      final j = json.decode(body);
-      if (j is Map && j['message'] != null) {
-        return j['message'].toString();
-      }
-    } catch (_) {}
-    return body;
   }
 
   void _resetForm() {
@@ -378,21 +350,15 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                           ),
                           const SizedBox(height: 16),
 
-                          // Category & Supplier (IDs)
+                          // Relations
                           _dashboardCard(
                             icon: Feather.package,
                             title: 'Relations',
                             color: kWarn,
                             children: [
-                              _categoriesSection(), // <-- NEW (handles loading/error/dropdown)
+                              _categoriesSection(),
                               const SizedBox(height: 12),
-                              _dropdownByMap(
-                                label: 'Supplier',
-                                valueId: _selectedSupplierId,
-                                options: _suppliers,
-                                onChanged: (id) => setState(() => _selectedSupplierId = id),
-                                isDisabled: false,
-                              ),
+                              _suppliersSection(),
                               const SizedBox(height: 12),
                               _dashboardNumberField(
                                 controller: _reorderCtrl,
@@ -408,7 +374,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                           _dashboardCard(
                             icon: Feather.layers,
                             title: 'Appearance & Meta',
-                            color: const Color(0xFFEC4899),
+                            color: Color(0xFFEC4899),
                             children: [
                               _flatColorPicker(),
                               const SizedBox(height: 12),
@@ -502,8 +468,8 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ).merge(
       ButtonStyle(
-        overlayColor: MaterialStateProperty.resolveWith(
-          (states) => Colors.white.withOpacity(states.contains(MaterialState.pressed) ? 0.08 : 0.04),
+        overlayColor: WidgetStateProperty.resolveWith(
+          (states) => Colors.white.withOpacity(states.contains(WidgetState.pressed) ? 0.08 : 0.04),
         ),
       ),
     );
@@ -520,7 +486,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
         color: kSurface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: kBorder),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 16, offset: const Offset(0, 6))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 16, offset: Offset(0, 6))],
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -538,8 +504,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
             ),
             const SizedBox(width: 16),
             const Flexible(
-              child: Text('',
-                  style: TextStyle(color: Colors.transparent)), // spacing only; we show title below
+              child: Text('', style: TextStyle(color: Colors.transparent)),
             ),
           ]),
           Text(title, style: const TextStyle(color: kText, fontWeight: FontWeight.bold, fontSize: 20)),
@@ -635,17 +600,14 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
     );
   }
 
-  // Loading/error wrapper around Category dropdown
+  // ----- Category UI -----
   Widget _categoriesSection() {
-    if (_loadingCats) {
+    if (_loadingLookups) {
       return InputDecorator(
         decoration: _dashboardDecoration('Category'),
         child: const Row(
           children: [
-            SizedBox(
-              width: 18, height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2.2),
-            ),
+            SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.2)),
             SizedBox(width: 12),
             Text('Loading categories…', style: TextStyle(color: kTextMuted)),
           ],
@@ -653,19 +615,19 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       );
     }
 
-    if (_catError != null) {
+    if (_lookupError != null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InputDecorator(
             decoration: _dashboardDecoration('Category'),
-            child: Text(_catError!, style: const TextStyle(color: kDanger)),
+            child: Text(_lookupError!, style: const TextStyle(color: kDanger)),
           ),
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
-              onPressed: _fetchCategories,
+              onPressed: _loadLookups,
               icon: const Icon(Feather.refresh_cw, color: kTextMuted, size: 14),
               label: const Text('Retry', style: TextStyle(color: kTextMuted)),
             ),
@@ -674,43 +636,60 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       );
     }
 
-    return _dropdownByMap(
-      label: 'Category',
-      valueId: _selectedCategoryId,
-      options: _categories,
+    return DropdownButtonFormField<int>(
+      value: _selectedCategoryId,
+      items: _categories
+          .map((e) => DropdownMenuItem<int>(
+                value: e.id,
+                child: Text(
+                  e.category,
+                  style: const TextStyle(color: kText),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ))
+          .toList(),
       onChanged: (id) {
         setState(() {
           _selectedCategoryId = id;
           _selectedColor ??= _categoryDefaultColor(id);
         });
       },
-      isDisabled: _categories.isEmpty,
+      validator: (v) => v == null ? 'Required' : null,
+      dropdownColor: kSurface,
+      decoration: _dashboardDecoration('Category'),
+      style: const TextStyle(color: kText, fontSize: 14, fontWeight: FontWeight.w500),
+      icon: const Icon(Feather.chevron_down, color: kTextMuted, size: 20),
+      isExpanded: true,
     );
   }
 
-  Widget _dropdownByMap({
-    required String label,
-    required int? valueId,
-    required List<Map<String, dynamic>> options,
-    required void Function(int?) onChanged,
-    bool isDisabled = false,
-  }) {
+  // ----- Supplier UI -----
+  Widget _suppliersSection() {
+    if (_loadingLookups) {
+      return InputDecorator(
+        decoration: _dashboardDecoration('Supplier'),
+        child: const Row(
+          children: [
+            SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.2)),
+            SizedBox(width: 12),
+            Text('Loading suppliers…', style: TextStyle(color: kTextMuted)),
+          ],
+        ),
+      );
+    }
+
     return DropdownButtonFormField<int>(
-      value: valueId,
-      items: options
+      value: _selectedSupplierId,
+      items: _suppliers
           .map((e) => DropdownMenuItem<int>(
-                value: e['id'] as int,
-                child: Text(
-                  e['name'] as String,
-                  style: const TextStyle(color: kText),
-                  overflow: TextOverflow.ellipsis,
-                ),
+                value: e.id,
+                child: Text(e.name, style: const TextStyle(color: kText), overflow: TextOverflow.ellipsis),
               ))
           .toList(),
-      onChanged: isDisabled ? null : onChanged,
+      onChanged: (id) => setState(() => _selectedSupplierId = id),
       validator: (v) => v == null ? 'Required' : null,
       dropdownColor: kSurface,
-      decoration: _dashboardDecoration(label),
+      decoration: _dashboardDecoration('Supplier'),
       style: const TextStyle(color: kText, fontSize: 14, fontWeight: FontWeight.w500),
       icon: const Icon(Feather.chevron_down, color: kTextMuted, size: 20),
       isExpanded: true,
@@ -806,7 +785,13 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                     color: isSelected ? Colors.white : Colors.white.withOpacity(0.15),
                     width: isSelected ? 3 : 1,
                   ),
-                  boxShadow: [BoxShadow(color: c.withOpacity(isSelected ? 0.6 : 0.35), blurRadius: isSelected ? 14 : 8, offset: Offset(0, isSelected ? 4 : 2))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: c.withOpacity(isSelected ? 0.6 : 0.35),
+                      blurRadius: isSelected ? 14 : 8,
+                      offset: Offset(0, isSelected ? 4 : 2),
+                    )
+                  ],
                 ),
                 child: isSelected ? const Icon(Feather.check, color: Colors.white, size: 18) : null,
               ),
@@ -822,7 +807,10 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
 
     final String catName = (_selectedCategoryId == null)
         ? 'Category'
-        : (_categories.firstWhere((e) => e['id'] == _selectedCategoryId, orElse: () => const {'name': 'Category'})['name'] as String);
+        : (_categories.firstWhere(
+              (e) => e.id == _selectedCategoryId,
+              orElse: () => const CategoryModel(category: 'Category', colorCode: '#475569'),
+            ).category);
 
     return Container(
       padding: const EdgeInsets.all(16),

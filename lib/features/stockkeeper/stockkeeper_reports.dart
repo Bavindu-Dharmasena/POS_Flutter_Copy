@@ -1,12 +1,11 @@
-import 'dart:convert';
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/services.dart'; // for ESC key
-import 'package:http/http.dart' as http;
+import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:pos_system/data/models/stockkeeper/insight/chart_series.dart';
+import 'package:pos_system/data/models/stockkeeper/insight/top_selling_item.dart';
+import 'package:pos_system/data/repositories/stockkeeper/insight/insight_repository.dart';
 
 class StockKeeperReports extends StatefulWidget {
   const StockKeeperReports({Key? key}) : super(key: key);
@@ -19,42 +18,47 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
   String selectedPeriod = 'Today';
   late FocusNode _focusNode;
 
-  // ===== Accent colors =====
+  // Accent colors
   static const Color kInfo = Color(0xFF3B82F6);
   static const Color kSuccess = Color(0xFF10B981);
   static const Color kWarn = Color(0xFFF59E0B);
 
-  // ==== Total Sales ====
-  bool _loadingTotal = true;
-  String? _errorTotal;
+  // Repository
+  final _repo = InsightRepository();
+
+  // Quick stats
+  bool _loadingTotal = true, _loadingProducts = true, _loadingCustomers = true;
+  String? _errorTotal, _errorProducts, _errorCustomers;
+
   double _totalSales = 0.0;
-  String? _changePctText; // optional "+15%"
-
-  // ==== Total Products ====
-  bool _loadingProducts = true;
-  String? _errorProducts;
   int _totalProducts = 0;
-
-  // ==== Total Customers ====
-  bool _loadingCustomers = true;
-  String? _errorCustomers;
   int _totalCustomers = 0;
 
-  // ==== Top Selling Items ====
+  // Top Selling
   bool _loadingTopItems = true;
   String? _errorTopItems;
-  List<_TopItem> _topItems = [];
+  List<TopItemSummary> _topItems = [];
 
-  // currency formatter
-  final _currency = NumberFormat.currency(locale: 'en_LK', symbol: 'Rs. ', decimalDigits: 2);
+  // Sales Overview (chart)
+  bool _loadingChart = true;
+  String? _errorChart;
+  ChartSeries _series = const ChartSeries(labels: [], values: [], yUnit: 'Rs.');
+
+  // currency formats
+  final _currencyFull = NumberFormat.currency(locale: 'en_LK', symbol: 'Rs. ', decimalDigits: 2);
+  final _currencyCompact = NumberFormat.compactCurrency(locale: 'en', symbol: 'Rs. ');
 
   @override
   void initState() {
     super.initState();
     _focusNode = FocusNode();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       _focusNode.requestFocus();
-      _refreshAll();
+
+      // OPTIONAL seed (call once if you want demo data):
+      // await _repo.seedInsightDemoIfEmpty();
+
+      await _refreshAll();
     });
   }
 
@@ -64,83 +68,32 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     super.dispose();
   }
 
-  // === Base URL per platform ===
-  String _apiBase() {
-    if (kIsWeb) return 'http://localhost:3001';
-    if (Platform.isAndroid) return 'http://10.0.2.2:3001';
-    return 'http://127.0.0.1:3001';
+  InsightPeriod get _period {
+    switch (selectedPeriod) {
+      case 'Today':
+        return InsightPeriod.today;
+      case 'This Week':
+        return InsightPeriod.week;
+      case 'This Month':
+        return InsightPeriod.month;
+      case 'This Year':
+        return InsightPeriod.year;
+      default:
+        return InsightPeriod.today;
+    }
   }
 
   Future<void> _refreshAll() async {
-    // Fire them in parallel; each manages its own loading/error state.
-    await Future.wait([
-      _loadTotalSales(),
-      _loadTotalProducts(),
-      _loadTotalCustomers(),
-      _loadTopItems(),
-    ]);
-  }
-
-  // ---- Helpers to extract numbers from various JSON shapes ----
-  double _extractDouble(dynamic body, List<String> keys) {
-    if (body is num) return body.toDouble();
-    if (body is Map<String, dynamic>) {
-      for (final k in keys) {
-        final v = body[k];
-        if (v is num) return v.toDouble();
-      }
-    }
-    throw Exception('Unexpected response: $body');
-  }
-
-  int _extractInt(dynamic body, List<String> keys) {
-    if (body is num) return body.toInt();
-    if (body is Map<String, dynamic>) {
-      for (final k in keys) {
-        final v = body[k];
-        if (v is num) return v.toInt();
-      }
-    }
-    throw Exception('Unexpected response: $body');
-  }
-
-  // ================= API LOADERS =================
-  Future<void> _loadTotalSales() async {
     setState(() {
-      _loadingTotal = true;
-      _errorTotal = null;
+      _loadingTotal = _loadingProducts = _loadingCustomers = true;
+      _loadingTopItems = _loadingChart = true;
+      _errorTotal = _errorProducts = _errorCustomers = _errorTopItems = _errorChart = null;
     });
 
     try {
-      // final periodKey = _mapPeriod(selectedPeriod); // period support
-      // final uri = Uri.parse('${_apiBase()}/insight/total-sales?period=$periodKey');
-      final uri = Uri.parse('${_apiBase()}/insight/total-sales');
-
-      final res = await http.get(uri, headers: {'Accept': 'application/json'});
-      if (res.statusCode < 200 || res.statusCode >= 300) {
-        throw Exception('HTTP ${res.statusCode}: ${res.body}');
-      }
-
-      final body = res.body.trim().isEmpty ? null : jsonDecode(res.body);
-      double total = 0.0;
-      String? changeText;
-
-      if (body is num) {
-        total = body.toDouble();
-      } else if (body is Map<String, dynamic>) {
-        total = _extractDouble(body, ['totalSales', 'total', 'amount', 'value']);
-        if (body['change'] is String) changeText = body['change'] as String;
-        if (body['changePct'] is num) {
-          final pct = (body['changePct'] as num).toDouble() * 100.0;
-          changeText = (pct >= 0 ? '+' : '') + pct.toStringAsFixed(0) + '%';
-        }
-      } else {
-        throw Exception('Unexpected response');
-      }
-
+      final total = await _repo.totalSales(_period);
       setState(() {
         _totalSales = total;
-        _changePctText = changeText;
         _loadingTotal = false;
       });
     } catch (e) {
@@ -149,29 +102,11 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         _loadingTotal = false;
       });
     }
-  }
-
-  Future<void> _loadTotalProducts() async {
-    setState(() {
-      _loadingProducts = true;
-      _errorProducts = null;
-    });
 
     try {
-      // final periodKey = _mapPeriod(selectedPeriod);
-      // final uri = Uri.parse('${_apiBase()}/insight/total-products?period=$periodKey');
-      final uri = Uri.parse('${_apiBase()}/insight/total-products');
-
-      final res = await http.get(uri, headers: {'Accept': 'application/json'});
-      if (res.statusCode < 200 || res.statusCode >= 300) {
-        throw Exception('HTTP ${res.statusCode}: ${res.body}');
-      }
-
-      final body = res.body.trim().isEmpty ? null : jsonDecode(res.body);
-      final total = _extractInt(body, ['totalProducts', 'total', 'count', 'value']);
-
+      final p = await _repo.totalProducts();
       setState(() {
-        _totalProducts = total;
+        _totalProducts = p;
         _loadingProducts = false;
       });
     } catch (e) {
@@ -180,29 +115,11 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         _loadingProducts = false;
       });
     }
-  }
-
-  Future<void> _loadTotalCustomers() async {
-    setState(() {
-      _loadingCustomers = true;
-      _errorCustomers = null;
-    });
 
     try {
-      // final periodKey = _mapPeriod(selectedPeriod);
-      // final uri = Uri.parse('${_apiBase()}/insight/total-customers?period=$periodKey');
-      final uri = Uri.parse('${_apiBase()}/insight/total-customers');
-
-      final res = await http.get(uri, headers: {'Accept': 'application/json'});
-      if (res.statusCode < 200 || res.statusCode >= 300) {
-        throw Exception('HTTP ${res.statusCode}: ${res.body}');
-      }
-
-      final body = res.body.trim().isEmpty ? null : jsonDecode(res.body);
-      final total = _extractInt(body, ['totalCustomers', 'total', 'count', 'value']);
-
+      final c = await _repo.totalCustomers();
       setState(() {
-        _totalCustomers = total;
+        _totalCustomers = c;
         _loadingCustomers = false;
       });
     } catch (e) {
@@ -211,46 +128,11 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         _loadingCustomers = false;
       });
     }
-  }
-
-  Future<void> _loadTopItems() async {
-    setState(() {
-      _loadingTopItems = true;
-      _errorTopItems = null;
-    });
 
     try {
-      // final periodKey = _mapPeriod(selectedPeriod);
-      // final uri = Uri.parse('${_apiBase()}/insight/top-selling-items?period=$periodKey');
-      final uri = Uri.parse('${_apiBase()}/insight/top-selling-items');
-
-      final res = await http.get(uri, headers: {'Accept': 'application/json'});
-      if (res.statusCode < 200 || res.statusCode >= 300) {
-        throw Exception('HTTP ${res.statusCode}: ${res.body}');
-      }
-
-      final body = res.body.trim().isEmpty ? null : jsonDecode(res.body);
-
-      final items = <_TopItem>[];
-      if (body is List) {
-        for (final e in body) {
-          if (e is Map<String, dynamic>) {
-            final name = (e['name'] ?? e['itemName'] ?? e['title'] ?? 'Item').toString();
-            final priceRaw = e['price'] ?? e['sellPrice'] ?? e['unitPrice'];
-            final price = (priceRaw is num) ? priceRaw.toDouble() : null;
-            final soldRaw = e['sold'] ?? e['count'] ?? e['quantity'] ?? e['qty'];
-            final sold = (soldRaw is num) ? soldRaw.toInt() : 0;
-            items.add(_TopItem(name: name, price: price, sold: sold));
-          } else if (e is String) {
-            items.add(_TopItem(name: e, price: null, sold: 0));
-          }
-        }
-      } else {
-        throw Exception('Unexpected response for top-selling-items');
-      }
-
+      final t = await _repo.topSellingItems(_period, limit: 10);
       setState(() {
-        _topItems = items;
+        _topItems = t;
         _loadingTopItems = false;
       });
     } catch (e) {
@@ -259,31 +141,29 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         _loadingTopItems = false;
       });
     }
-  }
 
-  String _mapPeriod(String uiValue) {
-    switch (uiValue) {
-      case 'Today':
-        return 'today';
-      case 'This Week':
-        return 'week';
-      case 'This Month':
-        return 'month';
-      case 'This Year':
-        return 'year';
-      default:
-        return 'today';
+    try {
+      final s = await _repo.salesSeries(_period);
+      setState(() {
+        _series = s;
+        _loadingChart = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorChart = e.toString();
+        _loadingChart = false;
+      });
     }
   }
 
-  // === ESC -> back ===
+  // ESC -> back
   void _handleKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape) {
       Navigator.of(context).pop();
     }
   }
 
-  // ===== Dynamic palette =====
+  // Palette
   _Palette _palette(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     if (isDark) {
@@ -333,16 +213,9 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
           titleSpacing: 12,
           title: Row(
             children: [
-              Text(
-                'Insights & Analytics',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: p.text,
-                ),
-              ),
+              Text('Insights & Analytics',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: p.text)),
               const SizedBox(width: 8),
-              // ESC hint
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
@@ -350,14 +223,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: p.border),
                 ),
-                child: Text(
-                  'ESC',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: p.textMuted,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                child: Text('ESC', style: TextStyle(fontSize: 10, color: p.textMuted, fontWeight: FontWeight.w500)),
               ),
             ],
           ),
@@ -376,20 +242,11 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                   dropdownColor: p.surface,
                   style: TextStyle(color: p.text, fontSize: 14),
                   icon: Icon(Icons.keyboard_arrow_down, color: p.textMuted),
-                  items: const [
-                    'Today',
-                    'This Week',
-                    'This Month',
-                    'This Year'
-                  ].map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value),
-                    );
-                  }).toList(),
-                  onChanged: (String? newValue) async {
-                    setState(() => selectedPeriod = newValue!);
-                    // If API supports period filter, the loaders already have commented lines.
+                  items: const ['Today','This Week','This Month','This Year']
+                      .map((v) => DropdownMenuItem<String>(value: v, child: Text(v)))
+                      .toList(),
+                  onChanged: (String? v) async {
+                    setState(() => selectedPeriod = v!);
                     await _refreshAll();
                   },
                 ),
@@ -400,7 +257,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         body: SingleChildScrollView(
           child: Column(
             children: [
-              // Quick Stats - horizontally scrollable
+              // Quick Stats
               Container(
                 height: 120,
                 margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
@@ -408,7 +265,6 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      // Total Sales
                       SizedBox(
                         width: 160,
                         child: _buildStatCard(
@@ -418,29 +274,13 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                               ? 'Loading...'
                               : _errorTotal != null
                                   ? 'Error'
-                                  : _currency.format(_totalSales),
-                          change: _loadingTotal ? '...' : (_changePctText ?? ''),
+                                  : _currencyFull.format(_totalSales),
+                          change: '',
                           color: kSuccess,
                           icon: Icons.trending_up,
                         ),
                       ),
                       const SizedBox(width: 12),
-
-                      // Orders (still static unless you add endpoint)
-                      SizedBox(
-                        width: 160,
-                        child: _buildStatCard(
-                          p: p,
-                          title: 'Orders',
-                          value: '348',
-                          change: '+8%',
-                          color: kInfo,
-                          icon: Icons.receipt_long,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Customers from API
                       SizedBox(
                         width: 160,
                         child: _buildStatCard(
@@ -457,8 +297,6 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                         ),
                       ),
                       const SizedBox(width: 12),
-
-                      // Products from API
                       SizedBox(
                         width: 160,
                         child: _buildStatCard(
@@ -474,7 +312,6 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                           icon: Icons.inventory_2_outlined,
                         ),
                       ),
-                      const SizedBox(width: 12),
                     ],
                   ),
                 ),
@@ -483,7 +320,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
               const SizedBox(height: 12),
               _buildSalesContent(p),
 
-              // Top selling items section (with loading/error)
+              // Top selling items
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Container(
@@ -498,14 +335,13 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       if (_loadingTopItems)
                         Padding(
                           padding: const EdgeInsets.all(12.0),
-                          child: Center(
-                            child: Text('Loading...', style: TextStyle(color: p.textMuted)),
-                          ),
+                          child: Center(child: Text('Loading...', style: TextStyle(color: p.textMuted))),
                         )
                       else if (_errorTopItems != null)
                         Padding(
                           padding: const EdgeInsets.all(12.0),
-                          child: Text('Failed to load: $_errorTopItems', style: const TextStyle(color: Colors.redAccent)),
+                          child: Text('Failed to load: $_errorTopItems',
+                              style: const TextStyle(color: Colors.redAccent)),
                         )
                       else if (_topItems.isEmpty)
                         Padding(
@@ -515,11 +351,10 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
                       else
                         Column(
                           children: _topItems
-                              .take(10)
                               .map((it) => _buildTopSellingItem(
                                     p,
                                     it.name,
-                                    it.price != null ? _currency.format(it.price!) : '—',
+                                    it.price != null ? _currencyFull.format(it.price!) : '—',
                                     '${it.sold} sold',
                                   ))
                               .toList(),
@@ -532,11 +367,8 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
               if (_errorTotal != null)
                 Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Text(
-                    'Total Sales load failed:\n$_errorTotal',
-                    style: TextStyle(color: Colors.red.shade300),
-                    textAlign: TextAlign.center,
-                  ),
+                  child: Text('Total Sales load failed:\n$_errorTotal',
+                      style: TextStyle(color: Colors.red.shade300), textAlign: TextAlign.center),
                 ),
             ],
           ),
@@ -545,7 +377,7 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     );
   }
 
-  // ======= Reusable stat card =======
+  // Stat card
   Widget _buildStatCard({
     required _Palette p,
     required String title,
@@ -560,68 +392,39 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // header row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(0.35),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Icon(icon, color: Colors.white, size: 20),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [BoxShadow(color: color.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))],
               ),
-              Text(
-                change,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
+              child: Icon(icon, color: Colors.white, size: 20),
+            ),
+            Text(change, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+          ]),
           const Spacer(),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: p.text,
-            ),
-          ),
+          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: p.text)),
           const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: p.textMuted,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(title, style: TextStyle(fontSize: 12, color: p.textMuted, fontWeight: FontWeight.w500)),
         ],
       ),
     );
   }
 
-  // ================== SALES CONTENT (chart) ==================
+  // ===== Sales Overview (with axis names) =====
   Widget _buildSalesContent(_Palette p) {
+    final labels = _series.labels;
+    final values = _series.values;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Column(
         children: [
-          // Sales Chart
           Container(
-            height: 300,
+            height: 340,
             padding: const EdgeInsets.all(16),
             margin: const EdgeInsets.only(bottom: 12),
             decoration: _cardBox(p),
@@ -629,67 +432,16 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _SectionHeader(title: 'Sales Overview', iconColor: kInfo, textColor: p.text),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Expanded(
-                  child: LineChart(
-                    LineChartData(
-                      backgroundColor: Colors.transparent,
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        getDrawingHorizontalLine: (value) => FlLine(
-                          color: p.text.withOpacity(0.08),
-                          strokeWidth: 1,
-                        ),
-                      ),
-                      titlesData: FlTitlesData(
-                        leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            getTitlesWidget: (value, meta) {
-                              const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Text(
-                                  days[value.toInt() % 7],
-                                  style: TextStyle(color: p.textMuted, fontSize: 11),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      borderData: FlBorderData(show: false),
-                      minX: 0,
-                      maxX: 6,
-                      minY: 0,
-                      maxY: 6,
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: const [
-                            FlSpot(0, 3),
-                            FlSpot(1, 1),
-                            FlSpot(2, 4),
-                            FlSpot(3, 2),
-                            FlSpot(4, 5),
-                            FlSpot(5, 3),
-                            FlSpot(6, 4),
-                          ],
-                          isCurved: true,
-                          color: kInfo,
-                          barWidth: 3,
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: kInfo.withOpacity(0.18),
-                          ),
-                          dotData: FlDotData(show: false),
-                        ),
-                      ],
-                    ),
-                  ),
+                  child: _loadingChart
+                      ? Center(child: Text('Loading...', style: TextStyle(color: p.textMuted)))
+                      : _errorChart != null
+                          ? Center(child: Text('Failed to load: $_errorChart',
+                              style: const TextStyle(color: Colors.redAccent)))
+                          : (labels.isEmpty || values.isEmpty)
+                              ? Center(child: Text('No data', style: TextStyle(color: p.textMuted)))
+                              : LineChart(_chartData(p, labels, values)),
                 ),
               ],
             ),
@@ -699,7 +451,100 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
     );
   }
 
-  // ===== Helpers (list rows) =====
+  LineChartData _chartData(_Palette p, List<String> labels, List<double> values) {
+    final spots = List<FlSpot>.generate(values.length, (i) => FlSpot(i.toDouble(), values[i]));
+    final maxY = values.fold<double>(0, (m, v) => math.max(m, v));
+    final niceMax = _niceCeil(maxY);
+    final stepX = math.max(1, (labels.length / 6).floor()); // show ~6 ticks on x
+
+    return LineChartData(
+      backgroundColor: Colors.transparent,
+      minX: 0,
+      maxX: math.max(0, labels.length - 1).toDouble(),
+      minY: 0,
+      maxY: niceMax == 0 ? 10 : niceMax.toDouble(),
+      gridData: FlGridData(
+        show: true,
+        drawVerticalLine: false,
+        getDrawingHorizontalLine: (value) => FlLine(color: p.text.withOpacity(0.08), strokeWidth: 1),
+      ),
+      borderData: FlBorderData(show: false),
+      titlesData: FlTitlesData(
+        // Y axis
+        leftTitles: AxisTitles(
+          axisNameWidget: Text('Sales (${_series.yUnit})',
+              style: TextStyle(color: p.textMuted, fontWeight: FontWeight.w600)),
+          axisNameSize: 28,
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 54,
+            getTitlesWidget: (v, meta) {
+              if (niceMax == 0) return const SizedBox.shrink();
+              // show ~5 ticks
+              final interval = (niceMax / 4).clamp(1, double.infinity);
+              if ((v % interval).abs() > 0.001 && v != niceMax) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Text(_currencyCompact.format(v),
+                    style: TextStyle(color: p.textMuted, fontSize: 11), textAlign: TextAlign.right),
+              );
+            },
+          ),
+        ),
+        // X axis
+        bottomTitles: AxisTitles(
+          axisNameWidget:
+              Text('Time', style: TextStyle(color: p.textMuted, fontWeight: FontWeight.w600)),
+          axisNameSize: 26,
+          sideTitles: SideTitles(
+            showTitles: true,
+            getTitlesWidget: (v, meta) {
+              final i = v.round();
+              if (i < 0 || i >= labels.length) return const SizedBox.shrink();
+              if (i % stepX != 0 && i != labels.length - 1) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(labels[i], style: TextStyle(color: p.textMuted, fontSize: 11)),
+              );
+            },
+          ),
+        ),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      ),
+      lineBarsData: [
+        LineChartBarData(
+          spots: spots,
+          isCurved: true,
+          color: kInfo,
+          barWidth: 3,
+          belowBarData: BarAreaData(show: true, color: kInfo.withOpacity(0.18)),
+          dotData: FlDotData(show: false),
+        ),
+      ],
+    );
+  }
+
+  int _niceCeil(double v) {
+    if (v <= 0) return 0;
+    // round up to 1/2/5 * 10^n
+    final exp = (math.log(v) / math.ln10).floor();
+    final base = math.pow(10, exp).toDouble();
+    final scaled = v / base;
+    double nice;
+    if (scaled <= 1) {
+      nice = 1;
+    } else if (scaled <= 2) {
+      nice = 2;
+    } else if (scaled <= 5) {
+      nice = 5;
+    } else {
+      nice = 10;
+    }
+    return (nice * base).ceil();
+  }
+
+  // Helpers for Top items list rows
   Widget _buildTopSellingItem(_Palette p, String name, String price, String sold) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -707,25 +552,19 @@ class _StockKeeperReportsState extends State<StockKeeperReports> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: TextStyle(fontWeight: FontWeight.w700, color: p.text)),
-                Text(sold, style: TextStyle(fontSize: 12, color: p.textMuted)),
-              ],
-            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(name, style: TextStyle(fontWeight: FontWeight.w700, color: p.text)),
+              Text(sold, style: TextStyle(fontSize: 12, color: p.textMuted)),
+            ]),
           ),
-          Text(
-            price,
-            style: const TextStyle(fontWeight: FontWeight.w800, color: kInfo),
-          ),
+          Text(price, style: const TextStyle(fontWeight: FontWeight.w800, color: kInfo)),
         ],
       ),
     );
   }
 }
 
-// ===== Palette holder =====
+// Palette
 class _Palette {
   final Color bg;
   final Color surface;
@@ -741,16 +580,12 @@ class _Palette {
   });
 }
 
-// ===== Small reusable header =====
+// Small header
 class _SectionHeader extends StatelessWidget {
   final String title;
   final Color iconColor;
   final Color textColor;
-  const _SectionHeader({
-    required this.title,
-    required this.iconColor,
-    required this.textColor,
-  });
+  const _SectionHeader({required this.title, required this.iconColor, required this.textColor});
 
   @override
   Widget build(BuildContext context) {
@@ -762,30 +597,13 @@ class _SectionHeader extends StatelessWidget {
           decoration: BoxDecoration(
             color: iconColor,
             borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: iconColor.withOpacity(0.35),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            boxShadow: [BoxShadow(color: iconColor.withOpacity(0.35), blurRadius: 10, offset: const Offset(0, 4))],
           ),
           child: const Icon(Icons.bar_chart_rounded, color: Colors.white, size: 18),
         ),
         const SizedBox(width: 12),
-        Text(
-          title,
-          style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 16),
-        ),
+        Text(title, style: TextStyle(color: textColor, fontWeight: FontWeight.w800, fontSize: 16)),
       ],
     );
   }
-}
-
-// ===== Top item model =====
-class _TopItem {
-  final String name;
-  final double? price; // can be null if API doesn’t send it
-  final int sold;
-  _TopItem({required this.name, this.price, required this.sold});
 }

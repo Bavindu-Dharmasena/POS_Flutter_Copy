@@ -5,8 +5,7 @@ import 'package:pos_system/features/stockkeeper/stockkeeper_inventory.dart';
 class ProductDetailsDialog extends StatefulWidget {
   final Product product;
 
-  const ProductDetailsDialog({Key? key, required this.product})
-    : super(key: key);
+  const ProductDetailsDialog({super.key, required this.product});
 
   @override
   State<ProductDetailsDialog> createState() => _ProductDetailsDialogState();

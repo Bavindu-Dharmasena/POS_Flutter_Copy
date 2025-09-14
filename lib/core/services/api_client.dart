@@ -9,7 +9,7 @@ import 'secure_storage_service.dart';
 typedef Json = Map<String, dynamic>;
 
 class ApiClient {
-  ApiClient._(this.baseOrigin, {this.timeout = const Duration(seconds: 25)});
+  ApiClient._(this.baseOrigin);
 
   /// ✅ Auto pick the right origin per platform
   factory ApiClient.auto() {
@@ -30,12 +30,16 @@ class ApiClient {
   }
 
   final String baseOrigin; // e.g. http://10.0.2.2:3001 or http://localhost:3001
-  final Duration timeout;
+
+  // ✅ FIX: initialize the final field with a default value
+  final Duration timeout = const Duration(seconds: 5);
 
   String get _authBase => '$baseOrigin/auth';
   final _storage = SecureStorageService.instance;
 
   static const bool _logEnabled = true;
+
+  static ApiClient? get instance => null;
 
   // ---- Public HTTP methods
   Future<http.Response> get(String path) => _send('GET', path);
@@ -61,11 +65,20 @@ class ApiClient {
     http.Response res;
     try {
       switch (method) {
-        case 'GET':    res = await http.get(uri, headers: headers).timeout(timeout); break;
-        case 'POST':   res = await http.post(uri, headers: headers, body: _encode(body)).timeout(timeout); break;
-        case 'PUT':    res = await http.put(uri, headers: headers, body: _encode(body)).timeout(timeout); break;
-        case 'DELETE': res = await http.delete(uri, headers: headers, body: _encode(body)).timeout(timeout); break;
-        default: throw Exception('Unsupported method: $method');
+        case 'GET':
+          res = await http.get(uri, headers: headers).timeout(timeout);
+          break;
+        case 'POST':
+          res = await http.post(uri, headers: headers, body: _encode(body)).timeout(timeout);
+          break;
+        case 'PUT':
+          res = await http.put(uri, headers: headers, body: _encode(body)).timeout(timeout);
+          break;
+        case 'DELETE':
+          res = await http.delete(uri, headers: headers, body: _encode(body)).timeout(timeout);
+          break;
+        default:
+          throw Exception('Unsupported method: $method');
       }
     } catch (e) {
       _log('❌ Network error: $e');
@@ -83,10 +96,14 @@ class ApiClient {
       };
       _log('🔁 Retrying after refresh: [$method] $uri');
       switch (method) {
-        case 'GET':    return http.get(uri, headers: headers2).timeout(timeout);
-        case 'POST':   return http.post(uri, headers: headers2, body: _encode(body)).timeout(timeout);
-        case 'PUT':    return http.put(uri, headers: headers2, body: _encode(body)).timeout(timeout);
-        case 'DELETE': return http.delete(uri, headers: headers2, body: _encode(body)).timeout(timeout);
+        case 'GET':
+          return http.get(uri, headers: headers2).timeout(timeout);
+        case 'POST':
+          return http.post(uri, headers: headers2, body: _encode(body)).timeout(timeout);
+        case 'PUT':
+          return http.put(uri, headers: headers2, body: _encode(body)).timeout(timeout);
+        case 'DELETE':
+          return http.delete(uri, headers: headers2, body: _encode(body)).timeout(timeout);
       }
     }
 
@@ -111,8 +128,9 @@ class ApiClient {
 
     http.Response res;
     try {
-      res = await http.post(uri, headers: {'Content-Type': 'application/json'}, body: payload)
-                      .timeout(timeout);
+      res = await http
+          .post(uri, headers: {'Content-Type': 'application/json'}, body: payload)
+          .timeout(timeout);
     } catch (e) {
       _log('❌ Refresh call failed: $e');
       return false;
@@ -156,8 +174,9 @@ class ApiClient {
 
     http.Response res;
     try {
-      res = await http.post(uri, headers: {'Content-Type': 'application/json'}, body: body)
-                      .timeout(timeout);
+      res = await http
+          .post(uri, headers: {'Content-Type': 'application/json'}, body: body)
+          .timeout(timeout);
     } catch (e) {
       _log('❌ Network error: $e');
       throw Exception('Network error: $e');
@@ -200,7 +219,9 @@ class ApiClient {
   }
 
   // ---- Utilities
-  void _log(Object msg) { if (_logEnabled) print('[ApiClient] $msg'); }
+  void _log(Object msg) {
+    if (_logEnabled) print('[ApiClient] $msg');
+  }
 
   Map<String, String> _safeHeaders(Map<String, String> headers) {
     final masked = Map<String, String>.from(headers);
@@ -218,4 +239,6 @@ class ApiClient {
       throw Exception('Invalid JSON from server: $e\nBody: $body');
     }
   }
+
+  static create() {}
 }
