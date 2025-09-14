@@ -35,7 +35,7 @@ class AppRoutes {
       // ---------- Cashier ----------
       case '/cashier':
         print('✅ Loading CashierViewPage');
-        return MaterialPageRoute(builder: (_) => const StockKeeperHome());
+        return MaterialPageRoute(builder: (_) => const CashierViewPage());
 
       // ---------- StockKeeper ----------
       case '/stockkeeper':
