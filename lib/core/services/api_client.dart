@@ -32,7 +32,7 @@ class ApiClient {
   final String baseOrigin; // e.g. http://10.0.2.2:3001 or http://localhost:3001
 
   // ✅ FIX: initialize the final field with a default value
-  final Duration timeout = const Duration(seconds: 15);
+  final Duration timeout = const Duration(seconds: 5);
 
   String get _authBase => '$baseOrigin/auth';
   final _storage = SecureStorageService.instance;
