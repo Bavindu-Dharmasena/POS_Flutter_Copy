@@ -1723,7 +1723,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
       "amount": grandTotal,
       "fileName": "receipt_${saleInvoiceId}.pdf",
       "salesInvoiceId": saleInvoiceId, // TEXT
-      "user_id": 2,
+      "user_id": 1,
       "date": now.millisecondsSinceEpoch, // INTEGER
       "remain_amount": balance,
       "customer_contact": "0771234567",
