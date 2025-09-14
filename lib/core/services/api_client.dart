@@ -39,6 +39,8 @@ class ApiClient {
 
   static const bool _logEnabled = true;
 
+  static ApiClient? get instance => null;
+
   // ---- Public HTTP methods
   Future<http.Response> get(String path) => _send('GET', path);
   Future<http.Response> post(String path, {Object? body}) => _send('POST', path, body: body);
@@ -237,4 +239,6 @@ class ApiClient {
       throw Exception('Invalid JSON from server: $e\nBody: $body');
     }
   }
+
+  static create() {}
 }
