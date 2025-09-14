@@ -49,13 +49,14 @@ flutter:
   assets:
     - assets/images/
     - assets/item/
-    - assets/cat/bakery.png
+    - assets/cat/
     - assets/cat/beverages.png
     - assets/cat/snacks.png
     - assets/cat/drinks.png
     - assets/cat/grocery.png
     - assets/cat/household.png
     - assets/cat/dairy.png
+    - assets/cat/bakery.png
 
 
 flutter_launcher_icons:

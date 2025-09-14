@@ -154,3 +154,47 @@ class Category {
     'items': items.map((i) => i.toMap()).toList(),
   };
 }
+
+class Payment {
+  final int id;
+  final double amount;
+  final double remainAmount;
+  final int date; // stored as epoch ms
+  final String fileName;
+  final String type;
+  final int saleInvoiceId;
+  final int userId;
+  final String? customerContact;
+
+  Payment({
+    required this.id,
+    required this.amount,
+    required this.remainAmount,
+    required this.date,
+    required this.fileName,
+    required this.type,
+    required this.saleInvoiceId,
+    required this.userId,
+    this.customerContact,
+  });
+
+  factory Payment.fromMap(Map<String, dynamic> map) {
+    return Payment(
+      id: map['id'],
+      amount: map['amount'],
+      remainAmount: map['remain_amount'],
+      date: map['date'],
+      fileName: map['file_name'],
+      type: map['type'],
+      saleInvoiceId: map['sale_invoice_id'],
+      userId: map['user_id'],
+      customerContact: map['customer_contact'],
+    );
+  }
+}
+
+// Future<List<Payment>> getAllPaymentsAsModel() async {
+//   final db = await DatabaseHelper.instance.database;
+//   final results = await db.query('payment', orderBy: 'date DESC');
+//   return results.map((row) => Payment.fromMap(row)).toList();
+// }
