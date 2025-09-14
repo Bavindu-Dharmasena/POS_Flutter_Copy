@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../cashier/sale_details_page.dart';
 
 class CashierHistoryPage extends StatelessWidget {
   /// Current cashier name to filter "My History"
@@ -39,15 +40,22 @@ class CashierHistoryPage extends StatelessWidget {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
-          child: Text('No history yet.', style: TextStyle(color: Colors.white70)),
+          child: Text(
+            'No history yet.',
+            style: TextStyle(color: Colors.white70),
+          ),
         ),
       );
     }
 
     // (Optional) sort newest first
     list.sort((a, b) {
-      final da = a['date'] is DateTime ? a['date'] as DateTime : DateTime.tryParse(a['date'].toString()) ?? DateTime(1970);
-      final db = b['date'] is DateTime ? b['date'] as DateTime : DateTime.tryParse(b['date'].toString()) ?? DateTime(1970);
+      final da = a['date'] is DateTime
+          ? a['date'] as DateTime
+          : DateTime.tryParse(a['date'].toString()) ?? DateTime(1970);
+      final db = b['date'] is DateTime
+          ? b['date'] as DateTime
+          : DateTime.tryParse(b['date'].toString()) ?? DateTime(1970);
       return db.compareTo(da);
     });
 
@@ -67,7 +75,15 @@ class CashierHistoryPage extends StatelessWidget {
           trailing: IconButton(
             icon: const Icon(Icons.visibility),
             onPressed: () {
-              // TODO: open bill details page/modal if you have one
+              final String saleId = (s['billId'] ?? '').toString();
+              if (saleId.isEmpty) return;
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SaleDetailsPage(saleInvoiceId: saleId),
+                ),
+              );
             },
           ),
         );
@@ -114,7 +130,8 @@ class _HistoryTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Access the nearest CashierHistoryPage to reuse its helpers/data
-    final element = context.findAncestorWidgetOfExactType<CashierHistoryPage>()!;
+    final element = context
+        .findAncestorWidgetOfExactType<CashierHistoryPage>()!;
     // Reuse its list builder
     return element._buildHistoryList(myOnly);
   }
