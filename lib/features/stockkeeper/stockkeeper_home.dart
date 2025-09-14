@@ -193,6 +193,37 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
     );
   }
 
+  void _logout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Logout'),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close dialog
+                // Navigate to login page and clear navigation stack
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/login', // Replace with your login route name
+                  (Route<dynamic> route) => false,
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _reorder(int from, int to) {
     if (from == to || from < 0 || to < 0 || from >= _tiles.length || to >= _tiles.length) return;
 
@@ -294,6 +325,13 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () => _logout(context),
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+          ),
+        ],
       ),
       body: MediaQuery(
         data: MediaQuery.of(context).copyWith(
@@ -775,4 +813,4 @@ class _TileBodyState extends State<_TileBody> with SingleTickerProviderStateMixi
     _controller.dispose(); 
     super.dispose(); 
   }
-} 
+}
