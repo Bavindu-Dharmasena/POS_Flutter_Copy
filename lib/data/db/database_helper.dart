@@ -488,7 +488,7 @@ class DatabaseHelper {
         'barcode': 'BARC0004',
         'category_id': householdId,
         'supplier_id': hemasId,
-        'reorder_level': 6,
+        'reorder_level': 0,
         'gradient': null,
         'remark': 'Household',
         'color_code': '#F43F5E',

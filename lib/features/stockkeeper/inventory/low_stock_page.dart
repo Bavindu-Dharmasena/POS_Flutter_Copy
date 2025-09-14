@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+// Repo + models
+import 'package:pos_system/data/repositories/stockkeeper/low_stock_repository.dart';
+import 'package:pos_system/data/models/stockkeeper/low_stock_models.dart';
+
+/// Use the repository's UI model directly.
+typedef Product = LowStockProduct;
+
 /// Intent used by Shortcuts/Actions to go back on ESC.
 class BackIntent extends Intent {
   const BackIntent();
 }
 
-/// ---- Dark table palette (extracted from your screenshot) ----
+/// ---- Dark table palette (same as before) ----
 const _kDarkCard     = Color(0xFF0F1318); // outer container / card
 const _kDarkHeader   = Color(0xFF1F2631); // header row
 const _kDarkRow      = Color(0xFF141A21); // body rows
@@ -14,102 +21,19 @@ const _kDarkDivider  = Color(0xFF2A3240); // table grid lines
 const _kDarkTextMain = Color(0xFFE6EAF0); // main text
 const _kDarkTextMute = Color(0xFFB7C0CC); // secondary text
 
-/// If you already have a shared Product model, delete this one and import yours.
-class Product {
-  final String id;
-  final String name;
-  final String category;
-  final int currentStock;
-  final int minStock;
-  final int maxStock;
-  final double price; // unit/sale price if needed
-  final String supplier;
-
-  const Product({
-    required this.id,
-    required this.name,
-    required this.category,
-    required this.currentStock,
-    required this.minStock,
-    required this.maxStock,
-    required this.price,
-    required this.supplier,
-  });
-
-  // Low stock = >0 and below/equal min (adjust if you prefer strict < min)
-  bool get isLowStock => currentStock > 0 && currentStock <= minStock;
-  bool get isOutOfStock => currentStock == 0;
-}
-
 /// Low Stock → Request page
 class LowStockRequestPage extends StatefulWidget {
-  /// Pass your full product list; only low-stock items will be shown.
-  final List<Product>? allProducts;
-  const LowStockRequestPage({super.key, this.allProducts});
+  const LowStockRequestPage({super.key});
 
   @override
   State<LowStockRequestPage> createState() => _LowStockRequestPageState();
 }
 
 class _LowStockRequestPageState extends State<LowStockRequestPage> {
-  // --- demo data (used only if allProducts == null) ---
-  static const _demo = <Product>[
-    Product(
-      id: '001',
-      name: 'Cadbury Dairy Milk',
-      category: 'Chocolates',
-      currentStock: 4,
-      minStock: 20,
-      maxStock: 100,
-      price: 250.00,
-      supplier: 'Cadbury Lanka',
-    ),
-    Product(
-      id: '002',
-      name: 'Maliban Cream Crackers',
-      category: 'Biscuits',
-      currentStock: 8,
-      minStock: 15,
-      maxStock: 80,
-      price: 180.00,
-      supplier: 'Maliban Biscuits',
-    ),
-    Product(
-      id: '003',
-      name: 'Coca Cola 330ml',
-      category: 'Beverages',
-      currentStock: 6,
-      minStock: 25,
-      maxStock: 120,
-      price: 150.00,
-      supplier: 'Coca Cola Lanka',
-    ),
-    Product(
-      id: '004',
-      name: 'Anchor Milk Powder 400g',
-      category: 'Dairy',
-      currentStock: 2,
-      minStock: 10,
-      maxStock: 50,
-      price: 850.00,
-      supplier: 'Fonterra Lanka',
-    ),
-    Product(
-      id: '005',
-      name: 'Sunquick Orange 700ml',
-      category: 'Beverages',
-      currentStock: 3,
-      minStock: 15,
-      maxStock: 60,
-      price: 420.00,
-      supplier: 'Lanka Beverages',
-    ),
-  ];
-
   // --- state ---
-  late final List<Product> _source; // full low-stock list (pre-filtered)
-  final Map<String, TextEditingController> _qtyCtrls = {};
-  final Set<String> _selected = {};
+  List<Product> _source = []; // hydrated from SQLite
+  final Map<int, TextEditingController> _qtyCtrls = {};
+  final Set<int> _selected = {};
   final TextEditingController _searchCtrl = TextEditingController();
   String _supplierFilter = 'All';
   int? _sortColumnIndex;
@@ -118,12 +42,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
   @override
   void initState() {
     super.initState();
-    _source = (widget.allProducts ?? _demo).where((p) => p.isLowStock).toList();
-
-    // preload suggested quantities
-    for (final p in _source) {
-      _qtyCtrls[p.id] = TextEditingController(text: _suggestQty(p).toString());
-    }
+    _loadFromDb();
   }
 
   @override
@@ -133,6 +52,20 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _loadFromDb() async {
+    final repo = LowStockRepository.instance;
+    final rows = await repo.fetchLowStock(); // initial: no filters
+
+    setState(() {
+      _source = rows;
+      _qtyCtrls.clear();
+      for (final p in _source) {
+        _qtyCtrls[p.id] = TextEditingController(text: _suggestQty(p).toString());
+      }
+      _selected.clear();
+    });
   }
 
   // --- helpers ---
@@ -180,12 +113,13 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
   }
 
   List<String> get _suppliers {
+    if (_source.isEmpty) return const ['All'];
     final s = _source.map((e) => e.supplier).toSet().toList()..sort();
     s.insert(0, 'All');
     return s;
   }
 
-  int _qtyOf(String id) => int.tryParse(_qtyCtrls[id]?.text ?? '') ?? 0;
+  int _qtyOf(int id) => int.tryParse(_qtyCtrls[id]?.text ?? '') ?? 0;
   int get _selectedCount => _selected.length;
 
   // --- actions ---
@@ -208,7 +142,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
 
   void _clearSelection() => setState(_selected.clear);
 
-  void _requestToSupplier(List<Product> visible) {
+  Future<void> _requestToSupplier(List<Product> visible) async {
     final sel = visible.where((p) => _selected.contains(p.id)).toList();
     if (sel.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -217,7 +151,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
       return;
     }
 
-    // Group by supplier for a clean confirmation
+    // Confirm summary grouped by supplier
     final Map<String, List<Product>> bySupp = {};
     for (final p in sel) {
       bySupp.putIfAbsent(p.supplier, () => []).add(p);
@@ -232,27 +166,44 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
       summary.writeln();
     });
 
-    showDialog(
+    final proceed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Create supplier request?'),
         content: SingleChildScrollView(child: Text(summary.toString().trim())),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // TODO: Integrate real create-request behavior.
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Request created for $_selectedCount item(s).')),
-              );
-              _clearSelection();
-            },
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Create Request'),
           ),
         ],
       ),
     );
+
+    if (proceed != true) return;
+
+    try {
+      // Build selections for repo
+      final selections = [
+        for (final p in sel) LowStockSelection(itemId: p.id, quantity: _qtyOf(p.id)),
+      ];
+
+      final created = await LowStockRepository.instance
+          .createRequestsFromSelections(selections);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Created ${created.length} supplier request(s).')),
+      );
+
+      _clearSelection();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to create request: $e')),
+      );
+    }
   }
 
   // --- UI ---
