@@ -60,6 +60,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart';
+import 'core/services/auth_service.dart';
 
 import 'dart:io' show Platform;
 
@@ -107,14 +108,18 @@ Future<void> main() async {
   await settings.load();
 
   runZonedGuarded(() {
-    runApp(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<SettingsController>.value(value: settings),
-        ],
-        child: const App(),
-      ),
-    );
+   runApp(
+  MultiProvider(
+    providers: [
+      ChangeNotifierProvider<SettingsController>.value(value: settings),
+
+      // ✅ add this line back
+      ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
+    ],
+    child: const App(),
+  ),
+);
+
   }, (error, stack) {
     debugPrint('UNCAUGHT (Zone): $error\n$stack');
   });
@@ -187,7 +192,7 @@ class App extends StatelessWidget {
             );
           },
           
-          home: const SplashScreen(),
+          // home: const SplashScreen(),
         );
       },
     );

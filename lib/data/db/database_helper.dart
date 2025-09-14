@@ -11,8 +11,8 @@ class DatabaseHelper {
 
   static const _dbName = 'pos.db';
 
-  /// ⬆️ Bump to trigger migration and ensure supplier_request tables + seeds.
-  static const _dbVersion = 4;
+  /// ⬆️ Bump to trigger migration and ensure user seeds on upgrade too.
+  static const _dbVersion = 5; // was 4
 
   Database? _db;
   Future<Database> get database async => _db ??= await _initDB();
@@ -53,58 +53,8 @@ class DatabaseHelper {
       );
     ''');
 
-    // Seed users (hashed)
-    {
-      final now = DateTime.now().millisecondsSinceEpoch;
-      String hash(String s) => sha256.convert(utf8.encode(s)).toString();
-
-      final users = [
-        {
-          'name': 'Sadeep Chathushan',
-          'email': 'sadeep@aasa.lk',
-          'contact': '+94 77 000 0001',
-          'password': hash('Admin@123'),
-          'role': 'Admin',
-          'color_code': '#7C3AED',
-          'created_at': now,
-          'updated_at': now,
-        },
-        {
-          'name': 'Hansima Perera',
-          'email': 'hansima@aasa.lk',
-          'contact': '+94 77 000 0002',
-          'password': hash('Manager@123'),
-          'role': 'Manager',
-          'color_code': '#0EA5E9',
-          'created_at': now,
-          'updated_at': now,
-        },
-        {
-          'name': 'Achintha Silva',
-          'email': 'achintha@aasa.lk',
-          'contact': '+94 77 000 0003',
-          'password': hash('Cashier@123'),
-          'role': 'Cashier',
-          'color_code': '#10B981',
-          'created_at': now,
-          'updated_at': now,
-        },
-        {
-          'name': 'Insaf Imran',
-          'email': 'insaf@aasa.lk',
-          'contact': '+94 77 000 0004',
-          'password': hash('Stock@123'),
-          'role': 'StockKeeper',
-          'color_code': '#F59E0B',
-          'created_at': now,
-          'updated_at': now,
-        },
-      ];
-
-      for (final u in users) {
-        await db.insert('user', u);
-      }
-    }
+    // ✅ Seed users safely (only if table empty)
+    await _seedUsersIfEmpty(db);
 
     // --- Customer ---
     await db.execute('''
@@ -276,6 +226,11 @@ class DatabaseHelper {
         await _seedSupplierRequestsForExistingDb(db);
       }
     }
+
+    // ✅ v5: ensure users table has seeds on existing installs
+    if (oldVersion < 5) {
+      await _seedUsersIfEmpty(db);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -336,6 +291,69 @@ class DatabaseHelper {
   // ---------------------------------------------------------------------------
   // Seeders
   // ---------------------------------------------------------------------------
+
+  /// ✅ New: Seed default users only if table is empty.
+  Future<void> _seedUsersIfEmpty(DatabaseExecutor db) async {
+    final count = Sqflite.firstIntValue(
+          await db.rawQuery('SELECT COUNT(*) FROM user'),
+        ) ??
+        0;
+    if (count > 0) return;
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    String hash(String s) => sha256.convert(utf8.encode(s)).toString();
+
+    final users = [
+      {
+        'name': 'Sadeep Chathushan',
+        'email': 'sadeep@aasa.lk',
+        'contact': '+94 77 000 0001',
+        'password': hash('Admin@123'),
+        'role': 'Admin',
+        'color_code': '#7C3AED',
+        'created_at': now,
+        'updated_at': now,
+      },
+      {
+        'name': 'Hansima Perera',
+        'email': 'hansima@aasa.lk',
+        'contact': '+94 77 000 0002',
+        'password': hash('Manager@123'),
+        'role': 'Manager',
+        'color_code': '#0EA5E9',
+        'created_at': now,
+        'updated_at': now,
+      },
+      {
+        'name': 'Achintha Silva',
+        'email': 'achintha@aasa.lk',
+        'contact': '+94 77 000 0003',
+        'password': hash('Cashier@123'),
+        'role': 'Cashier',
+        'color_code': '#10B981',
+        'created_at': now,
+        'updated_at': now,
+      },
+      {
+        'name': 'Insaf Imran',
+        'email': 'insaf@aasa.lk',
+        'contact': '+94 77 000 0004',
+        'password': hash('Stock@123'),
+        'role': 'StockKeeper',
+        'color_code': '#F59E0B',
+        'created_at': now,
+        'updated_at': now,
+      },
+    ];
+
+    for (final u in users) {
+      await db.insert(
+        'user',
+        u,
+        conflictAlgorithm: ConflictAlgorithm.ignore, // idempotent
+      );
+    }
+  }
 
   Future<void> _seedInitialData(Database db) async {
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -488,7 +506,7 @@ class DatabaseHelper {
         'barcode': 'BARC0004',
         'category_id': householdId,
         'supplier_id': hemasId,
-        'reorder_level': 6,
+        'reorder_level': 0,
         'gradient': null,
         'remark': 'Household',
         'color_code': '#F43F5E',
