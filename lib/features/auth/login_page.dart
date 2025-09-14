@@ -169,7 +169,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                   children: [
                     const SizedBox(height: 40),
                     const Text(
-                      "Tharu Shop",
+                      "Shop Name",
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white,
