@@ -12,7 +12,7 @@ class DatabaseHelper {
   static const _dbName = 'pos.db';
 
   /// Bump this number when schema changes (forces onCreate/onUpgrade).
-  static const _dbVersion = 10;
+  static const _dbVersion = 1;
 
   Database? _db;
   Future<Database> get database async => _db ??= await _initDB();
