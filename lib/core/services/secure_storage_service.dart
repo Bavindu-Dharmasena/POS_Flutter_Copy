@@ -43,6 +43,11 @@ class SecureStorageService {
     }
   }
 
+  Future<String?> getUserId() async =>
+      _canUseSecure
+          ? _secure.read(key: 'userId')
+          : (await SharedPreferences.getInstance()).getString('userId');
+
   Future<String?> getAccessToken() async =>
       _canUseSecure
           ? _secure.read(key: _kAccess)
