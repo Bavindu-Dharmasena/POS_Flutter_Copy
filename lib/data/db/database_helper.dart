@@ -9,21 +9,21 @@ class DatabaseHelper {
   DatabaseHelper._internal();
   static final DatabaseHelper instance = DatabaseHelper._internal();
 
-  static const _dbName = 'pos.db';
-  /// Bump to trigger migration.
-  static const _dbVersion = 7; // was 5
+  static const _dbName = 'possystem.db';
+  /// Bump to trigger a fresh onCreate (dev). Keep 1 if you don't need migrations.
+  static const _dbVersion = 1;
 
   Database? _db;
   Future<Database> get database async => _db ??= await _initDB();
 
   Future<Database> _initDB() async {
-    final String dbPath =
-        kIsWeb ? _dbName : p.join(await getDatabasesPath(), _dbName);
+    final String dbPath = kIsWeb ? _dbName : p.join(await getDatabasesPath(), _dbName);
 
     return openDatabase(
       dbPath,
       version: _dbVersion,
       onConfigure: (db) async {
+        // Enforce FKs
         await db.execute('PRAGMA foreign_keys = ON;');
       },
       onCreate: _onCreate,
@@ -31,7 +31,7 @@ class DatabaseHelper {
     );
   }
 
-  // Helper function to hash passwords
+  // Helper: SHA-256 hash (use if you seed users later)
   String _hashPassword(String password) {
     final bytes = utf8.encode(password);
     final digest = sha256.convert(bytes);
@@ -43,7 +43,7 @@ class DatabaseHelper {
   // ---------------------------------------------------------------------------
 
   FutureOr<void> _onCreate(Database db, int version) async {
-    // --- Users ---
+    // 1) user
     await db.execute('''
       CREATE TABLE user (
         id                 INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,7 +51,8 @@ class DatabaseHelper {
         email              TEXT    NOT NULL UNIQUE,
         contact            TEXT    NOT NULL,
         password           TEXT    NOT NULL,
-        role               TEXT    NOT NULL DEFAULT 'Cashier' CHECK (role IN ('Admin','Manager','Cashier','StockKeeper')),
+        role               TEXT    NOT NULL DEFAULT 'Cashier'
+                           CHECK (role IN ('Admin','Manager','Cashier','StockKeeper')),
         color_code         TEXT    NOT NULL DEFAULT '#000000',
         created_at         INTEGER NOT NULL,
         updated_at         INTEGER NOT NULL,
@@ -59,7 +60,7 @@ class DatabaseHelper {
       );
     ''');
 
-    // --- Customer ---
+    // 2) customer
     await db.execute('''
       CREATE TABLE customer (
         id       INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,7 +69,7 @@ class DatabaseHelper {
       );
     ''');
 
-    // --- Supplier ---
+    // 3) supplier
     await db.execute('''
       CREATE TABLE supplier (
         id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,7 +89,7 @@ class DatabaseHelper {
       );
     ''');
 
-    // --- Category ---
+    // 4) category
     await db.execute('''
       CREATE TABLE category (
         id             INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,7 +99,7 @@ class DatabaseHelper {
       );
     ''');
 
-    // --- Item ---
+    // 5) item
     await db.execute('''
       CREATE TABLE item (
         id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -115,7 +116,7 @@ class DatabaseHelper {
       );
     ''');
 
-    // --- Stock ---
+    // 6) stock
     await db.execute('''
       CREATE TABLE stock (
         id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -132,7 +133,28 @@ class DatabaseHelper {
       );
     ''');
 
-    // --- Invoice ---
+    // 7) payment (before invoice because invoice FK references sale_invoice_id)
+    await db.execute('''
+      CREATE TABLE payment (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        amount           REAL    NOT NULL,
+        remain_amount    REAL    NOT NULL,
+        date             INTEGER NOT NULL,           -- epoch millis
+        file_name        TEXT    NOT NULL,
+        type             TEXT    NOT NULL,
+        sale_invoice_id  TEXT    NOT NULL,           -- unique bill id
+        user_id          INTEGER NOT NULL,
+        customer_contact TEXT,
+        discount_type    TEXT    NOT NULL DEFAULT 'no'
+                           CHECK (discount_type IN ('no','percentage','amount')),
+        discount_value   REAL    NOT NULL DEFAULT 0,
+        UNIQUE (sale_invoice_id),
+        FOREIGN KEY (user_id)           REFERENCES user(id)           ON DELETE RESTRICT ON UPDATE CASCADE,
+        FOREIGN KEY (customer_contact)  REFERENCES customer(contact)  ON DELETE SET NULL   ON UPDATE CASCADE
+      );
+    ''');
+
+    // 8) invoice
     await db.execute('''
       CREATE TABLE invoice (
         id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,28 +167,8 @@ class DatabaseHelper {
         FOREIGN KEY (sale_invoice_id) REFERENCES payment(sale_invoice_id) ON DELETE CASCADE  ON UPDATE CASCADE
       );
     ''');
-    await db.execute('CREATE INDEX idx_invoice_sale_invoice_id ON invoice(sale_invoice_id);');
 
-    // --- Payment ---
-    await db.execute('''
-      CREATE TABLE payment (
-        id               INTEGER PRIMARY KEY AUTOINCREMENT,
-        amount           REAL    NOT NULL,
-        remain_amount    REAL    NOT NULL,
-        date             INTEGER NOT NULL,        -- epoch millis
-        file_name        TEXT    NOT NULL,
-        type             TEXT    NOT NULL,
-        sale_invoice_id  TEXT    NOT NULL,
-        user_id          INTEGER NOT NULL,
-        customer_contact TEXT,
-        UNIQUE (sale_invoice_id),
-        FOREIGN KEY (user_id)           REFERENCES user(id)           ON DELETE RESTRICT ON UPDATE CASCADE,
-        FOREIGN KEY (customer_contact)  REFERENCES customer(contact)  ON DELETE SET NULL   ON UPDATE CASCADE
-      );
-    ''');
-    await db.execute('CREATE INDEX idx_payment_sale_invoice_id ON payment(sale_invoice_id);');
-
-    // --- Supplier Request (master) ---
+    // 9) supplier_request (master)
     await db.execute('''
       CREATE TABLE supplier_request (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -180,7 +182,7 @@ class DatabaseHelper {
       );
     ''');
 
-    // --- Supplier Request Items (lines) ---
+    // 10) supplier_request_item (lines)
     await db.execute('''
       CREATE TABLE supplier_request_item (
         id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -198,860 +200,27 @@ class DatabaseHelper {
     ''');
 
     // Indexes
-    await db.execute('CREATE INDEX idx_item_category ON item(category_id);');
-    await db.execute('CREATE INDEX idx_item_supplier ON item(supplier_id);');
-    await db.execute('CREATE INDEX idx_stock_item ON stock(item_id);');
-    await db.execute('CREATE INDEX idx_stock_supplier ON stock(supplier_id);');
-    await db.execute('CREATE INDEX idx_payment_user ON payment(user_id);');
-    await db.execute('CREATE INDEX idx_req_supplier  ON supplier_request(supplier_id);');
-    await db.execute('CREATE INDEX idx_ri_request   ON supplier_request_item(request_id);');
-    await db.execute('CREATE INDEX idx_ri_item      ON supplier_request_item(item_id);');
-
-    // -------- Seed data (unchanged from your file) --------
-    await db.transaction((txn) async {
-      final now = DateTime.now().millisecondsSinceEpoch;
-
-      // Users
-      await txn.insert('user', {
-        'id': 1,
-        'name': 'Cashier 1',
-        'email': 'cashier1@demo.lk',
-        'contact': '0770000001',
-        'password': _hashPassword('password1'),
-        'role': 'Cashier',
-        'color_code': '#000000',
-        'created_at': now,
-        'updated_at': now,
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('user', {
-        'id': 2,
-        'name': 'manager',
-        'email': 'manager@demo.lk',
-        'contact': '0770000002',
-        'password': _hashPassword('password2'),
-        'role': 'Manager',
-        'color_code': '#000000',
-        'created_at': now,
-        'updated_at': now,
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('user', {
-        'id': 3,
-        'name': 'Stockkeeper',
-        'email': 'stock@demo.lk',
-        'contact': '0770000003',
-        'password': _hashPassword('stock123'),
-        'role': 'StockKeeper',
-        'color_code': '#FF0000',
-        'created_at': now,
-        'updated_at': now,
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-      // Customers
-      await txn.insert('customer', {
-        'id': 1, 'name': 'John Doe', 'contact': '0771234567',
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('customer', {
-        'id': 2, 'name': 'Jane Smith', 'contact': '0779876543',
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-      // Supplier
-      await txn.insert('supplier', {
-        'id': 1,
-        'name': 'Default Supplier',
-        'contact': '+94 77 000 0000',
-        'email': 'supplier@demo.lk',
-        'address': 'Colombo',
-        'brand': 'Generic',
-        'color_code': '#000000',
-        'location': 'LK',
-        'status': 'ACTIVE',
-        'preferred': 1,
-        'payment_terms': 'NET 30',
-        'notes': 'Seed supplier',
-        'created_at': now,
-        'updated_at': now,
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-      // Categories (1..10)
-      await txn.insert('category', {'id': 1,'category':'Beverages','color_code':'#FF5733','category_image':'beverages.png',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('category', {'id': 2,'category':'Snacks','color_code':'#33FF57','category_image':'snacks.png',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('category', {'id': 3,'category':'Stationery','color_code':'#3357FF','category_image':'stationery.png',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('category', {'id': 4,'category':'Dairy','color_code':'#FFE082','category_image':'dairy.png',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('category', {'id': 5,'category':'Bakery','color_code':'#FBC02D','category_image':'bakery.png',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('category', {'id': 6,'category':'Frozen','color_code':'#80DEEA','category_image':'frozen.png',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('category', {'id': 7,'category':'Produce','color_code':'#81C784','category_image':'produce.png',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('category', {'id': 8,'category':'Household','color_code':'#90A4AE','category_image':'household.png',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('category', {'id': 9,'category':'Personal Care','color_code':'#B39DDB','category_image':'personal_care.png',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('category', {'id': 10,'category':'Baby','color_code':'#F48FB1','category_image':'baby.png',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-      // Items (1..15) — same as your file
-      await txn.insert('item', {'id':1,'name':'Coca Cola 500ml','barcode':'BARC0001','category_id':1,'supplier_id':1,'color_code':'#FF0000',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':2,'name':'Potato Chips 100g','barcode':'BARC0002','category_id':2,'supplier_id':1,'color_code':'#FFD700',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':3,'name':'A4 Paper Ream','barcode':'BARC0003','category_id':3,'supplier_id':1,'color_code':'#FFFFFF',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':4,'name':'Fresh Milk 1L','barcode':'BARC0004','category_id':4,'supplier_id':1,'color_code':'#FFF9C4',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':5,'name':'Cheddar Cheese 200g','barcode':'BARC0005','category_id':4,'supplier_id':1,'color_code':'#FFECB3',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':6,'name':'White Bread Loaf','barcode':'BARC0006','category_id':5,'supplier_id':1,'color_code':'#FFE0B2',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':7,'name':'Chocolate Donut','barcode':'BARC0007','category_id':5,'supplier_id':1,'color_code':'#D7CCC8',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':8,'name':'Frozen Peas 500g','barcode':'BARC0008','category_id':6,'supplier_id':1,'color_code':'#A5D6A7',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':9,'name':'Vanilla Ice Cream 1L','barcode':'BARC0009','category_id':6,'supplier_id':1,'color_code':'#FFFDE7',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':10,'name':'Bananas 1kg','barcode':'BARC0010','category_id':7,'supplier_id':1,'color_code':'#FFF59D',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':11,'name':'Tomatoes 500g','barcode':'BARC0011','category_id':7,'supplier_id':1,'color_code':'#FF8A80',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':12,'name':'Laundry Detergent 1kg','barcode':'BARC0012','category_id':8,'supplier_id':1,'color_code':'#B0BEC5',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':13,'name':'Dishwashing Liquid 500ml','barcode':'BARC0013','category_id':8,'supplier_id':1,'color_code':'#B2EBF2',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':14,'name':'Shampoo 400ml','barcode':'BARC0014','category_id':9,'supplier_id':1,'color_code':'#CE93D8',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-      await txn.insert('item', {'id':15,'name':'Baby Diapers M (20 pcs)','barcode':'BARC0015','category_id':10,'supplier_id':1,'color_code':'#F8BBD0',}, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-      // Stock (keep all your inserts here; omitted for brevity)
-
-      // Payments
-      await txn.insert('payment', {
-        'id': 1,
-        'amount': 1500.00,
-        'remain_amount': 500.00,
-        'date': now,
-        'file_name': 'receipt1.pdf',
-        'type': 'Cash',
-        'sale_invoice_id': 'INV-001',
-        'user_id': 1,
-        'customer_contact': '0771234567',
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-      await txn.insert('payment', {
-        'id': 2,
-        'amount': 2500.50,
-        'remain_amount': 0.00,
-        'date': now - const Duration(days: 1).inMilliseconds,
-        'file_name': 'receipt2.pdf',
-        'type': 'Card',
-        'sale_invoice_id': 'INV-002',
-        'user_id': 1,
-        'customer_contact': '0779876543',
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-      await txn.insert('payment', {
-        'id': 3,
-        'amount': 350.75,
-        'remain_amount': 50.00,
-        'date': now - const Duration(days: 2).inMilliseconds,
-        'file_name': 'receipt3.pdf',
-        'type': 'Cash',
-        'sale_invoice_id': 'INV-003',
-        'user_id': 2,
-        'customer_contact': null,
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-      // Invoices
-      await txn.insert('invoice', {
-        'batch_id': 'BATCH-COCA-002',
-        'item_id': 1,
-        'quantity': 10,
-        'unit_saled_price': 65.0,
-        'sale_invoice_id': 'INV-001',
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-      await txn.insert('invoice', {
-        'batch_id': 'BATCH-CHIPS-001',
-        'item_id': 2,
-        'quantity': 5,
-        'unit_saled_price': 100.0,
-        'sale_invoice_id': 'INV-001',
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-      await txn.insert('invoice', {
-        'batch_id': 'BATCH-PAPER-001',
-        'item_id': 3,
-        'quantity': 2,
-        'unit_saled_price': 480.0,
-        'sale_invoice_id': 'INV-002',
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-    });
+    await db.execute('CREATE INDEX idx_item_category             ON item(category_id);');
+    await db.execute('CREATE INDEX idx_item_supplier             ON item(supplier_id);');
+    await db.execute('CREATE INDEX idx_stock_item                ON stock(item_id);');
+    await db.execute('CREATE INDEX idx_stock_supplier            ON stock(supplier_id);');
+    await db.execute('CREATE INDEX idx_payment_user              ON payment(user_id);');
+    await db.execute('CREATE INDEX idx_payment_sale_invoice_id   ON payment(sale_invoice_id);');
+    await db.execute('CREATE INDEX idx_invoice_sale_invoice_id   ON invoice(sale_invoice_id);');
+    await db.execute('CREATE INDEX idx_req_supplier              ON supplier_request(supplier_id);');
+    await db.execute('CREATE INDEX idx_ri_request                ON supplier_request_item(request_id);');
+    await db.execute('CREATE INDEX idx_ri_item                   ON supplier_request_item(item_id);');
   }
 
   @override
   FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // --- keep your existing v<3 migration ---
-    if (oldVersion < 3) {
-      await db.execute('PRAGMA foreign_keys = OFF;');
-      await db.transaction((txn) async {
-        // rebuild PAYMENT
-        await txn.execute('''
-          CREATE TABLE payment_new (
-            id               INTEGER PRIMARY KEY AUTOINCREMENT,
-            amount           REAL    NOT NULL,
-            remain_amount    REAL    NOT NULL,
-            date             INTEGER NOT NULL,
-            file_name        TEXT    NOT NULL,
-            type             TEXT    NOT NULL,
-            sale_invoice_id  TEXT    NOT NULL,
-            user_id          INTEGER NOT NULL,
-            customer_contact TEXT,
-            UNIQUE (sale_invoice_id),
-            FOREIGN KEY (user_id)           REFERENCES user(id)           ON DELETE RESTRICT ON UPDATE CASCADE,
-            FOREIGN KEY (customer_contact)  REFERENCES customer(contact)  ON DELETE SET NULL   ON UPDATE CASCADE
-          );
-        ''');
-
-        await txn.execute('''
-          INSERT OR IGNORE INTO payment_new
-            (id, amount, remain_amount, date, file_name, type, sale_invoice_id, user_id, customer_contact)
-          SELECT id, amount, remain_amount, date, file_name, type, sale_invoice_id, user_id, customer_contact
-          FROM payment;
-        ''');
-
-        // rebuild INVOICE (FK -> payment.sale_invoice_id)
-        await txn.execute('''
-          CREATE TABLE invoice_new (
-            id               INTEGER PRIMARY KEY AUTOINCREMENT,
-            batch_id         TEXT    NOT NULL,
-            item_id          INTEGER NOT NULL,
-            quantity         INTEGER NOT NULL,
-            unit_saled_price REAL    NOT NULL,
-            sale_invoice_id  TEXT    NOT NULL,
-            FOREIGN KEY (item_id)         REFERENCES item(id)                 ON DELETE RESTRICT ON UPDATE CASCADE,
-            FOREIGN KEY (sale_invoice_id) REFERENCES payment(sale_invoice_id) ON DELETE CASCADE  ON UPDATE CASCADE
-          );
-        ''');
-
-        await txn.execute('''
-          INSERT OR IGNORE INTO invoice_new
-            (id, batch_id, item_id, quantity, unit_saled_price, sale_invoice_id)
-          SELECT id, batch_id, item_id, quantity, 0.0, sale_invoice_id
-          FROM invoice;
-        ''');
-
-        // swap
-        await txn.execute('DROP TABLE IF EXISTS invoice;');
-        await txn.execute('DROP TABLE IF EXISTS payment;');
-        await txn.execute('ALTER TABLE payment_new RENAME TO payment;');
-        await txn.execute('ALTER TABLE invoice_new RENAME TO invoice;');
-
-        // indexes
-        await txn.execute('CREATE INDEX IF NOT EXISTS idx_payment_sale_invoice_id ON payment(sale_invoice_id);');
-        await txn.execute('CREATE INDEX IF NOT EXISTS idx_invoice_sale_invoice_id ON invoice(sale_invoice_id);');
-
-        await txn.execute('DROP TABLE IF EXISTS sale;');
-      });
-      await db.execute('PRAGMA foreign_keys = ON;');
-    }
-
-    // --- v6: create supplier request tables if missing ---
-    if (oldVersion < 6) {
-      await db.transaction((txn) async {
-        await txn.execute('''
-          CREATE TABLE IF NOT EXISTS supplier_request (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            supplier_id INTEGER NOT NULL,
-            status      TEXT NOT NULL DEFAULT 'PENDING'
-                         CHECK (status IN ('PENDING','ACCEPTED','REJECTED','RESENT')),
-            created_at  INTEGER NOT NULL,
-            updated_at  INTEGER NOT NULL,
-            FOREIGN KEY (supplier_id) REFERENCES supplier(id)
-              ON DELETE RESTRICT ON UPDATE CASCADE
-          );
-        ''');
-
-        await txn.execute('''
-          CREATE TABLE IF NOT EXISTS supplier_request_item (
-            id               INTEGER PRIMARY KEY AUTOINCREMENT,
-            request_id       INTEGER NOT NULL,
-            item_id          INTEGER NOT NULL,
-            requested_amount INTEGER NOT NULL DEFAULT 0,
-            quantity         INTEGER NOT NULL DEFAULT 0,
-            unit_price       REAL    NOT NULL DEFAULT 0,
-            sale_price       REAL    NOT NULL DEFAULT 0,
-            FOREIGN KEY (request_id) REFERENCES supplier_request(id)
-              ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY (item_id)    REFERENCES item(id)
-              ON DELETE RESTRICT ON UPDATE CASCADE
-          );
-        ''');
-
-        await txn.execute('CREATE INDEX IF NOT EXISTS idx_req_supplier  ON supplier_request(supplier_id);');
-        await txn.execute('CREATE INDEX IF NOT EXISTS idx_ri_request   ON supplier_request_item(request_id);');
-        await txn.execute('CREATE INDEX IF NOT EXISTS idx_ri_item      ON supplier_request_item(item_id);');
-      });
-    }
-
-    // --- v7 hardening: add any missing columns on dev devices ---
-    if (oldVersion < 7) {
-      await db.transaction((txn) async {
-        Future<Set<String>> cols(String table) async {
-          final rs = await txn.rawQuery("PRAGMA table_info('$table');");
-          return rs.map((r) => (r['name'] as String)).toSet();
-        }
-
-        // supplier_request: ensure updated_at & status exist
-        final reqCols = await cols('supplier_request');
-        if (reqCols.isNotEmpty) {
-          if (!reqCols.contains('updated_at')) {
-            await txn.execute("ALTER TABLE supplier_request ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0;");
-            await txn.execute("UPDATE supplier_request SET updated_at = CASE WHEN updated_at = 0 THEN created_at ELSE updated_at END;");
-          }
-          if (!reqCols.contains('status')) {
-            await txn.execute("ALTER TABLE supplier_request ADD COLUMN status TEXT NOT NULL DEFAULT 'PENDING';");
-          }
-        }
-
-        // supplier_request_item: ensure all expected numeric columns
-        final riCols = await cols('supplier_request_item');
-        if (riCols.isNotEmpty) {
-          if (!riCols.contains('requested_amount')) {
-            await txn.execute("ALTER TABLE supplier_request_item ADD COLUMN requested_amount INTEGER NOT NULL DEFAULT 0;");
-          }
-          if (!riCols.contains('quantity')) {
-            await txn.execute("ALTER TABLE supplier_request_item ADD COLUMN quantity INTEGER NOT NULL DEFAULT 0;");
-          }
-          if (!riCols.contains('unit_price')) {
-            await txn.execute("ALTER TABLE supplier_request_item ADD COLUMN unit_price REAL NOT NULL DEFAULT 0;");
-          }
-          if (!riCols.contains('sale_price')) {
-            await txn.execute("ALTER TABLE supplier_request_item ADD COLUMN sale_price REAL NOT NULL DEFAULT 0;");
-          }
-        }
-      });
-    }
+    // Keep empty for now (you asked for no migration logic yet).
+    // When you need to migrate, implement ALTER TABLE / rebuild here and bump _dbVersion.
   }
 
-  Future<T> runInTransaction<T>(
-    Future<T> Function(Transaction tx) action,
-  ) async {
+  // Utility to run a whole action in a transaction
+  Future<T> runInTransaction<T>(Future<T> Function(Transaction tx) action) async {
     final db = await database;
     return db.transaction<T>(action);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import 'dart:async';
-// import 'dart:convert';
-// import 'package:crypto/crypto.dart';
-// import 'package:flutter/foundation.dart' show kIsWeb;
-// import 'package:path/path.dart' as p;
-// import 'package:sqflite/sqflite.dart';
-
-// class DatabaseHelper {
-//   DatabaseHelper._internal();
-//   static final DatabaseHelper instance = DatabaseHelper._internal();
-
-//   static const _dbName = 'pos.db';
-//   static const _dbVersion = 5; // was 4
-
-//   Database? _db;
-//   Future<Database> get database async => _db ??= await _initDB();
-
-//   Future<Database> _initDB() async {
-//     final String dbPath =
-//         kIsWeb ? _dbName : p.join(await getDatabasesPath(), _dbName);
-
-//     return openDatabase(
-//       dbPath,
-//       version: _dbVersion,
-//       onConfigure: (db) async {
-//         await db.execute('PRAGMA foreign_keys = ON;');
-//       },
-//       onCreate: _onCreate,
-//       onUpgrade: _onUpgrade,
-//     );
-//   }
-
-//   FutureOr<void> _onCreate(Database db, int version) async {
-//     await db.execute('''
-//       CREATE TABLE user (
-//         id                 INTEGER PRIMARY KEY AUTOINCREMENT,
-//         name               TEXT    NOT NULL,
-//         email              TEXT    NOT NULL UNIQUE,
-//         contact            TEXT    NOT NULL,
-//         password           TEXT    NOT NULL,
-//         role               TEXT    NOT NULL DEFAULT 'Cashier' CHECK (role IN ('Admin','Manager','Cashier','StockKeeper')),
-//         color_code         TEXT    NOT NULL DEFAULT '#000000',
-//         created_at         INTEGER NOT NULL,
-//         updated_at         INTEGER NOT NULL,
-//         refresh_token_hash TEXT
-//       );
-//     ''');
-
-//     await _seedUsersIfEmpty(db);
-
-//     await db.execute('''
-//       CREATE TABLE customer (
-//         id       INTEGER PRIMARY KEY AUTOINCREMENT,
-//         name     TEXT    NOT NULL,
-//         contact  TEXT    NOT NULL UNIQUE
-//       );
-//     ''');
-
-//     await db.execute('''
-//       CREATE TABLE supplier (
-//         id             INTEGER PRIMARY KEY AUTOINCREMENT,
-//         name           TEXT    NOT NULL,
-//         contact        TEXT    NOT NULL,
-//         email          TEXT,
-//         address        TEXT,
-//         brand          TEXT    NOT NULL,
-//         color_code     TEXT    NOT NULL DEFAULT '#000000',
-//         location       TEXT    NOT NULL,
-//         status         TEXT    CHECK (status IN ('ACTIVE','INACTIVE','PENDING')) DEFAULT 'ACTIVE',
-//         preferred      INTEGER NOT NULL DEFAULT 0,
-//         payment_terms  TEXT,
-//         notes          TEXT,
-//         created_at     INTEGER NOT NULL,
-//         updated_at     INTEGER NOT NULL
-//       );
-//     ''');
-
-//     await db.execute('''
-//       CREATE TABLE category (
-//         id             INTEGER PRIMARY KEY AUTOINCREMENT,
-//         category       TEXT    NOT NULL,
-//         color_code     TEXT    NOT NULL,
-//         category_image TEXT
-//       );
-//     ''');
-
-//     await db.execute('''
-//       CREATE TABLE item (
-//         id            INTEGER PRIMARY KEY AUTOINCREMENT,
-//         name          TEXT    NOT NULL,
-//         barcode       TEXT    NOT NULL UNIQUE,
-//         category_id   INTEGER NOT NULL,
-//         supplier_id   INTEGER NOT NULL,
-//         reorder_level INTEGER NOT NULL DEFAULT 0,
-//         gradient      TEXT,
-//         remark        TEXT,
-//         color_code    TEXT    NOT NULL DEFAULT '#000000',
-//         FOREIGN KEY (category_id) REFERENCES category(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-//         FOREIGN KEY (supplier_id) REFERENCES supplier(id) ON DELETE RESTRICT ON UPDATE CASCADE
-//       );
-//     ''');
-
-//     await db.execute('''
-//       CREATE TABLE stock (
-//         id              INTEGER PRIMARY KEY AUTOINCREMENT,
-//         batch_id        TEXT    NOT NULL,
-//         item_id         INTEGER NOT NULL,
-//         quantity        INTEGER NOT NULL,
-//         unit_price      REAL    NOT NULL,
-//         sell_price      REAL    NOT NULL,
-//         discount_amount REAL    NOT NULL DEFAULT 0,
-//         supplier_id     INTEGER NOT NULL,
-//         UNIQUE (batch_id, item_id),
-//         FOREIGN KEY (item_id)     REFERENCES item(id)     ON DELETE CASCADE ON UPDATE CASCADE,
-//         FOREIGN KEY (supplier_id) REFERENCES supplier(id) ON DELETE CASCADE ON UPDATE CASCADE
-//       );
-//     ''');
-
-//     await db.execute('''
-//       CREATE TABLE sale (
-//         id       INTEGER PRIMARY KEY AUTOINCREMENT,
-//         date     INTEGER NOT NULL,
-//         total    REAL    NOT NULL,
-//         user_id  INTEGER NOT NULL,
-//         FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE RESTRICT ON UPDATE CASCADE
-//       );
-//     ''');
-
-//     await db.execute('''
-//       CREATE TABLE invoice (
-//         id               INTEGER PRIMARY KEY AUTOINCREMENT,
-//         batch_id         TEXT    NOT NULL,
-//         item_id          INTEGER NOT NULL,
-//         quantity         INTEGER NOT NULL,
-//         unit_saled_price REAL    NOT NULL,
-//         sale_invoice_id  TEXT    NOT NULL,
-//         FOREIGN KEY (item_id)         REFERENCES item(id)                 ON DELETE RESTRICT ON UPDATE CASCADE,
-//         FOREIGN KEY (sale_invoice_id) REFERENCES payment(sale_invoice_id) ON DELETE CASCADE  ON UPDATE CASCADE
-//       );
-//     ''');
-//     await db.execute(
-//       'CREATE INDEX idx_invoice_sale_invoice_id ON invoice(sale_invoice_id);'
-//     );
-
-//     await db.execute('''
-//       CREATE TABLE payment (
-//         id               INTEGER PRIMARY KEY AUTOINCREMENT,
-//         amount           REAL    NOT NULL,
-//         remain_amount    REAL    NOT NULL,
-//         date             INTEGER NOT NULL,        -- epoch millis
-//         file_name        TEXT    NOT NULL,
-//         type             TEXT    NOT NULL,
-//         sale_invoice_id  TEXT    NOT NULL,        -- TEXT
-//         user_id          INTEGER NOT NULL,
-//         customer_contact TEXT,
-//         UNIQUE (sale_invoice_id),
-//         FOREIGN KEY (user_id)           REFERENCES user(id)           ON DELETE RESTRICT ON UPDATE CASCADE,
-//         FOREIGN KEY (customer_contact)  REFERENCES customer(contact)  ON DELETE SET NULL   ON UPDATE CASCADE
-//       );
-//     ''');
-//     await db.execute(
-//       'CREATE INDEX idx_payment_sale_invoice_id ON payment(sale_invoice_id);'
-//     );
-//     await db.execute('CREATE INDEX idx_item_category ON item(category_id);');
-//     await db.execute('CREATE INDEX idx_item_supplier ON item(supplier_id);');
-//     await db.execute('CREATE INDEX idx_stock_item ON stock(item_id);');
-//     await db.execute('CREATE INDEX idx_stock_supplier ON stock(supplier_id);');
-//     await db.execute('CREATE INDEX idx_payment_user ON payment(user_id);');
-
-//     await db.transaction((txn) async {
-//       final now = DateTime.now().millisecondsSinceEpoch;
-
-//       await txn.insert('user', {
-//         'id': 1,
-//         'name': 'Cashier 1',
-//         'email': 'cashier1@demo.lk',
-//         'contact': '0770000001',
-//         'password': 'hashed_pw_1',
-//         'role': 'Cashier',
-//         'color_code': '#000000',
-//         'created_at': now,
-//         'updated_at': now,
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('user', {
-//         'id': 2,
-//         'name': 'Cashier 2',
-//         'email': 'cashier2@demo.lk',
-//         'contact': '0770000002',
-//         'password': 'hashed_pw_2',
-//         'role': 'Cashier',
-//         'color_code': '#000000',
-//         'created_at': now,
-//         'updated_at': now,
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('customer', {
-//         'id': 1,
-//         'name': 'John',
-//         'contact': '0771234567',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('customer', {
-//         'id': 2,
-//         'name': 'Jane',
-//         'contact': '0779876543',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('supplier', {
-//         'id': 1,
-//         'name': 'Default Supplier',
-//         'contact': '+94 77 000 0000',
-//         'email': 'supplier@demo.lk',
-//         'address': 'Colombo',
-//         'brand': 'Generic',
-//         'color_code': '#000000',
-//         'location': 'LK',
-//         'status': 'ACTIVE',
-//         'preferred': 1,
-//         'payment_terms': 'NET 30',
-//         'notes': 'Seed supplier',
-//         'created_at': now,
-//         'updated_at': now,
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('category', {
-//         'id': 1,
-//         'category': 'Beverages',
-//         'color_code': '#FF5733',
-//         'category_image': 'beverages.png',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('category', {
-//         'id': 2,
-//         'category': 'Snacks',
-//         'color_code': '#33FF57',
-//         'category_image': 'snacks.png',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('category', {
-//         'id': 3,
-//         'category': 'Stationery',
-//         'color_code': '#3357FF',
-//         'category_image': 'household.png',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('category', {
-//         'id': 4,
-//         'category': 'Dairy',
-//         'color_code': '#FFE082',
-//         'category_image': 'dairy.png',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('category', {
-//         'id': 5,
-//         'category': 'Bakery',
-//         'color_code': '#FBC02D',
-//         'category_image': 'bakery.png',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('category', {
-//         'id': 6,
-//         'category': 'Frozen',
-//         'color_code': '#80DEEA',
-//         'category_image': 'frozen.png',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('category', {
-//         'id': 7,
-//         'category': 'Produce',
-//         'color_code': '#81C784',
-//         'category_image': 'produce.png',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('category', {
-//         'id': 8,
-//         'category': 'Household',
-//         'color_code': '#90A4AE',
-//         'category_image': 'household.png',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('category', {
-//         'id': 9,
-//         'category': 'Personal Care',
-//         'color_code': '#B39DDB',
-//         'category_image': 'personal_care.png',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('category', {
-//         'id': 10,
-//         'category': 'Baby',
-//         'color_code': '#F48FB1',
-//         'category_image': 'baby.png',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 1,
-//         'name': 'Coca Cola 500ml',
-//         'barcode': 'BARC0001',
-//         'category_id': 1,
-//         'supplier_id': 1,
-//         'color_code': '#FF0000',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 2,
-//         'name': 'Potato Chips 100g',
-//         'barcode': 'BARC0002',
-//         'category_id': 2,
-//         'supplier_id': 1,
-//         'color_code': '#FFD700',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 3,
-//         'name': 'A4 Paper Ream',
-//         'barcode': 'BARC0003',
-//         'category_id': 3,
-//         'supplier_id': 1,
-//         'color_code': '#FFFFFF',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 4,
-//         'name': 'Fresh Milk 1L',
-//         'barcode': 'BARC0004',
-//         'category_id': 4, // Dairy
-//         'supplier_id': 1,
-//         'color_code': '#FFF9C4',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 5,
-//         'name': 'Cheddar Cheese 200g',
-//         'barcode': 'BARC0005',
-//         'category_id': 4, // Dairy
-//         'supplier_id': 1,
-//         'color_code': '#FFECB3',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 6,
-//         'name': 'White Bread Loaf',
-//         'barcode': 'BARC0006',
-//         'category_id': 5, // Bakery
-//         'supplier_id': 1,
-//         'color_code': '#FFE0B2',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 7,
-//         'name': 'Chocolate Donut',
-//         'barcode': 'BARC0007',
-//         'category_id': 5, // Bakery
-//         'supplier_id': 1,
-//         'color_code': '#D7CCC8',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 8,
-//         'name': 'Frozen Peas 500g',
-//         'barcode': 'BARC0008',
-//         'category_id': 6, // Frozen
-//         'supplier_id': 1,
-//         'color_code': '#A5D6A7',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 9,
-//         'name': 'Vanilla Ice Cream 1L',
-//         'barcode': 'BARC0009',
-//         'category_id': 6, // Frozen
-//         'supplier_id': 1,
-//         'color_code': '#FFFDE7',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 10,
-//         'name': 'Bananas 1kg',
-//         'barcode': 'BARC0010',
-//         'category_id': 7, // Produce
-//         'supplier_id': 1,
-//         'color_code': '#FFF59D',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 11,
-//         'name': 'Tomatoes 500g',
-//         'barcode': 'BARC0011',
-//         'category_id': 7, // Produce
-//         'supplier_id': 1,
-//         'color_code': '#FF8A80',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 12,
-//         'name': 'Laundry Detergent 1kg',
-//         'barcode': 'BARC0012',
-//         'category_id': 8, // Household
-//         'supplier_id': 1,
-//         'color_code': '#B0BEC5',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 13,
-//         'name': 'Dishwashing Liquid 500ml',
-//         'barcode': 'BARC0013',
-//         'category_id': 8, // Household
-//         'supplier_id': 1,
-//         'color_code': '#B2EBF2',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 14,
-//         'name': 'Shampoo 400ml',
-//         'barcode': 'BARC0014',
-//         'category_id': 9, // Personal Care
-//         'supplier_id': 1,
-//         'color_code': '#CE93D8',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-//       await txn.insert('item', {
-//         'id': 15,
-//         'name': 'Baby Diapers M (20 pcs)',
-//         'barcode': 'BARC0015',
-//         'category_id': 10, // Baby
-//         'supplier_id': 1,
-//         'color_code': '#F8BBD0',
-//       }, conflictAlgorithm: ConflictAlgorithm.ignore);
-//     });
-//   }
-
-//   Future<void> _seedUsersIfEmpty(DatabaseExecutor db) async {
-//     final count = Sqflite.firstIntValue(
-//           await db.rawQuery('SELECT COUNT(*) FROM user'),
-//         ) ??
-//         0;
-//     if (count > 0) return;
-
-//     final now = DateTime.now().millisecondsSinceEpoch;
-//     String hash(String s) => sha256.convert(utf8.encode(s)).toString();
-
-//     final users = [
-//       {
-//         'name': 'Sadeep Chathushan',
-//         'email': 'sadeep@aasa.lk',
-//         'contact': '+94 77 000 0001',
-//         'password': hash('Admin@123'),
-//         'role': 'Admin',
-//         'color_code': '#7C3AED',
-//         'created_at': now,
-//         'updated_at': now,
-//       },
-//       {
-//         'name': 'Hansima Perera',
-//         'email': 'hansima@aasa.lk',
-//         'contact': '+94 77 000 0002',
-//         'password': hash('Manager@123'),
-//         'role': 'Manager',
-//         'color_code': '#0EA5E9',
-//         'created_at': now,
-//         'updated_at': now,
-//       },
-//       {
-//         'name': 'Achintha Silva',
-//         'email': 'achintha@aasa.lk',
-//         'contact': '+94 77 000 0003',
-//         'password': hash('Cashier@123'),
-//         'role': 'Cashier',
-//         'color_code': '#10B981',
-//         'created_at': now,
-//         'updated_at': now,
-//       },
-//       {
-//         'name': 'Insaf Imran',
-//         'email': 'insaf@aasa.lk',
-//         'contact': '+94 77 000 0004',
-//         'password': hash('Stock@123'),
-//         'role': 'StockKeeper',
-//         'color_code': '#F59E0B',
-//         'created_at': now,
-//         'updated_at': now,
-//       },
-//     ];
-
-//     for (final u in users) {
-//       await db.insert(
-//         'user',
-//         u,
-//         conflictAlgorithm: ConflictAlgorithm.ignore, // idempotent
-//       );
-//     }
-//   }
-  
-//   // Example of runInTransaction usage
-//   Future<T> runInTransaction<T>(
-//     Future<T> Function(Transaction tx) action,
-//   ) async {
-//     final db = await database;
-//     return db.transaction<T>(action);
-//   }
-
-//   FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) {
-//   }
-// }
-

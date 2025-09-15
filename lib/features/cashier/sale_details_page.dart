@@ -78,6 +78,10 @@ class _SaleDetailsPageState extends State<SaleDetailsPage> {
                 .toString();
 
             final double subtotal = _sumLineTotals(items);
+            final double discountValue =
+                (header['discount_value'] as num?)?.toDouble() ?? 0.0;
+            final String discountType = (header['discount_type'] ?? 'no')
+                .toString();
 
             return ListView(
               padding: const EdgeInsets.all(16),
@@ -107,6 +111,18 @@ class _SaleDetailsPageState extends State<SaleDetailsPage> {
                         _listTile('Customer', contact.isEmpty ? '-' : contact),
                         _listTile('File', fileName),
                         const Divider(height: 24),
+                        _listTile('dddddddd', 'puka'),
+                        if (discountValue > 0)
+                          if (discountType == 'percentage')
+                            _listTile(
+                              'Discount (%)',
+                              _fmtMoney(discountValue),
+                            )
+                          else
+                            _listTile(
+                              'Discount (Rs)',
+                              _fmtMoney(discountValue),
+                          ),
                         _listTile(
                           'Subtotal (items total)',
                           _fmtMoney(subtotal),

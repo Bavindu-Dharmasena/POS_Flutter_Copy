@@ -1726,6 +1726,8 @@ class _CashierViewPageState extends State<CashierViewPage> {
       "user_id": 1,
       "date": now.millisecondsSinceEpoch, // INTEGER
       "remain_amount": balance,
+      "discount_type": discount>0 ? (isPercentageDiscount ? 'percentage' : 'amount') : 'no',
+      "discount_value": discount,
       "customer_contact": "0771234567",
     };
 
@@ -1828,11 +1830,12 @@ class _CashierViewPageState extends State<CashierViewPage> {
           .trim();
       if (batchId.isEmpty) batchId = 'quick';
 
+
       invoicesPayload.add({
         'batchId': batchId,
         'itemId': itemId,
         'quantity': qty,
-        'unitsaledprice': finalUnitPrice, // int
+        'unitsaledprice': finalUnitPrice.toDouble(), // int
       });
     }
 
