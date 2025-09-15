@@ -1,3 +1,4 @@
+// lib/features/stockkeeper/supplier_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
@@ -5,6 +6,10 @@ import 'package:pos_system/data/models/stockkeeper/supplier_model.dart' as model
 import 'package:pos_system/data/models/stockkeeper/supplier_db_maps.dart'; // for toUiMap()
 import 'package:pos_system/data/repositories/stockkeeper/supplier_repository.dart';
 import 'package:pos_system/theme/palette.dart';
+
+// Pages
+import 'package:pos_system/features/stockkeeper/supplier/add_supplier_page.dart';
+import 'package:pos_system/features/stockkeeper/supplier/supplier_products_page.dart';
 
 // alias the supplier card import
 import 'package:pos_system/widget/suppliers/supplier_card.dart' as cards;
@@ -24,7 +29,7 @@ class _SupplierPageState extends State<SupplierPage> {
   @override
   void initState() {
     super.initState();
-    _future = _repo.getAll(); // load all suppliers initially
+    _future = _repo.getAll(); // initial load
   }
 
   @override
@@ -40,6 +45,60 @@ class _SupplierPageState extends State<SupplierPage> {
     });
   }
 
+  Future<void> _reloadKeepingSearch() async {
+    final q = _searchCtrl.text.trim();
+    setState(() {
+      _future = _repo.getAll(q: q.isEmpty ? null : q);
+    });
+  }
+
+  Future<void> _openAddSupplier() async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const AddSupplierPage(supplierData: {}), // add mode
+        fullscreenDialog: true,
+      ),
+    );
+    if (!mounted) return;
+    if (result != null) await _reloadKeepingSearch();
+  }
+
+  Future<void> _openEditSupplier(model.Supplier s) async {
+    // Build a map with the keys AddSupplierPage reads in initState
+    final editData = {
+      'id': s.id,
+      'name': s.name,
+      'contact': s.contact,
+      'phone': s.contact,
+      'email': s.email,
+      'brand': s.brand,
+      'location': s.location,
+      'locations': [s.location],
+      'paymentTerms': s.paymentTerms,
+      'status': s.status,
+      'notes': s.notes,
+      'created_at': s.createdAt,
+    };
+
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AddSupplierPage(supplierData: editData),
+        fullscreenDialog: true,
+      ),
+    );
+    if (!mounted) return;
+    if (result != null) await _reloadKeepingSearch();
+  }
+
+  Future<void> _openProducts(model.Supplier s) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SupplierProductsPage(supplier: s.toUiMap()),
+      ),
+    );
+    // optional: no refresh needed here
+  }
+
   @override
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.of(context).size.width >= 700;
@@ -53,7 +112,7 @@ class _SupplierPageState extends State<SupplierPage> {
         title: const Text('Suppliers', style: TextStyle(color: Colors.white)),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {/* TODO: open add */},
+        onPressed: _openAddSupplier,        // ✅ wired
         backgroundColor: Palette.kInfo,
         icon: const Icon(Feather.plus, color: Colors.white),
         label: const Text('Add Supplier', style: TextStyle(color: Colors.white)),
@@ -124,10 +183,10 @@ class _SupplierPageState extends State<SupplierPage> {
                   itemBuilder: (context, i) {
                     final s = data[i];
                     return cards.SupplierCard(
-                      supplier: s.toUiMap(), // safe, colorless map
+                      supplier: s.toUiMap(), // safe map for card
                       isTablet: isTablet,
-                      onTap: () {/* TODO: open products */},
-                      onEdit: () {/* TODO: open edit */},
+                      onTap: () => _openProducts(s),     // ✅ view products
+                      onEdit: () => _openEditSupplier(s), // ✅ edit
                     );
                   },
                 );

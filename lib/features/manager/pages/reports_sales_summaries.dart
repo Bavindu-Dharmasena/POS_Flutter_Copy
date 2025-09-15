@@ -1,9 +1,11 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pos_system/data/models/manager/reports/sales_record.dart';
+import 'package:pos_system/data/repositories/manager/reports/sales_repository.dart';
 
-/// Modern Sales Analytics Dashboard
-/// Clean, intuitive design with better visual hierarchy and mobile optimization
+
+
 class SalesSummariesReportPage extends StatefulWidget {
   const SalesSummariesReportPage({super.key});
 
@@ -28,6 +30,8 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  // Repo
+  final _repo = SalesRepository();
 
   @override
   void initState() {
@@ -41,14 +45,10 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
 
     _loadData();
   }
@@ -70,21 +70,14 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
     _slideController.reset();
 
     try {
-      final repo = FakeSalesRepository(seed: 42);
-      final fromTo = _getPeriodRange(_anchor, _period);
-      final all = await repo.fetch(fromTo.$1, fromTo.$2);
+      final (from, to) = _getPeriodRange(_anchor, _period);
+      final result = await _repo.fetch(
+        from,
+        to,
+        query: _query.trim().isEmpty ? null : _query.trim(),
+      );
 
-      final filtered = all.where((r) {
-        if (_query.isNotEmpty &&
-            !r.orderId.toLowerCase().contains(_query.toLowerCase())) {
-          return false;
-        }
-        return true;
-      }).toList();
-
-      setState(() {
-        _records = filtered;
-      });
+      setState(() => _records = result);
 
       // Start animations
       _fadeController.forward();
@@ -191,23 +184,13 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Filters Section
             _buildFiltersSection(),
             const SizedBox(height: 24),
-
-            // Loading State
             if (_loading) _buildLoadingState(),
-
-            // Error State
             if (_error != null) _buildErrorState(),
-
-            // Main Content
             if (!_loading && _error == null) ...[
-              // KPI Cards
               _buildKPISection(),
               const SizedBox(height: 24),
-
-              // Charts and Analysis
               _buildAnalyticsSection(),
             ],
           ],
@@ -248,12 +231,8 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
             ],
           ),
           const SizedBox(height: 16),
-
-          // Period Selector
           _buildPeriodSelector(),
           const SizedBox(height: 16),
-
-          // Date and Search Row
           LayoutBuilder(
             builder: (context, constraints) {
               if (constraints.maxWidth < 600) {
@@ -343,9 +322,7 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                 period,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: isSelected
-                      ? const Color(0xFF3B82F6)
-                      : Colors.grey[600],
+                  color: isSelected ? const Color(0xFF3B82F6) : Colors.grey[600],
                 ),
               ),
             ],
@@ -424,10 +401,7 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
         ),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
       onChanged: (value) {
         _query = value;
@@ -701,7 +675,6 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
         position: _slideAnimation,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            // Always stack vertically on mobile for better UX
             if (constraints.maxWidth < 1200) {
               return Column(
                 children: [
@@ -753,18 +726,14 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
-                  Icons.pie_chart_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
+                child: const Icon(Icons.pie_chart_rounded, color: Colors.white, size: 20),
               ),
               const SizedBox(width: 12),
-              Expanded(
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Sales Distribution',
                       style: TextStyle(
                         fontSize: 18,
@@ -772,7 +741,7 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                         color: Color(0xFF1E293B),
                       ),
                     ),
-                    const Text(
+                    Text(
                       'Revenue breakdown by time period',
                       style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                     ),
@@ -782,7 +751,6 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
             ],
           ),
           const SizedBox(height: 24),
-          // Better chart sizing for mobile
           LayoutBuilder(
             builder: (context, constraints) {
               final chartHeight = constraints.maxWidth < 600 ? 250.0 : 300.0;
@@ -828,11 +796,7 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                     ),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
-                    Icons.table_chart_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
+                  child: const Icon(Icons.table_chart_rounded, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
@@ -849,10 +813,7 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                       ),
                       Text(
                         'Sales data by time slots',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF64748B),
-                        ),
+                        style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                       ),
                     ],
                   ),
@@ -860,21 +821,17 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
               ],
             ),
           ),
-          // Scrollable table content
           LayoutBuilder(
             builder: (context, constraints) {
-              // Calculate max height for mobile - leave space for other content
               final maxHeight = constraints.maxWidth < 600
-                  ? MediaQuery.of(context).size.height *
-                        0.4 // 40% of screen height on mobile
-                  : 400.0; // Fixed height on larger screens
+                  ? MediaQuery.of(context).size.height * 0.4
+                  : 400.0;
 
               return Container(
                 constraints: BoxConstraints(maxHeight: maxHeight),
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      // Table Header
                       Container(
                         padding: EdgeInsets.symmetric(
                           horizontal: constraints.maxWidth < 600 ? 16 : 24,
@@ -894,9 +851,7 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                               child: Text(
                                 'Time Period',
                                 style: TextStyle(
-                                  fontSize: constraints.maxWidth < 600
-                                      ? 11
-                                      : 12,
+                                  fontSize: constraints.maxWidth < 600 ? 11 : 12,
                                   fontWeight: FontWeight.w600,
                                   color: const Color(0xFF475569),
                                 ),
@@ -907,9 +862,7 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                                 'Revenue',
                                 textAlign: TextAlign.right,
                                 style: TextStyle(
-                                  fontSize: constraints.maxWidth < 600
-                                      ? 11
-                                      : 12,
+                                  fontSize: constraints.maxWidth < 600 ? 11 : 12,
                                   fontWeight: FontWeight.w600,
                                   color: const Color(0xFF475569),
                                 ),
@@ -920,9 +873,7 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                                 'Share',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: constraints.maxWidth < 600
-                                      ? 11
-                                      : 12,
+                                  fontSize: constraints.maxWidth < 600 ? 11 : 12,
                                   fontWeight: FontWeight.w600,
                                   color: const Color(0xFF475569),
                                 ),
@@ -931,11 +882,9 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                           ],
                         ),
                       ),
-                      // Table Rows
                       ...entries.map((entry) {
-                        final percentage = totalSales > 0
-                            ? (entry.value / totalSales) * 100
-                            : 0;
+                        final percentage =
+                            totalSales > 0 ? (entry.value / totalSales) * 100 : 0;
                         return Container(
                           padding: EdgeInsets.symmetric(
                             horizontal: constraints.maxWidth < 600 ? 16 : 24,
@@ -953,9 +902,7 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                                 child: Text(
                                   entry.key,
                                   style: TextStyle(
-                                    fontSize: constraints.maxWidth < 600
-                                        ? 13
-                                        : 14,
+                                    fontSize: constraints.maxWidth < 600 ? 13 : 14,
                                     fontWeight: FontWeight.w500,
                                     color: const Color(0xFF1E293B),
                                   ),
@@ -966,9 +913,7 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                                   _formatCurrency(entry.value),
                                   textAlign: TextAlign.right,
                                   style: TextStyle(
-                                    fontSize: constraints.maxWidth < 600
-                                        ? 12
-                                        : 14,
+                                    fontSize: constraints.maxWidth < 600 ? 12 : 14,
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xFF1E293B),
                                   ),
@@ -978,23 +923,17 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                                 child: Center(
                                   child: Container(
                                     padding: EdgeInsets.symmetric(
-                                      horizontal: constraints.maxWidth < 600
-                                          ? 6
-                                          : 8,
+                                      horizontal: constraints.maxWidth < 600 ? 6 : 8,
                                       vertical: 4,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF3B82F6,
-                                      ).withOpacity(0.1),
+                                      color: const Color(0xFF3B82F6).withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
                                       '${percentage.toStringAsFixed(1)}%',
                                       style: TextStyle(
-                                        fontSize: constraints.maxWidth < 600
-                                            ? 10
-                                            : 11,
+                                        fontSize: constraints.maxWidth < 600 ? 10 : 11,
                                         fontWeight: FontWeight.w600,
                                         color: const Color(0xFF3B82F6),
                                       ),
@@ -1006,29 +945,23 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                           ),
                         );
                       }),
-                      // Total Row
                       Container(
-                        padding: EdgeInsets.all(
-                          constraints.maxWidth < 600 ? 16 : 24,
-                        ),
+                        padding:
+                            EdgeInsets.all(constraints.maxWidth < 600 ? 16 : 24),
                         decoration: const BoxDecoration(
                           color: Color(0xFFF8FAFC),
-                          border: Border(
-                            top: BorderSide(color: Color(0xFFE2E8F0)),
-                          ),
+                          border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
                         ),
                         child: Row(
                           children: [
                             Expanded(
                               flex: constraints.maxWidth < 600 ? 3 : 2,
-                              child: Text(
+                              child: const Text(
                                 'Total',
                                 style: TextStyle(
-                                  fontSize: constraints.maxWidth < 600
-                                      ? 13
-                                      : 14,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF1E293B),
+                                  color: Color(0xFF1E293B),
                                 ),
                               ),
                             ),
@@ -1036,12 +969,10 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                               child: Text(
                                 _formatCurrency(totalSales),
                                 textAlign: TextAlign.right,
-                                style: TextStyle(
-                                  fontSize: constraints.maxWidth < 600
-                                      ? 12
-                                      : 14,
+                                style: const TextStyle(
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF1E293B),
+                                  color: Color(0xFF1E293B),
                                 ),
                               ),
                             ),
@@ -1095,11 +1026,7 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
                 color: Colors.grey[100],
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.inbox_rounded,
-                size: 48,
-                color: Colors.grey[400],
-              ),
+              child: Icon(Icons.inbox_rounded, size: 48, color: Colors.grey[400]),
             ),
             const SizedBox(height: 16),
             const Text(
@@ -1135,7 +1062,6 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
       map[key] = (map[key] ?? 0) + record.amount;
     }
 
-    // Sort the entries
     final sortedEntries = map.entries.toList()
       ..sort((a, b) {
         if (_period == 'Day') {
@@ -1210,9 +1136,9 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(
-              context,
-            ).colorScheme.copyWith(primary: const Color(0xFF3B82F6)),
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+                  primary: const Color(0xFF3B82F6),
+                ),
           ),
           child: child!,
         );
@@ -1245,10 +1171,8 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
           children: [
             Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
             SizedBox(width: 12),
-            Text(
-              'CSV data copied to clipboard',
-              style: TextStyle(fontWeight: FontWeight.w500),
-            ),
+            Text('CSV data copied to clipboard',
+                style: TextStyle(fontWeight: FontWeight.w500)),
           ],
         ),
         backgroundColor: const Color(0xFF10B981),
@@ -1261,43 +1185,34 @@ class _SalesSummariesReportPageState extends State<SalesSummariesReportPage>
 
   String _generateCSV() {
     final buffer = StringBuffer()..writeln('Order ID,Date & Time,Store,Amount');
-
     for (final record in _records) {
       buffer.writeln(
         '${record.orderId},"${record.timestamp.toIso8601String()}",${record.store},${record.amount.toStringAsFixed(2)}',
       );
     }
-
     return buffer.toString();
   }
 }
 
-// Modern Donut Chart Widget with improved mobile spacing
+// -------------------- Donut chart widgets --------------------
+
 class _ModernDonutChart extends StatelessWidget {
   const _ModernDonutChart({required this.data});
-
   final Map<String, double> data;
 
   @override
   Widget build(BuildContext context) {
     final entries = data.entries.toList();
-    final total = entries.fold<double>(0, (sum, entry) => sum + entry.value);
+    final total = entries.fold<double>(0, (sum, e) => sum + e.value);
 
     if (entries.isEmpty || total == 0) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.pie_chart_outline_rounded,
-              size: 64,
-              color: Colors.grey[300],
-            ),
+            Icon(Icons.pie_chart_outline_rounded, size: 64, color: Colors.grey[300]),
             const SizedBox(height: 16),
-            Text(
-              'No data to display',
-              style: TextStyle(color: Colors.grey[600], fontSize: 16),
-            ),
+            Text('No data to display', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
           ],
         ),
       );
@@ -1305,27 +1220,21 @@ class _ModernDonutChart extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Better responsive layout for mobile
         if (constraints.maxWidth < 600) {
           return Column(
             children: [
-              // Chart
               Expanded(
                 flex: 3,
                 child: Center(
                   child: AspectRatio(
                     aspectRatio: 1,
                     child: CustomPaint(
-                      painter: _ModernDonutPainter(
-                        entries: entries,
-                        total: total,
-                      ),
+                      painter: _ModernDonutPainter(entries: entries, total: total),
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              // Legend - Horizontal scrollable for mobile
               Expanded(
                 flex: 2,
                 child: SingleChildScrollView(
@@ -1333,16 +1242,13 @@ class _ModernDonutChart extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Row(
                     children: entries.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final data = entry.value;
-                      final percentage = (data.value / total) * 100;
+                      final idx = entry.key;
+                      final kv = entry.value;
+                      final pct = (kv.value / total) * 100;
 
                       return Container(
                         margin: const EdgeInsets.only(right: 16),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(8),
@@ -1358,37 +1264,28 @@ class _ModernDonutChart extends StatelessWidget {
                                   width: 12,
                                   height: 12,
                                   decoration: BoxDecoration(
-                                    color: _getColorForIndex(index),
+                                    color: _getColorForIndex(idx),
                                     borderRadius: BorderRadius.circular(3),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  data.key,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF1E293B),
-                                  ),
-                                ),
+                                Text(kv.key,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF1E293B))),
                               ],
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              'Rs. ${data.value.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF64748B),
-                              ),
-                            ),
-                            Text(
-                              '${percentage.toStringAsFixed(1)}%',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: _getColorForIndex(index),
-                              ),
-                            ),
+                            const SizedBox(height: 2),
+                            Text('Rs. ${kv.value.toStringAsFixed(0)}',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                            Text('${pct.toStringAsFixed(1)}%',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: _getColorForIndex(idx),
+                                )),
                           ],
                         ),
                       );
@@ -1399,34 +1296,28 @@ class _ModernDonutChart extends StatelessWidget {
             ],
           );
         } else {
-          // Desktop/tablet layout
           return Row(
             children: [
-              // Chart
               Expanded(
                 flex: 3,
                 child: Center(
                   child: AspectRatio(
                     aspectRatio: 1,
                     child: CustomPaint(
-                      painter: _ModernDonutPainter(
-                        entries: entries,
-                        total: total,
-                      ),
+                      painter: _ModernDonutPainter(entries: entries, total: total),
                     ),
                   ),
                 ),
               ),
-              // Legend
               Expanded(
                 flex: 2,
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: entries.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final data = entry.value;
-                      final percentage = (data.value / total) * 100;
+                      final idx = entry.key;
+                      final kv = entry.value;
+                      final pct = (kv.value / total) * 100;
 
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1436,7 +1327,7 @@ class _ModernDonutChart extends StatelessWidget {
                               width: 12,
                               height: 12,
                               decoration: BoxDecoration(
-                                color: _getColorForIndex(index),
+                                color: _getColorForIndex(idx),
                                 borderRadius: BorderRadius.circular(3),
                               ),
                             ),
@@ -1445,34 +1336,22 @@ class _ModernDonutChart extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    data.key,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF1E293B),
-                                    ),
-                                  ),
+                                  Text(kv.key,
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF1E293B))),
                                   const SizedBox(height: 2),
                                   Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(
-                                        'Rs. ${data.value.toStringAsFixed(0)}',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                      Text(
-                                        '${percentage.toStringAsFixed(1)}%',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
+                                      Text('Rs. ${kv.value.toStringAsFixed(0)}',
+                                          style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                                      Text('${pct.toStringAsFixed(1)}%',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.grey[700])),
                                     ],
                                   ),
                                 ],
@@ -1511,7 +1390,6 @@ class _ModernDonutChart extends StatelessWidget {
 
 class _ModernDonutPainter extends CustomPainter {
   const _ModernDonutPainter({required this.entries, required this.total});
-
   final List<MapEntry<String, double>> entries;
   final double total;
 
@@ -1526,11 +1404,9 @@ class _ModernDonutPainter extends CustomPainter {
 
     double startAngle = -pi / 2;
 
-    // Draw segments
     for (int i = 0; i < entries.length; i++) {
       final sweepAngle = (entries[i].value / total) * 2 * pi;
       paint.color = _getColorForIndex(i);
-
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
         startAngle,
@@ -1538,11 +1414,9 @@ class _ModernDonutPainter extends CustomPainter {
         false,
         paint,
       );
-
       startAngle += sweepAngle;
     }
 
-    // Draw center text
     final textPainter = TextPainter(
       text: TextSpan(
         children: [
@@ -1588,55 +1462,5 @@ class _ModernDonutPainter extends CustomPainter {
       Color(0xFFA855F7), // Purple
     ];
     return colors[index % colors.length];
-  }
-}
-
-// Data Models and Repository (same as original)
-class SalesRecord {
-  const SalesRecord({
-    required this.orderId,
-    required this.timestamp,
-    required this.store,
-    required this.paymentMethod,
-    required this.amount,
-  });
-
-  final String orderId;
-  final DateTime timestamp;
-  final String store;
-  final String paymentMethod;
-  final double amount;
-}
-
-class FakeSalesRepository {
-  FakeSalesRepository({int seed = 1}) : _rng = Random(seed);
-
-  final Random _rng;
-
-  static const _stores = ['Downtown', 'Airport', 'Mall'];
-  static const _payments = ['Cash', 'Card', 'Online'];
-
-  Future<List<SalesRecord>> fetch(DateTime from, DateTime to) async {
-    await Future<void>.delayed(const Duration(milliseconds: 600));
-
-    final minutes = to.difference(from).inMinutes;
-    final safeMinutes = minutes <= 0 ? 60 : minutes;
-    final count = (safeMinutes / 30).clamp(40, 600).toInt();
-
-    return List.generate(count, (i) {
-      final ts = from.add(Duration(minutes: _rng.nextInt(safeMinutes)));
-      final store = _stores[_rng.nextInt(_stores.length)];
-      final pay = _payments[_rng.nextInt(_payments.length)];
-      final cents = (_rng.nextDouble() * 20000) + 500;
-      final id = 'ORD-${ts.millisecondsSinceEpoch}-${_rng.nextInt(999)}';
-
-      return SalesRecord(
-        orderId: id,
-        timestamp: ts,
-        store: store,
-        paymentMethod: pay,
-        amount: double.parse(cents.toStringAsFixed(2)),
-      );
-    });
   }
 }
