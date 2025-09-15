@@ -1,17 +1,61 @@
-import 'package:flutter/foundation.dart';
+// lib/data/models/stockkeeper/supplier_request_model.dart
 
-@immutable
+/// Header + detail aggregate for a supplier request.
+class SupplierRequestRecord {
+  final int id;
+  final int supplierId;
+  final String supplierName;
+  final int createdAt; // epoch ms
+  final String status;
+  final List<SupplierRequestLine> items;
+
+  SupplierRequestRecord({
+    required this.id,
+    required this.supplierId,
+    required this.supplierName,
+    required this.createdAt,
+    required this.status,
+    this.items = const [],
+  });
+
+  String get displayId => 'REQ-${id.toString().padLeft(4, '0')}';
+  DateTime get createdAtDt => DateTime.fromMillisecondsSinceEpoch(createdAt);
+
+  SupplierRequestRecord copyWith({List<SupplierRequestLine>? items}) {
+    return SupplierRequestRecord(
+      id: id,
+      supplierId: supplierId,
+      supplierName: supplierName,
+      createdAt: createdAt,
+      status: status,
+      items: items ?? this.items,
+    );
+  }
+
+  /// Map a *header* row (no lines) to the model.
+  static SupplierRequestRecord fromHeaderMap(Map<String, Object?> m) {
+    return SupplierRequestRecord(
+      id: (m['id'] as num).toInt(),
+      supplierId: (m['supplier_id'] as num).toInt(),
+      supplierName: (m['supplier_name'] as String?) ?? 'Supplier',
+      createdAt: (m['created_at'] as num).toInt(),
+      status: (m['status'] as String?) ?? 'PENDING',
+    );
+  }
+}
+
+/// One line (item) inside a supplier request.
 class SupplierRequestLine {
-  final int id;                 // row id in supplier_request_item
+  final int id;
   final int itemId;
-  final String itemName;        // joined from item.name
-  final int currentStock;       // computed from stock table
-  final int requestedAmount;    // asked from supplier
-  final int quantity;           // editable qty (your UI edits this)
+  final String itemName;
+  final int currentStock;      // computed at read-time
+  final int requestedAmount;   // "Req. amount" column in UI
+  final int quantity;          // editable "Quantity" column
   final double unitPrice;
   final double salePrice;
 
-  const SupplierRequestLine({
+  SupplierRequestLine({
     required this.id,
     required this.itemId,
     required this.itemName,
@@ -22,71 +66,21 @@ class SupplierRequestLine {
     required this.salePrice,
   });
 
-  SupplierRequestLine copyWith({
-    int? id,
-    int? itemId,
-    String? itemName,
-    int? currentStock,
-    int? requestedAmount,
-    int? quantity,
-    double? unitPrice,
-    double? salePrice,
-  }) {
+  factory SupplierRequestLine.fromMap(Map<String, Object?> m) {
     return SupplierRequestLine(
-      id: id ?? this.id,
-      itemId: itemId ?? this.itemId,
-      itemName: itemName ?? this.itemName,
-      currentStock: currentStock ?? this.currentStock,
-      requestedAmount: requestedAmount ?? this.requestedAmount,
-      quantity: quantity ?? this.quantity,
-      unitPrice: unitPrice ?? this.unitPrice,
-      salePrice: salePrice ?? this.salePrice,
+      id: (m['id'] as num).toInt(),
+      itemId: (m['item_id'] as num).toInt(),
+      itemName: (m['item_name'] as String?) ?? 'Item',
+      currentStock: (m['current_stock'] as num?)?.toInt() ?? 0,
+      requestedAmount: (m['requested_amount'] as num?)?.toInt() ?? 0,
+      quantity: (m['quantity'] as num?)?.toInt() ?? 0,
+      unitPrice: (m['unit_price'] as num?)?.toDouble() ?? 0,
+      salePrice: (m['sale_price'] as num?)?.toDouble() ?? 0,
     );
   }
 }
 
-@immutable
-class SupplierRequestRecord {
-  final int id;                 // numeric DB id
-  final int supplierId;
-  final String supplierName;    // joined from supplier.name
-  final int createdAt;          // ms since epoch
-  final String status;          // PENDING | ACCEPTED | REJECTED | RESENT
-  final List<SupplierRequestLine> items;
-
-  const SupplierRequestRecord({
-    required this.id,
-    required this.supplierId,
-    required this.supplierName,
-    required this.createdAt,
-    required this.status,
-    required this.items,
-  });
-
-  String get displayId => 'REQ-${id.toString().padLeft(4, '0')}';
-  DateTime get createdAtDt => DateTime.fromMillisecondsSinceEpoch(createdAt);
-
-  SupplierRequestRecord copyWith({
-    int? id,
-    int? supplierId,
-    String? supplierName,
-    int? createdAt,
-    String? status,
-    List<SupplierRequestLine>? items,
-  }) {
-    return SupplierRequestRecord(
-      id: id ?? this.id,
-      supplierId: supplierId ?? this.supplierId,
-      supplierName: supplierName ?? this.supplierName,
-      createdAt: createdAt ?? this.createdAt,
-      status: status ?? this.status,
-      items: items ?? this.items,
-    );
-  }
-}
-
-/// Simple DTO for creating lines
-@immutable
+/// Helper for creation API (keeps your existing repo signature)
 class CreateSupplierRequestLine {
   final int itemId;
   final int requestedAmount;
