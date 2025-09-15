@@ -267,6 +267,8 @@ class CashierRepository {
           .toString(),
       'user_id': data['user_id'],
       'customer_contact': data['customer_contact'],
+      'discount_type': data['discount_type'] ?? 'no',
+      'discount_value': (data['discount_value'] as num?)?.toDouble() ?? 0.0,
     };
 
     // Keep abort if you want UNIQUE(sale_invoice_id) to throw on duplicates
@@ -297,9 +299,7 @@ class CashierRepository {
         final int qty = inv['quantity'] is num
             ? (inv['quantity'] as num).toInt()
             : int.tryParse('${inv['quantity']}') ?? 0;
-        final double finalUnitPrice = inv['unitsaledprice'] is num
-            ? (inv['unitsaledprice'] as num).toDouble()
-            : double.tryParse('${inv['unitsaledprice']}') ?? 0.0;
+        final double finalUnitPrice = inv['unitsaledprice'];
 
         batch.insert('invoice', {
           'batch_id': (inv['batchId'] ?? inv['batch_id']).toString(),
@@ -340,6 +340,8 @@ class CashierRepository {
         'date',
         'user_id',
         'customer_contact',
+        'discount_type',
+        'discount_value',
       ],
       where: 'sale_invoice_id = ?',
       whereArgs: [saleInvoiceId],
@@ -367,6 +369,8 @@ class CashierRepository {
           ? p["user_id"] as int
           : int.tryParse("${p["user_id"]}") ?? 0,
       "customer_contact": p["customer_contact"]?.toString(),
+      "discount_type": p["discount_type"]?.toString() ?? 'no',
+      "discount_value": (p["discount_value"] as num?)?.toDouble() ?? 0.0,
     };
 
     // 2) Fetch invoice lines (children) with joined details
