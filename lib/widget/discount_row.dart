@@ -29,7 +29,7 @@ class DiscountRow extends StatelessWidget {
             children: [
               const Text(
                 "Discount: ",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
               SizedBox(
                 width: 80,
@@ -37,7 +37,10 @@ class DiscountRow extends StatelessWidget {
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     hintText: '0',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                   ),
                   onChanged: onDiscountChange,
                   style: const TextStyle(fontSize: 16),
@@ -47,8 +50,14 @@ class DiscountRow extends StatelessWidget {
               DropdownButton<bool>(
                 value: isPercentageDiscount,
                 items: const [
-                  DropdownMenuItem(value: true, child: Text('%', style: TextStyle(fontSize: 16))),
-                  DropdownMenuItem(value: false, child: Text('Rs', style: TextStyle(fontSize: 16))),
+                  DropdownMenuItem(
+                    value: true,
+                    child: Text('%', style: TextStyle(fontSize: 16)),
+                  ),
+                  DropdownMenuItem(
+                    value: false,
+                    child: Text('Rs', style: TextStyle(fontSize: 16)),
+                  ),
                 ],
                 onChanged: (v) {
                   if (v != null) onTypeChange(v);
@@ -56,14 +65,28 @@ class DiscountRow extends StatelessWidget {
               ),
             ],
           ),
-          
+
           // Right side: Total amount
-          Text(
-            'Total: Rs. ${totalAmount.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontSize: 25,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Total: ',
+                  style: const TextStyle(
+                    fontSize: 14, // smaller size for "Total:"
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                ),
+                TextSpan(
+                  text: 'Rs. ${totalAmount.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 25, // larger size for amount
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
