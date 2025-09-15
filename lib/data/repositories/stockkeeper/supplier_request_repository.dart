@@ -1,14 +1,13 @@
+// lib/data/repositories/stockkeeper/supplier_request_repository.dart
 import 'package:sqflite/sqflite.dart';
 import 'package:pos_system/data/db/database_helper.dart';
 import 'package:pos_system/data/models/stockkeeper/supplier_request_model.dart';
-
-typedef Row = Map<String, Object?>;
 
 class SupplierRequestRepository {
   SupplierRequestRepository._();
   static final SupplierRequestRepository instance = SupplierRequestRepository._();
 
-  Future<Database> get _db => DatabaseHelper.instance.database;
+  Future<Database> get _db async => DatabaseHelper.instance.database;
 
   // ---------------- CREATE ----------------
 
@@ -26,6 +25,7 @@ class SupplierRequestRepository {
       final reqId = await tx.insert('supplier_request', {
         'supplier_id': supplierId,
         'created_at': now,
+        'updated_at': now,
         'status': status,
       });
 
@@ -33,7 +33,6 @@ class SupplierRequestRepository {
         await tx.insert('supplier_request_item', l.toInsertMap(reqId));
       }
 
-      // return freshly loaded full record
       return _getByIdTx(tx, reqId);
     });
   }
@@ -62,13 +61,15 @@ class SupplierRequestRepository {
       args.add(endMs);
     }
     if ((query ?? '').trim().isNotEmpty) {
-      final q = '%${query!.trim()}%';
-      // allow search by supplier name or REQ-XXXX numeric part
+      final raw = query!.trim();
+      final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+      final q = '%$raw%';
+      final qDigits = '%$digits%';
       where.add('(s.name LIKE ? OR CAST(r.id AS TEXT) LIKE ?)');
-      args..add(q)..add(q.replaceAll(RegExp(r'[^0-9%]'), ''));
+      args..add(q)..add(qDigits);
     }
 
-    final sql = '''
+    final rows = await db.rawQuery('''
       SELECT
         r.id,
         r.supplier_id,
@@ -84,17 +85,9 @@ class SupplierRequestRepository {
       ORDER BY r.created_at DESC, r.id DESC
       ${limit != null ? 'LIMIT $limit' : ''}
       ${offset != null ? 'OFFSET $offset' : ''}
-    ''';
+    ''', args);
 
-    final rows = await db.rawQuery(sql, args);
-    return rows.map((r) => SupplierRequestRecord(
-      id: (r['id'] as int),
-      supplierId: (r['supplier_id'] as int),
-      supplierName: (r['supplier_name'] as String?) ?? 'Supplier',
-      createdAt: (r['created_at'] as int),
-      status: (r['status'] as String?) ?? 'PENDING',
-      items: const <SupplierRequestLine>[],  // header-only
-    )).toList();
+    return rows.map(SupplierRequestRecord.fromHeaderMap).toList();
   }
 
   /// Returns full request with lines (includes itemName + currentStock).
@@ -144,22 +137,13 @@ class SupplierRequestRepository {
       ORDER BY sri.id ASC
     ''', [id]);
 
-    final items = lineRows.map((r) => SupplierRequestLine(
-      id: r['id'] as int,
-      itemId: r['item_id'] as int,
-      itemName: (r['item_name'] as String?) ?? 'Item',
-      currentStock: (r['current_stock'] as num?)?.toInt() ?? 0,
-      requestedAmount: (r['requested_amount'] as num).toInt(),
-      quantity: (r['quantity'] as num).toInt(),
-      unitPrice: (r['unit_price'] as num).toDouble(),
-      salePrice: (r['sale_price'] as num).toDouble(),
-    )).toList();
+    final items = lineRows.map(SupplierRequestLine.fromMap).toList();
 
     return SupplierRequestRecord(
-      id: h['id'] as int,
-      supplierId: h['supplier_id'] as int,
+      id: (h['id'] as num).toInt(),
+      supplierId: (h['supplier_id'] as num).toInt(),
       supplierName: (h['supplier_name'] as String?) ?? 'Supplier',
-      createdAt: h['created_at'] as int,
+      createdAt: (h['created_at'] as num).toInt(),
       status: (h['status'] as String?) ?? 'PENDING',
       items: items,
     );
@@ -168,17 +152,29 @@ class SupplierRequestRepository {
   // ---------------- UPDATE ----------------
 
   Future<int> setStatus(int requestId, String status) async {
+    const allowed = {'PENDING', 'ACCEPTED', 'REJECTED', 'RESENT'};
+    final normalized = status.toUpperCase();
+    if (!allowed.contains(normalized)) {
+      throw ArgumentError('Invalid status: $status');
+    }
+
     final db = await _db;
     return db.update(
       'supplier_request',
-      {'status': status},
+      {
+        'status': normalized,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      },
       where: 'id = ?',
       whereArgs: [requestId],
       conflictAlgorithm: ConflictAlgorithm.abort,
     );
   }
 
-  Future<int> updateLineQuantity({required int lineId, required int quantity}) async {
+  Future<int> updateLineQuantity({
+    required int lineId,
+    required int quantity,
+  }) async {
     final db = await _db;
     return db.update(
       'supplier_request_item',
