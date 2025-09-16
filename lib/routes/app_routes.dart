@@ -21,7 +21,7 @@ import '../features/manager/pages/reports_creditors.dart';
 import '../features/manager/pages/audit_logs.dart';
 import '../features/manager/pages/price_rules.dart';
 import '../features/manager/pages/create_creditor.dart';
-import '../features/manager/pages/add_user.dart';
+
 
 class AppRoutes {
   static Route<dynamic> generateRoute(

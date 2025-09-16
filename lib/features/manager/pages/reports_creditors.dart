@@ -1,6 +1,9 @@
-import 'dart:math';
+// lib/features/manager/reports/report_creditors.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
+import 'package:pos_system/data/models/manager/creditor_account.dart';
+import 'package:pos_system/data/repositories/manager/creditor_account_repository.dart';
 
 class CreditorsReportPage extends StatefulWidget {
   const CreditorsReportPage({super.key});
@@ -22,26 +25,25 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
   final Set<String> _selected = {};
 
   // ----------------------------- Data State -----------------------------
-  late List<Creditor> _all;
-  List<Creditor> _view = [];
-  final bool _loading = false;
+  List<CreditorAccount> _all = [];
+  List<CreditorAccount> _view = [];
+  bool _loading = false;
   String? _error;
 
   // Animations
-  late AnimationController _filterAC;
-  late Animation<double> _filterA;
+  late final AnimationController _filterAC = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 250),
+  );
+  late final Animation<double> _filterA =
+      CurvedAnimation(parent: _filterAC, curve: Curves.easeInOut);
+
+  final _repo = CreditorAccountRepository.instance;
 
   @override
   void initState() {
     super.initState();
-    _filterAC = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-    );
-    _filterA = CurvedAnimation(parent: _filterAC, curve: Curves.easeInOut);
-
-    _seedData();
-    _apply();
+    _load();
   }
 
   @override
@@ -50,33 +52,31 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
     super.dispose();
   }
 
-  // ----------------------------- Mock Data -----------------------------
-  void _seedData() {
-    final rng = Random(7);
-    final now = DateTime.now();
-    _all = List.generate(48, (i) {
-      final daysAgo = rng.nextInt(120);
-      final lastInvoice = now.subtract(Duration(days: daysAgo));
-      final amount = (rng.nextDouble() * 500000).roundToDouble();
-      final paid = rng.nextBool() && amount < 120000; // some paid
-      final overdueDays = paid ? 0 : (rng.nextInt(90));
-      return Creditor(
-        id: 'CR${1000 + i}',
-        name: _names[i % _names.length],
-        company: _companies[i % _companies.length],
-        phone: '+94 7${rng.nextInt(9)} ${rng.nextInt(900) + 100} ${rng.nextInt(900) + 100}',
-        email: 'contact$i@example.com',
-        lastInvoiceDate: lastInvoice,
-        dueAmount: paid ? 0 : amount,
-        paidAmount: paid ? amount : 0,
-        overdueDays: paid ? 0 : overdueDays,
-      );
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
     });
+    try {
+      // seed sample rows first run (optional)
+      await _repo.seedIfEmpty();
+      final rows = await _repo.getAll();
+      setState(() {
+        _all = rows;
+      });
+      _apply();
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   // ----------------------------- Filtering + Sorting -----------------------------
   void _apply() {
-    List<Creditor> v = List.of(_all);
+    List<CreditorAccount> v = List.of(_all);
 
     // Tab filter
     if (_tab == 'Overdue') {
@@ -88,24 +88,32 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
     // Search
     final q = _query.trim().toLowerCase();
     if (q.isNotEmpty) {
-      v = v.where((c) =>
-          c.name.toLowerCase().contains(q) ||
-          c.company.toLowerCase().contains(q) ||
-          c.id.toLowerCase().contains(q)).toList();
+      v = v
+          .where((c) =>
+              c.name.toLowerCase().contains(q) ||
+              c.company.toLowerCase().contains(q) ||
+              c.id.toLowerCase().contains(q))
+          .toList();
     }
 
     // Amount range
-    v = v.where((c) => c.dueAmount >= _amountRange.start && c.dueAmount <= _amountRange.end).toList();
+    v = v
+        .where((c) =>
+            c.dueAmount >= _amountRange.start &&
+            c.dueAmount <= _amountRange.end)
+        .toList();
 
     // Date range (last invoice)
     if (_dateRange != null) {
-      v = v.where((c) =>
-          !c.lastInvoiceDate.isBefore(_dateRange!.start) &&
-          !c.lastInvoiceDate.isAfter(_dateRange!.end)).toList();
+      v = v
+          .where((c) =>
+              !c.lastInvoiceDate.isBefore(_dateRange!.start) &&
+              !c.lastInvoiceDate.isAfter(_dateRange!.end))
+          .toList();
     }
 
     // Sorting
-    int cmp(Creditor a, Creditor b) {
+    int cmp(CreditorAccount a, CreditorAccount b) {
       int r;
       switch (_sort) {
         case 'Name':
@@ -129,7 +137,9 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
   }
 
   // ----------------------------- Helpers -----------------------------
-  String _money(num v) => NumberFormat.currency(locale: 'en_US', symbol: 'Rs ').format(v);
+  // Sri Lankan Rupees
+  String _money(num v) =>
+      NumberFormat.currency(locale: 'en_LK', symbol: 'Rs ').format(v);
   String _date(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
   Color _badgeColor(int overdueDays) {
@@ -140,35 +150,32 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
   }
 
   // ----------------------------- Bulk Actions -----------------------------
-  void _markSelectedAsPaid() {
-    setState(() {
-      for (final id in _selected) {
-        final i = _all.indexWhere((c) => c.id == id);
-        if (i != -1) {
-          final c = _all[i];
-          _all[i] = c.copyWith(dueAmount: 0, overdueDays: 0, paidAmount: c.paidAmount + c.dueAmount);
-        }
-      }
-      _selected.clear();
-      _apply();
-    });
+  Future<void> _markSelectedAsPaid() async {
+    for (final id in _selected) {
+      await _repo.markPaid(id);
+    }
+    _selected.clear();
+    await _load();
     _snack('Marked selected as paid');
   }
 
   void _exportCsv() {
     final header = 'ID,Name,Company,Last Invoice,Due Amount,Overdue Days';
-    final rows = _view.map((c) =>
-        [c.id, c.name, c.company, _date(c.lastInvoiceDate), c.dueAmount.toStringAsFixed(2), c.overdueDays]
-            .join(',')
-    );
+    final rows = _view.map((c) => [
+          c.id,
+          c.name,
+          c.company,
+          _date(c.lastInvoiceDate),
+          c.dueAmount.toStringAsFixed(2),
+          c.overdueDays
+        ].join(','));
     final csv = ([header, ...rows]).join('\n');
     // TODO: write to file or share
     _snack('CSV generated (${csv.length} chars). Wire to File/Share.');
   }
 
-  void _snack(String msg) => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg)),
-      );
+  void _snack(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   // ----------------------------- UI -----------------------------
   @override
@@ -182,6 +189,11 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
             tooltip: 'Export CSV',
             onPressed: _view.isEmpty ? null : _exportCsv,
             icon: const Icon(Icons.download),
+          ),
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _loading ? null : _load,
+            icon: const Icon(Icons.refresh),
           ),
         ],
       ),
@@ -222,7 +234,8 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
 
   Widget _buildHeader() {
     final totalDue = _view.fold<double>(0, (s, c) => s + c.dueAmount);
-    final overdueCount = _view.where((c) => c.overdueDays > 0 && c.dueAmount > 0).length;
+    final overdueCount =
+        _view.where((c) => c.overdueDays > 0 && c.dueAmount > 0).length;
     final paidCount = _view.where((c) => c.dueAmount == 0).length;
 
     return Padding(
@@ -536,24 +549,19 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
     );
   }
 
-  // ----------------------------- Empty State -----------------------------
   Widget _emptyState() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
+        children: [
           Icon(Icons.inbox, size: 64, color: Colors.white24),
           SizedBox(height: 16),
-          Text(
-            'No creditors found.',
-            style: TextStyle(color: Colors.white70, fontSize: 18),
-          ),
+          Text('No creditors found.', style: TextStyle(color: Colors.white70, fontSize: 18)),
         ],
       ),
     );
   }
 
-  // ----------------------------- Table (Desktop) -----------------------------
   Widget _tableView() {
     final hdrStyle = TextStyle(color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w600);
     return Padding(
@@ -643,7 +651,6 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
     );
   }
 
-  // ----------------------------- Cards (Mobile) -----------------------------
   Widget _cardList() {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
@@ -730,7 +737,7 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
   }
 
   // ----------------------------- Actions -----------------------------
-  Future<void> _markPaid(Creditor c) async {
+  Future<void> _markPaid(CreditorAccount c) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -743,18 +750,13 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
       ),
     );
     if (ok == true) {
-      setState(() {
-        final i = _all.indexWhere((x) => x.id == c.id);
-        if (i != -1) {
-          _all[i] = c.copyWith(dueAmount: 0, overdueDays: 0, paidAmount: c.paidAmount + c.dueAmount);
-          _apply();
-        }
-      });
+      await _repo.markPaid(c.id);
+      await _load();
       _snack('Marked ${c.name} as paid');
     }
   }
 
-  void _showDetails(Creditor c) {
+  void _showDetails(CreditorAccount c) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -835,6 +837,7 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
   }
 
   Widget _fakeLedger() {
+    // Still a visual stub; wire to a real ledger table if/when you add one.
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.04),
@@ -873,7 +876,7 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
           children: [
             TextField(decoration: const InputDecoration(labelText: 'Name'), controller: nameCtrl),
             TextField(decoration: const InputDecoration(labelText: 'Company'), controller: companyCtrl),
-            TextField(decoration: const InputDecoration(labelText: 'Initial Due Amount'), controller: amountCtrl, keyboardType: TextInputType.number),
+            TextField(decoration: const InputDecoration(labelText: 'Initial Due Amount (Rs)'), controller: amountCtrl, keyboardType: TextInputType.number),
           ],
         ),
         actions: [
@@ -883,80 +886,23 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
       ),
     );
     if (ok == true) {
-      setState(() {
-        final id = 'CR${1000 + _all.length}';
-        _all.insert(0, Creditor(
-          id: id,
-          name: nameCtrl.text.trim().isEmpty ? 'New Creditor' : nameCtrl.text.trim(),
-          company: companyCtrl.text.trim().isEmpty ? '—' : companyCtrl.text.trim(),
-          phone: '+94 70 000 0000',
-          email: 'n/a',
-          lastInvoiceDate: DateTime.now(),
-          dueAmount: double.tryParse(amountCtrl.text) ?? 0,
-          paidAmount: 0,
-          overdueDays: 0,
-        ));
-        _apply();
-      });
+      final now = DateTime.now();
+      final row = CreditorAccount(
+        id: '', // auto-gen "CRxxxxxx"
+        name: nameCtrl.text.trim().isEmpty ? 'New Creditor' : nameCtrl.text.trim(),
+        company: companyCtrl.text.trim().isEmpty ? '—' : companyCtrl.text.trim(),
+        phone: '+94 70 000 0000',
+        email: 'n/a',
+        lastInvoiceDate: now,
+        dueAmount: double.tryParse(amountCtrl.text) ?? 0,
+        paidAmount: 0,
+        overdueDays: 0,
+        createdAt: now.millisecondsSinceEpoch,
+        updatedAt: now.millisecondsSinceEpoch,
+      );
+      await _repo.create(row);
+      await _load();
       _snack('Creditor created');
     }
   }
 }
-
-class Creditor {
-  final String id;
-  final String name;
-  final String company;
-  final String phone;
-  final String email;
-  final DateTime lastInvoiceDate;
-  final double dueAmount;
-  final double paidAmount;
-  final int overdueDays;
-
-  Creditor({
-    required this.id,
-    required this.name,
-    required this.company,
-    required this.phone,
-    required this.email,
-    required this.lastInvoiceDate,
-    required this.dueAmount,
-    required this.paidAmount,
-    required this.overdueDays,
-  });
-
-  Creditor copyWith({
-    String? id,
-    String? name,
-    String? company,
-    String? phone,
-    String? email,
-    DateTime? lastInvoiceDate,
-    double? dueAmount,
-    double? paidAmount,
-    int? overdueDays,
-  }) => Creditor(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        company: company ?? this.company,
-        phone: phone ?? this.phone,
-        email: email ?? this.email,
-        lastInvoiceDate: lastInvoiceDate ?? this.lastInvoiceDate,
-        dueAmount: dueAmount ?? this.dueAmount,
-        paidAmount: paidAmount ?? this.paidAmount,
-        overdueDays: overdueDays ?? this.overdueDays,
-      );
-}
-
-const _names = [
-  'Amal Perera', 'Nimal Silva', 'Kavindi Fernando', 'Ishara Jayasundara',
-  'Sachini Ranasinghe', 'Kasun Sameera', 'Tharindu Wickramasinghe',
-  'Malsha Upeksha', 'Rashmi Gunasekara', 'Sahan Dias', 'Chathura Lakmal',
-  'Sadeep Chathushan', 'Hansima Perera', 'Achintha Nimantha', 'Insaf Ahamed',
-];
-
-const _companies = [
-  'ABC Traders', 'Colombo Suppliers', 'Island Wholesale', 'Kandy Stores',
-  'Lanka Distributors', 'NorthMart', 'SouthLine Imports', 'Central Hub',
-];
