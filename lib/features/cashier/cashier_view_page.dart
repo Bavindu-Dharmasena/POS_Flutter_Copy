@@ -1322,6 +1322,7 @@ import 'category_items_page.dart';
 import 'cashier_insights_page.dart';
 import '../../widget/primary_actions_row.dart';
 import '../../data/repositories/cashier/cashier_repository.dart';
+import 'package:pos_system/core/services/secure_storage_service.dart';
 
 // ---- Keyboard Intents ----
 class ActivateSearchIntent extends Intent {
@@ -1378,10 +1379,10 @@ class _CashierViewPageState extends State<CashierViewPage> {
 
   bool _loading = true;
   String? _error;
-
   String searchQuery = '';
   bool isPercentageDiscount = true;
   double discount = 0;
+  int? _userId;
 
   // ----------------- FOCUS NODES -----------------
   final FocusNode _quickSaleBtnNode = FocusNode(debugLabel: 'QuickSaleBtn');
@@ -1404,6 +1405,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
   void initState() {
     super.initState();
     _loadCatalog();
+    _loadUserId();
   }
 
   @override
@@ -1556,6 +1558,13 @@ class _CashierViewPageState extends State<CashierViewPage> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _loadUserId() async {
+    final id = await SecureStorageService.instance.getUserId();
+    setState(() {
+      _userId = id != null ? int.parse(id) : null;
+    });
   }
 
   void _focusSearchField({bool selectAll = false}) {
@@ -1723,14 +1732,16 @@ class _CashierViewPageState extends State<CashierViewPage> {
       "amount": grandTotal,
       "fileName": "receipt_${saleInvoiceId}.pdf",
       "salesInvoiceId": saleInvoiceId, // TEXT
-      "user_id": 1,
+      "user_id": _userId,
       "date": now.millisecondsSinceEpoch, // INTEGER
       "remain_amount": balance,
-      "discount_type": discount>0 ? (isPercentageDiscount ? 'percentage' : 'amount') : 'no',
+      "discount_type": discount > 0
+          ? (isPercentageDiscount ? 'percentage' : 'amount')
+          : 'no',
       "discount_value": discount,
       "customer_contact": "0771234567",
     };
-
+    print("user: $_userId");
     try {
       final int payId = await _cashierrepo.insertPayment(paymentData);
       // print("Payment inserted with ID: $payId");
@@ -1740,8 +1751,6 @@ class _CashierViewPageState extends State<CashierViewPage> {
       ).showSnackBar(SnackBar(content: Text('Failed to create payment: $e')));
       return;
     }
-
-   
 
     // --- Build and show the bill text (unchanged UI) ---
     final bill = StringBuffer();
@@ -1830,7 +1839,6 @@ class _CashierViewPageState extends State<CashierViewPage> {
           .trim();
       if (batchId.isEmpty) batchId = 'quick';
 
-
       invoicesPayload.add({
         'batchId': batchId,
         'itemId': itemId,
@@ -1846,7 +1854,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
       return;
     }
 
-     try {
+    try {
       await _cashierrepo.insertInvoices({
         'saleInvoiceId': saleInvoiceId, // ✅ TEXT FK
         'invoices': invoicesPayload,

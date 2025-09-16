@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+
+// Repo + model for real SQLite-backed data
+import 'package:pos_system/data/models/manager/reports/trending_item_report.dart';
+import 'package:pos_system/data/repositories/manager/reports/trending_items_repository.dart';
 
 class TrendingItemsReportPage extends StatefulWidget {
   const TrendingItemsReportPage({super.key});
@@ -8,78 +14,124 @@ class TrendingItemsReportPage extends StatefulWidget {
 }
 
 class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
+  // UI state
   String selectedPeriod = 'Last 7 Days';
   String selectedSortBy = 'Quantity Sold';
-  int selectedIndex = 0;
+  int selectedIndex = 0; // 0: Top Products, 1: By Category, 2: Growth Leaders
 
-  final List<String> periods = [
+  final List<String> periods = const [
     'Last 7 Days',
     'Last 30 Days',
     'Last 3 Months',
     'Last 6 Months',
-    'This Year'
+    'This Year',
   ];
 
-  final List<String> sortOptions = [
+  final List<String> sortOptions = const [
     'Quantity Sold',
     'Revenue',
     'Growth Rate',
-    'Profit Margin'
+    'Profit Margin',
   ];
 
-  // Mock data for trending items
-  final List<TrendingItem> trendingItems = [
-    TrendingItem(
-      name: 'Wireless Bluetooth Headphones',
-      category: 'Electronics',
-      quantitySold: 245,
-      revenue: 12250.00,
-      growthRate: 15.8,
-      profitMargin: 35.2,
-      imageUrl: '🎧',
-      rank: 1,
-    ),
-    TrendingItem(
-      name: 'Organic Coffee Blend - Premium',
-      category: 'Food & Beverages',
-      quantitySold: 189,
-      revenue: 2835.00,
-      growthRate: 22.1,
-      profitMargin: 42.8,
-      imageUrl: '☕',
-      rank: 2,
-    ),
-    TrendingItem(
-      name: 'Smart Fitness Watch',
-      category: 'Electronics',
-      quantitySold: 156,
-      revenue: 23400.00,
-      growthRate: 31.5,
-      profitMargin: 28.9,
-      imageUrl: '⌚',
-      rank: 3,
-    ),
-    TrendingItem(
-      name: 'Eco-Friendly Yoga Mat',
-      category: 'Sports & Fitness',
-      quantitySold: 134,
-      revenue: 4020.00,
-      growthRate: 18.7,
-      profitMargin: 38.5,
-      imageUrl: '🧘',
-      rank: 4,
-    ),
-    TrendingItem(
-      name: 'Premium Skincare Set',
-      category: 'Beauty & Health',
-      quantitySold: 98,
-      revenue: 7840.00,
-      growthRate: 45.2,
-      profitMargin: 55.1,
-      imageUrl: '💄',
-      rank: 5,
-    ),
-  ];
+  // Data state
+  bool _loading = false;
+  String? _error;
+  List<TrendingItemReport> _rows = [];
+
+  // LKR formatters
+  String _fmtLkr(double v, {int decimals = 0}) =>
+      NumberFormat.currency(locale: 'en_LK', symbol: 'Rs. ', decimalDigits: decimals).format(v);
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Data loading
+  // ---------------------------------------------------------------------------
+
+  (DateTime, DateTime) _rangeForPeriod(DateTime now, String periodLabel) {
+    // end = now (exclusive), start depends on the period
+    final DateTime to = now;
+    DateTime from;
+
+    DateTime startOfDay(DateTime d) => DateTime(d.year, d.month, d.day);
+
+    switch (periodLabel) {
+      case 'Last 7 Days':
+        from = to.subtract(const Duration(days: 7));
+        break;
+      case 'Last 30 Days':
+        from = to.subtract(const Duration(days: 30));
+        break;
+      case 'Last 3 Months':
+        from = DateTime(to.year, to.month - 3, to.day);
+        break;
+      case 'Last 6 Months':
+        from = DateTime(to.year, to.month - 6, to.day);
+        break;
+      case 'This Year':
+        from = DateTime(to.year, 1, 1);
+        break;
+      default:
+        from = to.subtract(const Duration(days: 7));
+    }
+    // Normalize to start of day for nicer boundaries
+    return (startOfDay(from), to);
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      // If the user taps the "Growth Leaders" tab, force-sort by growth
+      final effectiveSort = (selectedIndex == 2) ? 'Growth Rate' : selectedSortBy;
+
+      final now = DateTime.now();
+      final fromTo = _rangeForPeriod(now, selectedPeriod);
+
+      final data = await TrendingItemsRepository.instance.fetch(
+        fromMs: fromTo.$1.millisecondsSinceEpoch,
+        toMs: fromTo.$2.millisecondsSinceEpoch,
+        sortBy: sortByFromLabel(effectiveSort),
+        limit: 100,
+      );
+
+      setState(() {
+        _rows = data;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      setState(() {
+        _loading = false;
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Derived metrics
+  // ---------------------------------------------------------------------------
+
+  int get _totalQty => _rows.fold<int>(0, (s, r) => s + r.quantitySold);
+  double get _totalRevenue => _rows.fold<double>(0, (s, r) => s + r.revenue);
+  double get _avgGrowth {
+    final vals = _rows.map((e) => e.growthRate).whereType<double>().toList();
+    if (vals.isEmpty) return 0;
+    return vals.reduce((a, b) => a + b) / vals.length;
+  }
+
+  // ---------------------------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -92,19 +144,28 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
         elevation: 0,
         bottom: PreferredSize(
           preferredSize: Size.zero,
-          child: Container(
-            height: 1,
-            color: Colors.grey[200],
-          ),
+          child: Container(height: 1, color: Colors.grey[200]),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _loading ? null : _load,
+            icon: _loading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh),
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
       body: Column(
         children: [
           _buildFilterSection(),
           _buildStatsOverview(),
-          Expanded(
-            child: _buildItemsList(),
-          ),
+          Expanded(child: _buildMainPane()),
         ],
       ),
     );
@@ -124,9 +185,9 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
                   value: selectedPeriod,
                   items: periods,
                   onChanged: (value) {
-                    setState(() {
-                      selectedPeriod = value!;
-                    });
+                    if (value == null) return;
+                    setState(() => selectedPeriod = value);
+                    _load();
                   },
                 ),
               ),
@@ -137,9 +198,9 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
                   value: selectedSortBy,
                   items: sortOptions,
                   onChanged: (value) {
-                    setState(() {
-                      selectedSortBy = value!;
-                    });
+                    if (value == null) return;
+                    setState(() => selectedSortBy = value);
+                    _load();
                   },
                 ),
               ),
@@ -178,12 +239,12 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
           ),
           child: DropdownButton<String>(
             value: value,
-            items: items.map((item) {
-              return DropdownMenuItem(
-                value: item,
-                child: Text(item),
-              );
-            }).toList(),
+            items: items
+                .map((item) => DropdownMenuItem(
+                      value: item,
+                      child: Text(item),
+                    ))
+                .toList(),
             onChanged: onChanged,
             isExpanded: true,
             underline: const SizedBox(),
@@ -195,7 +256,7 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
 
   Widget _buildTabBar() {
     final tabs = ['Top Products', 'By Category', 'Growth Leaders'];
-    
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[100],
@@ -209,7 +270,10 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
               onTap: () {
                 setState(() {
                   selectedIndex = index;
+                  // If user taps "Growth Leaders", force growth sort to match the tab.
+                  if (selectedIndex == 2) selectedSortBy = 'Growth Rate';
                 });
+                _load();
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -244,6 +308,10 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
   }
 
   Widget _buildStatsOverview() {
+    final totalQty = _totalQty;
+    final totalRev = _totalRevenue;
+    final avgGrowth = _avgGrowth;
+
     return Container(
       margin: const EdgeInsets.all(16),
       child: Row(
@@ -251,9 +319,9 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
           Expanded(
             child: _buildStatCard(
               title: 'Total Items Sold',
-              value: '1,247',
-              change: '+12.5%',
-              isPositive: true,
+              value: totalQty.toString(),
+              change: '${avgGrowth >= 0 ? '+' : ''}${avgGrowth.toStringAsFixed(1)}%',
+              isPositive: avgGrowth >= 0,
               icon: Icons.trending_up,
               color: Colors.blue,
             ),
@@ -262,9 +330,9 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
           Expanded(
             child: _buildStatCard(
               title: 'Revenue Generated',
-              value: '\$52,345',
-              change: '+8.3%',
-              isPositive: true,
+              value: _fmtLkr(totalRev, decimals: 0),
+              change: '${avgGrowth >= 0 ? '+' : ''}${avgGrowth.toStringAsFixed(1)}%',
+              isPositive: avgGrowth >= 0,
               icon: Icons.attach_money,
               color: Colors.green,
             ),
@@ -273,9 +341,9 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
           Expanded(
             child: _buildStatCard(
               title: 'Avg. Growth',
-              value: '18.7%',
-              change: '+2.1%',
-              isPositive: true,
+              value: '${avgGrowth.toStringAsFixed(1)}%',
+              change: avgGrowth >= 0 ? '+0.0%' : '-0.0%', // cosmetic
+              isPositive: avgGrowth >= 0,
               icon: Icons.show_chart,
               color: Colors.orange,
             ),
@@ -318,11 +386,7 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
                   color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                  size: 20,
-                ),
+                child: Icon(icon, color: color, size: 20),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -366,7 +430,28 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
     );
   }
 
-  Widget _buildItemsList() {
+  Widget _buildMainPane() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Text(
+            'Failed to load data:\n$_error',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.red),
+          ),
+        ),
+      );
+    }
+    if (_rows.isEmpty) {
+      return const Center(
+        child: Text('No data for the selected period'),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       decoration: BoxDecoration(
@@ -383,48 +468,56 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // header
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Trending Products',
-                  style: TextStyle(
+                Text(
+                  selectedIndex == 1 ? 'Trending Categories' : 'Trending Products',
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
                 TextButton.icon(
-                  onPressed: () {},
+                  onPressed: _exportCsv,
                   icon: const Icon(Icons.file_download, size: 18),
                   label: const Text('Export'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.blue[600],
-                  ),
+                  style: TextButton.styleFrom(foregroundColor: Colors.blue[600]),
                 ),
               ],
             ),
           ),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: trendingItems.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final item = trendingItems[index];
-                return _buildItemTile(item);
-              },
-            ),
-          ),
+
+          // content
+          if (selectedIndex == 1)
+            Expanded(child: _buildCategoryList())
+          else
+            Expanded(child: _buildProductList()),
+
           const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  Widget _buildItemTile(TrendingItem item) {
+  // --- Product list ----------------------------------------------------------
+
+  Widget _buildProductList() {
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: _rows.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (_, i) => _buildItemTile(_rows[i]),
+    );
+  }
+
+  Widget _buildItemTile(TrendingItemReport r) {
+    final emoji = _emojiForCategory(r.category);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
@@ -436,12 +529,7 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
               color: Colors.grey[100],
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Center(
-              child: Text(
-                item.imageUrl,
-                style: const TextStyle(fontSize: 20),
-              ),
-            ),
+            child: Center(child: Text(emoji, style: const TextStyle(fontSize: 20))),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -449,7 +537,7 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.name,
+                  r.name,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
@@ -458,11 +546,8 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  item.category,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
+                  r.category,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
                 ),
               ],
             ),
@@ -478,7 +563,7 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '#${item.rank}',
+                  '#${r.rank}',
                   style: TextStyle(
                     color: Colors.blue[700],
                     fontSize: 12,
@@ -488,7 +573,7 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
               ),
               const SizedBox(height: 4),
               Text(
-                '${item.quantitySold} sold',
+                '${r.quantitySold} sold',
                 style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
@@ -496,11 +581,8 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
                 ),
               ),
               Text(
-                '\$${item.revenue.toStringAsFixed(0)}',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
+                _fmtLkr(r.revenue, decimals: 0),
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
             ],
           ),
@@ -508,15 +590,15 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
           Column(
             children: [
               Icon(
-                item.growthRate > 0 ? Icons.trending_up : Icons.trending_down,
-                color: item.growthRate > 0 ? Colors.green : Colors.red,
+                (r.growthRate ?? 0) >= 0 ? Icons.trending_up : Icons.trending_down,
+                color: (r.growthRate ?? 0) >= 0 ? Colors.green : Colors.red,
                 size: 20,
               ),
               const SizedBox(height: 2),
               Text(
-                '${item.growthRate.toStringAsFixed(1)}%',
+                '${(r.growthRate ?? 0).toStringAsFixed(1)}%',
                 style: TextStyle(
-                  color: item.growthRate > 0 ? Colors.green[700] : Colors.red[700],
+                  color: (r.growthRate ?? 0) >= 0 ? Colors.green[700] : Colors.red[700],
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -527,26 +609,153 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
       ),
     );
   }
+
+  // --- Category list (simple aggregation for tab 1) --------------------------
+
+  Widget _buildCategoryList() {
+    // Aggregate by category
+    final Map<String, _CatAgg> agg = {};
+    for (final r in _rows) {
+      final a = agg.putIfAbsent(r.category, () => _CatAgg());
+      a.qty += r.quantitySold;
+      a.rev += r.revenue;
+      if (r.growthRate != null) {
+        a.grCount++;
+        a.growthSum += r.growthRate!;
+      }
+    }
+    // To list & sort by revenue desc
+    final list = agg.entries
+        .map((e) => _CatRow(
+              category: e.key,
+              qty: e.value.qty,
+              revenue: e.value.rev,
+              avgGrowth: e.value.grCount == 0 ? 0 : e.value.growthSum / e.value.grCount,
+            ))
+        .toList()
+      ..sort((a, b) => b.revenue.compareTo(a.revenue));
+
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: list.length,
+      separatorBuilder: (_, __) => const Divider(height: 1),
+      itemBuilder: (_, i) {
+        final c = list[i];
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Center(child: Text(_emojiForCategory(c.category))),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  c.category,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('${c.qty} sold', style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(_fmtLkr(c.revenue, decimals: 0), style: TextStyle(color: Colors.grey[600])),
+                ],
+              ),
+              const SizedBox(width: 12),
+              Column(
+                children: [
+                  Icon(c.avgGrowth >= 0 ? Icons.trending_up : Icons.trending_down,
+                      color: c.avgGrowth >= 0 ? Colors.green : Colors.red, size: 20),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${c.avgGrowth.toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      color: c.avgGrowth >= 0 ? Colors.green[700] : Colors.red[700],
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Export
+  // ---------------------------------------------------------------------------
+
+  Future<void> _exportCsv() async {
+    final buf = StringBuffer()
+      ..writeln('Rank,Item,Category,Quantity Sold,Revenue (LKR),Growth %,Profit Margin %');
+
+    for (final r in _rows) {
+      buf.writeln(
+          '${r.rank},"${r.name.replaceAll('"', '""')}",${r.category.replaceAll(',', ' ')},${r.quantitySold},${r.revenue.toStringAsFixed(2)},${(r.growthRate ?? 0).toStringAsFixed(2)},${(r.profitMargin ?? 0).toStringAsFixed(2)}');
+    }
+
+    await Clipboard.setData(ClipboardData(text: buf.toString()));
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('CSV copied to clipboard'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        backgroundColor: Colors.green[600],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Small helpers
+  // ---------------------------------------------------------------------------
+
+  String _emojiForCategory(String c) {
+    final key = c.toLowerCase();
+    if (key.contains('beverage') || key.contains('drink')) return '🥤';
+    if (key.contains('snack')) return '🥨';
+    if (key.contains('dairy')) return '🥛';
+    if (key.contains('frozen') || key.contains('ice')) return '🧊';
+    if (key.contains('produce') || key.contains('fruit') || key.contains('veg')) return '🥦';
+    if (key.contains('household')) return '🧼';
+    if (key.contains('personal') || key.contains('care')) return '🧴';
+    if (key.contains('stationery')) return '📄';
+    return '📦';
+  }
 }
 
-class TrendingItem {
-  final String name;
-  final String category;
-  final int quantitySold;
-  final double revenue;
-  final double growthRate;
-  final double profitMargin;
-  final String imageUrl;
-  final int rank;
+// Simple category aggregation structs
+class _CatAgg {
+  int qty = 0;
+  double rev = 0;
+  double growthSum = 0;
+  int grCount = 0;
+}
 
-  TrendingItem({
-    required this.name,
+class _CatRow {
+  final String category;
+  final int qty;
+  final double revenue;
+  final double avgGrowth;
+  _CatRow({
     required this.category,
-    required this.quantitySold,
+    required this.qty,
     required this.revenue,
-    required this.growthRate,
-    required this.profitMargin,
-    required this.imageUrl,
-    required this.rank,
+    required this.avgGrowth,
   });
 }
