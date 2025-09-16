@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 // Repo + model for real SQLite-backed data
 import 'package:pos_system/data/models/manager/reports/trending_item_report.dart';
@@ -37,6 +38,10 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
   bool _loading = false;
   String? _error;
   List<TrendingItemReport> _rows = [];
+
+  // LKR formatters
+  String _fmtLkr(double v, {int decimals = 0}) =>
+      NumberFormat.currency(locale: 'en_LK', symbol: 'Rs. ', decimalDigits: decimals).format(v);
 
   @override
   void initState() {
@@ -122,7 +127,6 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
     final vals = _rows.map((e) => e.growthRate).whereType<double>().toList();
     if (vals.isEmpty) return 0;
     return vals.reduce((a, b) => a + b) / vals.length;
-    // NOTE: Per-item growth is revenue vs prev period. This is a *simple mean*.
   }
 
   // ---------------------------------------------------------------------------
@@ -308,11 +312,6 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
     final totalRev = _totalRevenue;
     final avgGrowth = _avgGrowth;
 
-    String _fmtCurrency(double v) {
-      // simple USD formatting (change as needed)
-      return '\$${v.toStringAsFixed(0)}';
-    }
-
     return Container(
       margin: const EdgeInsets.all(16),
       child: Row(
@@ -331,7 +330,7 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
           Expanded(
             child: _buildStatCard(
               title: 'Revenue Generated',
-              value: _fmtCurrency(totalRev),
+              value: _fmtLkr(totalRev, decimals: 0),
               change: '${avgGrowth >= 0 ? '+' : ''}${avgGrowth.toStringAsFixed(1)}%',
               isPositive: avgGrowth >= 0,
               icon: Icons.attach_money,
@@ -582,7 +581,7 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
                 ),
               ),
               Text(
-                '\$${r.revenue.toStringAsFixed(0)}',
+                _fmtLkr(r.revenue, decimals: 0),
                 style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
             ],
@@ -670,7 +669,7 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text('${c.qty} sold', style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Text('\$${c.revenue.toStringAsFixed(0)}', style: TextStyle(color: Colors.grey[600])),
+                  Text(_fmtLkr(c.revenue, decimals: 0), style: TextStyle(color: Colors.grey[600])),
                 ],
               ),
               const SizedBox(width: 12),
@@ -702,7 +701,7 @@ class _TrendingItemsReportPageState extends State<TrendingItemsReportPage> {
 
   Future<void> _exportCsv() async {
     final buf = StringBuffer()
-      ..writeln('Rank,Item,Category,Quantity Sold,Revenue,Growth %,Profit Margin %');
+      ..writeln('Rank,Item,Category,Quantity Sold,Revenue (LKR),Growth %,Profit Margin %');
 
     for (final r in _rows) {
       buf.writeln(
