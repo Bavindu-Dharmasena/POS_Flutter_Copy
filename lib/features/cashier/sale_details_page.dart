@@ -111,16 +111,15 @@ class _SaleDetailsPageState extends State<SaleDetailsPage> {
                         _listTile('Customer', contact.isEmpty ? '-' : contact),
                         _listTile('File', fileName),
                         const Divider(height: 24),
-                        _listTile('dddddddd', 'puka'),
                         if (discountValue > 0)
                           if (discountType == 'percentage')
                             _listTile(
-                              'Discount (%)',
+                              'Overall Discount (%)',
                               _fmtMoney(discountValue),
                             )
                           else
                             _listTile(
-                              'Discount (Rs)',
+                              'Overall Discount (Rs)',
                               _fmtMoney(discountValue),
                           ),
                         _listTile(

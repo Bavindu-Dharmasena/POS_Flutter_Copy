@@ -85,6 +85,8 @@ class Supplier {
         updatedAt: (row['updated_at'] ?? 0) as int,
       );
 
+  get phone => null;
+
   /// Map for INSERT. Includes both created_at & updated_at.
   Map<String, Object?> toInsertMap() => {
         'name': name,
