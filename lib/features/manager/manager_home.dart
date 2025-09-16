@@ -98,6 +98,7 @@ class _ManagerHomePageState extends State<ManagerHomePage> {
   }
 
   List<_Tile> get _allTiles => <_Tile>[
+        _Tile('Add User', 'Adding cashiers, stock keepers & suppliers', Icons.receipt_long, '/manager/add-user', Colors.cyan),
         _Tile('User Management', 'Change own / reset staff passwords', Icons.key, '/manager/user-management', const Color.fromARGB(255, 117, 193, 91)),
         _Tile('Sales Reports', 'Sales Summaries & revenue split', Icons.summarize, '/manager/reports/sales-summaries', Colors.blue),
         _Tile('Trending Items', 'Popular products by qty/revenue', Icons.trending_up, '/manager/reports/trending-items', Colors.green),
