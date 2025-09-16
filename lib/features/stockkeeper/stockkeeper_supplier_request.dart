@@ -1,11 +1,10 @@
-// lib/features/stockkeeper/requests/stockkeeper_supplier_request.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-// <- DB models & repo you added earlier
 import 'package:pos_system/data/models/stockkeeper/supplier_request_model.dart' as m;
 import 'package:pos_system/data/repositories/stockkeeper/supplier_request_repository.dart' hide Row;
 
+/// Supplier Requests — master/detail with ability to add items to a request.
 class stockkeeper_supplier_request extends StatefulWidget {
   const stockkeeper_supplier_request({super.key});
 
@@ -185,64 +184,22 @@ class _stockkeeper_supplier_requestState
     await _loadList();
   }
 
-  // ---------- Quick add ----------
-  Future<void> _quickAddRequest() async {
-    final supplierIdCtrl = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    final ok = await showDialog<bool>(
+  // ---------- Add items flow ----------
+  Future<void> _openAddItemsSheet() async {
+    if (_selectedId == null) return;
+    final added = await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) {
-        final cs = Theme.of(context).colorScheme;
-        return AlertDialog(
-          title: const Text('Create Supplier Request'),
-          content: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: supplierIdCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Supplier ID',
-                border: OutlineInputBorder(),
-              ),
-              validator: (v) {
-                final num = int.tryParse((v ?? '').trim());
-                if (num == null || num <= 0) return 'Enter a valid supplier id';
-                return null;
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              style: TextButton.styleFrom(foregroundColor: cs.error),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
-                  Navigator.pop(context, true);
-                }
-              },
-              child: const Text('Create'),
-            ),
-          ],
-        );
-      },
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (_) => _AddItemsSheet(requestId: _selectedId!),
     );
-
-    if (ok != true) return;
-
-    final supId = int.parse(supplierIdCtrl.text.trim());
-    final created = await _repo.create(
-      supplierId: supId,
-      lines: const [], // start empty (you can add a line editor later)
-    );
-    _toast('Request ${created.displayId} created');
-
-    // reload list and select the new ID
-    await _loadList();
-    await _loadDetail(created.id);
+    if (added == true && _selectedId != null) {
+      await _loadDetail(_selectedId!);
+    }
   }
 
   // ---------- UI ----------
@@ -262,10 +219,16 @@ class _stockkeeper_supplier_requestState
         centerTitle: true,
         actions: [
           IconButton(
-            tooltip: 'Add request',
+            tooltip: 'Create new request',
             onPressed: _quickAddRequest,
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.note_add_outlined),
           ),
+          if (_selectedId != null)
+            IconButton(
+              tooltip: 'Add items to this request',
+              onPressed: _openAddItemsSheet,
+              icon: const Icon(Icons.add_shopping_cart_outlined),
+            ),
           IconButton(
             tooltip: 'Clear filters',
             onPressed: () async {
@@ -380,7 +343,7 @@ class _stockkeeper_supplier_requestState
                     controller: _searchCtrl,
                     textInputAction: TextInputAction.search,
                     onSubmitted: (_) => _loadList(),
-                    onChanged: (_) {}, // keep responsive? call _loadList with debounce if you like
+                    onChanged: (_) {}, // add debounce if desired
                     decoration: const InputDecoration(
                       prefixIcon: Icon(Icons.search),
                       labelText: 'Search supplier or request ID',
@@ -550,6 +513,12 @@ class _stockkeeper_supplier_requestState
                       color: cs.onSurface.withOpacity(.75),
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  FilledButton.icon(
+                    onPressed: _openAddItemsSheet,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add items'),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -671,7 +640,7 @@ class _stockkeeper_supplier_requestState
     );
   }
 
-  // ---------- Mobile bottom sheet ----------
+  // ---------- Mobile bottom sheet for status only ----------
   void _showActionSheet(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
@@ -747,6 +716,365 @@ class _stockkeeper_supplier_requestState
           ),
         );
       },
+    );
+  }
+
+  // ---------- Quick create request ----------
+  Future<void> _quickAddRequest() async {
+    final supplierIdCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final cs = Theme.of(context).colorScheme;
+        return AlertDialog(
+          title: const Text('Create Supplier Request'),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: supplierIdCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Supplier ID',
+                border: OutlineInputBorder(),
+              ),
+              validator: (v) {
+                final num = int.tryParse((v ?? '').trim());
+                if (num == null || num <= 0) return 'Enter a valid supplier id';
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              style: TextButton.styleFrom(foregroundColor: cs.error),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  Navigator.pop(context, true);
+                }
+              },
+              child: const Text('Create'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (ok != true) return;
+
+    final supId = int.parse(supplierIdCtrl.text.trim());
+    final created = await _repo.create(
+      supplierId: supId,
+      lines: const [], // start empty (use Add Items to add)
+    );
+    _toast('Request ${created.displayId} created');
+
+    // reload list and select the new ID
+    await _loadList();
+    await _loadDetail(created.id);
+  }
+}
+
+/// Bottom sheet to add items to a request.
+class _AddItemsSheet extends StatefulWidget {
+  const _AddItemsSheet({required this.requestId});
+  final int requestId;
+
+  @override
+  State<_AddItemsSheet> createState() => _AddItemsSheetState();
+}
+
+class _AddItemsSheetState extends State<_AddItemsSheet> {
+  final _repo = SupplierRequestRepository.instance;
+
+  final _search = TextEditingController();
+  bool _loading = false;
+  bool _addedAny = false;
+
+  // MUST be mutable; each entry is Map<String,Object?>
+  List<Map<String, Object?>> _items = <Map<String, Object?>>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    final rows = await _repo.listItemsForRequest(
+      requestId: widget.requestId,
+      query: _search.text.trim().isEmpty ? null : _search.text.trim(),
+      limit: 200,
+    );
+    setState(() {
+      // make BOTH list and maps mutable to avoid read-only errors
+      _items = rows.map((e) => Map<String, Object?>.from(e)).toList(growable: true);
+      _loading = false;
+    });
+  }
+
+  static Widget _kv(String k, String v) => Row(
+        children: [
+          Text('$k: ', style: const TextStyle(fontWeight: FontWeight.w600)),
+          Flexible(child: Text(v, overflow: TextOverflow.ellipsis)),
+        ],
+      );
+
+  Future<void> _addOne(Map<String, Object?> row) async {
+    final itemId = (row['item_id'] as num).toInt();
+    final name = (row['name'] as String?) ?? 'Item';
+    final currentStock = (row['current_stock'] as num?)?.toInt() ?? 0;
+    final rl = (row['reorder_level'] as num?)?.toInt() ?? 0;
+
+    final rqCtrl = TextEditingController(text: '0');
+    final qtyCtrl = TextEditingController(text: '1');
+    final unitCtrl = TextEditingController(text: '0');
+    final saleCtrl = TextEditingController(text: '0');
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final cs = Theme.of(context).colorScheme;
+        InputDecoration dec(String label) => InputDecoration(
+          labelText: label,
+          isDense: true,
+          border: const OutlineInputBorder(),
+        );
+
+        return AlertDialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          title: Text('Add "$name"'),
+          content: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _kv('Current stock', '$currentStock'),
+                  _kv('Reorder level', '$rl'),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: rqCtrl,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: dec('Requested amount'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: qtyCtrl,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: dec('Quantity'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: unitCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                    decoration: dec('Unit price'),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: saleCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+                    decoration: dec('Sale price'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              style: TextButton.styleFrom(foregroundColor: cs.error),
+              child: const Text('Cancel'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                if (int.tryParse(rqCtrl.text) == null ||
+                    int.tryParse(qtyCtrl.text) == null ||
+                    double.tryParse(unitCtrl.text) == null ||
+                    double.tryParse(saleCtrl.text) == null) {
+                  return;
+                }
+                Navigator.pop(context, true);
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add item'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (ok != true) return;
+
+    final line = m.CreateSupplierRequestLine(
+      itemId: itemId,
+      requestedAmount: int.parse(rqCtrl.text),
+      quantity: int.parse(qtyCtrl.text),
+      unitPrice: double.parse(unitCtrl.text),
+      salePrice: double.parse(saleCtrl.text),
+    );
+
+    await _repo.addLine(requestId: widget.requestId, line: line);
+
+    // Mark as added inside the current list without mutating a read-only list
+    setState(() {
+      _addedAny = true;
+      // non-mutating reassignment (bulletproof)
+      _items = _items.map((e) {
+        if ((e['item_id'] as num).toInt() == itemId) {
+          final copy = Map<String, Object?>.from(e);
+          copy['already_added'] = 1;
+          return copy;
+        }
+        return e;
+      }).toList(growable: true);
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Added "$name" to request')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 8,
+        bottom: MediaQuery.of(context).viewInsets.bottom, // keyboard safe
+      ),
+      child: FractionallySizedBox(
+        heightFactor: 0.85, // avoid pixel overflow on small screens
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: cs.outlineVariant,
+                  borderRadius: BorderRadius.circular(100),
+                ),
+              ),
+            ),
+            Text('Add items to request', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _search,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (_) => _load(),
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      labelText: 'Search items by name or barcode',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Refresh'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _items.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No items for this supplier',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: cs.onSurface.withOpacity(.7),
+                            ),
+                          ),
+                        )
+                      : ListView.separated(
+                          itemCount: _items.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
+                          itemBuilder: (context, i) {
+                            final r = _items[i];
+                            final name = (r['name'] as String?) ?? 'Item';
+                            final currentStock = (r['current_stock'] as num?)?.toInt() ?? 0;
+                            final rl = (r['reorder_level'] as num?)?.toInt() ?? 0;
+                            final already = ((r['already_added'] as num?) ?? 0) != 0;
+
+                            return ListTile(
+                              tileColor: cs.surfaceContainerHighest.withOpacity(.25),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(color: cs.outlineVariant),
+                              ),
+                              title: Text(name, overflow: TextOverflow.ellipsis),
+                              subtitle: Text('Stock: $currentStock • Reorder: $rl'),
+                              trailing: already
+                                  ? Chip(
+                                      label: const Text('Added'),
+                                      visualDensity: VisualDensity.compact,
+                                    )
+                                  : FilledButton.icon(
+                                      onPressed: () => _addOne(r),
+                                      icon: const Icon(Icons.add),
+                                      label: const Text('Add'),
+                                    ),
+                            );
+                          },
+                        ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.pop(context, _addedAny),
+                    icon: const Icon(Icons.close),
+                    label: const Text('Close'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () => Navigator.pop(context, _addedAny),
+                    icon: const Icon(Icons.check),
+                    label: const Text('Done'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 }
