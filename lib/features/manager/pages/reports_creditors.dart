@@ -1,8 +1,10 @@
 // lib/features/manager/reports/report_creditors.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 import 'package:pos_system/data/models/manager/creditor_account.dart';
+import 'package:pos_system/data/models/manager/creditor_payment.dart';
 import 'package:pos_system/data/repositories/manager/creditor_account_repository.dart';
 
 class CreditorsReportPage extends StatefulWidget {
@@ -20,7 +22,7 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
   String _sort = 'Due Amount';
   bool _desc = true;
   RangeValues _amountRange = const RangeValues(0, 500000);
-  DateTimeRange? _dateRange; // last invoice date range
+  DateTimeRange? _dateRange;
   bool _showFilters = false;
   final Set<String> _selected = {};
 
@@ -30,11 +32,8 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
   bool _loading = false;
   String? _error;
 
-  // Animations
-  late final AnimationController _filterAC = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 250),
-  );
+  late final AnimationController _filterAC =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 250));
   late final Animation<double> _filterA =
       CurvedAnimation(parent: _filterAC, curve: Curves.easeInOut);
 
@@ -52,82 +51,58 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
     super.dispose();
   }
 
+  // ----------------------------- Data -----------------------------
   Future<void> _load() async {
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      // seed sample rows first run (optional)
-      await _repo.seedIfEmpty();
+      await _repo.seedIfEmpty();                 // optional seeding
       final rows = await _repo.getAll();
-      setState(() {
-        _all = rows;
-      });
+      setState(() => _all = rows);
       _apply();
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
+      setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  // ----------------------------- Filtering + Sorting -----------------------------
+  // ----------------------------- Filter & Sort -----------------------------
   void _apply() {
     List<CreditorAccount> v = List.of(_all);
 
-    // Tab filter
     if (_tab == 'Overdue') {
       v = v.where((c) => c.dueAmount > 0 && c.overdueDays > 0).toList();
     } else if (_tab == 'Paid') {
       v = v.where((c) => c.dueAmount == 0).toList();
     }
 
-    // Search
     final q = _query.trim().toLowerCase();
     if (q.isNotEmpty) {
-      v = v
-          .where((c) =>
-              c.name.toLowerCase().contains(q) ||
-              c.company.toLowerCase().contains(q) ||
-              c.id.toLowerCase().contains(q))
-          .toList();
+      v = v.where((c) =>
+        c.name.toLowerCase().contains(q) ||
+        c.company.toLowerCase().contains(q) ||
+        c.id.toLowerCase().contains(q)).toList();
     }
 
-    // Amount range
-    v = v
-        .where((c) =>
-            c.dueAmount >= _amountRange.start &&
-            c.dueAmount <= _amountRange.end)
-        .toList();
+    v = v.where((c) => c.dueAmount >= _amountRange.start && c.dueAmount <= _amountRange.end).toList();
 
-    // Date range (last invoice)
     if (_dateRange != null) {
-      v = v
-          .where((c) =>
-              !c.lastInvoiceDate.isBefore(_dateRange!.start) &&
-              !c.lastInvoiceDate.isAfter(_dateRange!.end))
-          .toList();
+      v = v.where((c) =>
+        !c.lastInvoiceDate.isBefore(_dateRange!.start) &&
+        !c.lastInvoiceDate.isAfter(_dateRange!.end)).toList();
     }
 
-    // Sorting
     int cmp(CreditorAccount a, CreditorAccount b) {
       int r;
       switch (_sort) {
-        case 'Name':
-          r = a.name.compareTo(b.name);
-          break;
-        case 'Overdue Days':
-          r = a.overdueDays.compareTo(b.overdueDays);
-          break;
-        case 'Last Invoice':
-          r = a.lastInvoiceDate.compareTo(b.lastInvoiceDate);
-          break;
+        case 'Name': r = a.name.compareTo(b.name); break;
+        case 'Overdue Days': r = a.overdueDays.compareTo(b.overdueDays); break;
+        case 'Last Invoice': r = a.lastInvoiceDate.compareTo(b.lastInvoiceDate); break;
         case 'Due Amount':
-        default:
-          r = a.dueAmount.compareTo(b.dueAmount);
+        default: r = a.dueAmount.compareTo(b.dueAmount);
       }
       return _desc ? -r : r;
     }
@@ -137,9 +112,7 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
   }
 
   // ----------------------------- Helpers -----------------------------
-  // Sri Lankan Rupees
-  String _money(num v) =>
-      NumberFormat.currency(locale: 'en_LK', symbol: 'Rs ').format(v);
+  String _money(num v) => NumberFormat.currency(locale: 'en_LK', symbol: 'Rs ').format(v);
   String _date(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
 
   Color _badgeColor(int overdueDays) {
@@ -149,8 +122,11 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
     return Colors.green;
   }
 
+  void _snack(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+
   // ----------------------------- Bulk Actions -----------------------------
   Future<void> _markSelectedAsPaid() async {
+    if (_selected.isEmpty) return;
     for (final id in _selected) {
       await _repo.markPaid(id);
     }
@@ -159,23 +135,15 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
     _snack('Marked selected as paid');
   }
 
-  void _exportCsv() {
-    final header = 'ID,Name,Company,Last Invoice,Due Amount,Overdue Days';
-    final rows = _view.map((c) => [
-          c.id,
-          c.name,
-          c.company,
-          _date(c.lastInvoiceDate),
-          c.dueAmount.toStringAsFixed(2),
-          c.overdueDays
-        ].join(','));
-    final csv = ([header, ...rows]).join('\n');
-    // TODO: write to file or share
-    _snack('CSV generated (${csv.length} chars). Wire to File/Share.');
+  Future<void> _addPaymentForSelected() async {
+    if (_selected.length != 1) {
+      _snack('Select exactly 1 creditor to add a payment.');
+      return;
+    }
+    final id = _selected.first;
+    final c = _all.firstWhere((x) => x.id == id, orElse: () => _view.first);
+    await _showAddPaymentDialog(c);
   }
-
-  void _snack(String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   // ----------------------------- UI -----------------------------
   @override
@@ -200,8 +168,7 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
             colors: [Color(0xFF0B1623), Color(0xFF0F2030)],
           ),
         ),
@@ -234,8 +201,7 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
 
   Widget _buildHeader() {
     final totalDue = _view.fold<double>(0, (s, c) => s + c.dueAmount);
-    final overdueCount =
-        _view.where((c) => c.overdueDays > 0 && c.dueAmount > 0).length;
+    final overdueCount = _view.where((c) => c.overdueDays > 0 && c.dueAmount > 0).length;
     final paidCount = _view.where((c) => c.dueAmount == 0).length;
 
     return Padding(
@@ -243,15 +209,9 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _chipTab('All'),
-              _chipTab('Overdue'),
-              _chipTab('Paid'),
-            ],
-          ),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            _chipTab('All'), _chipTab('Overdue'), _chipTab('Paid'),
+          ]),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -272,10 +232,7 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
     return ChoiceChip(
       label: Text(label),
       selected: selected,
-      onSelected: (_) => setState(() {
-        _tab = label;
-        _apply();
-      }),
+      onSelected: (_) => setState(() { _tab = label; _apply(); }),
       selectedColor: Colors.blueGrey.shade700,
       backgroundColor: Colors.blueGrey.shade900,
       labelStyle: TextStyle(color: selected ? Colors.white : Colors.white70),
@@ -296,13 +253,14 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
         children: [
           Icon(icon, size: 28, color: Colors.white70),
           const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(title, style: const TextStyle(color: Colors.white70, fontSize: 13)),
               const SizedBox(height: 4),
               Text(value, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
-            ]),
-          ),
+            ],
+          )),
         ],
       ),
     );
@@ -327,10 +285,7 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
                       borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
                     ),
                   ),
-                  onChanged: (v) {
-                    _query = v;
-                    _apply();
-                  },
+                  onChanged: (v) { _query = v; _apply(); },
                 ),
               ),
               const SizedBox(width: 12),
@@ -338,21 +293,14 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
               const SizedBox(width: 8),
               IconButton(
                 tooltip: _desc ? 'Sort Desc' : 'Sort Asc',
-                onPressed: () => setState(() {
-                  _desc = !_desc;
-                  _apply();
-                }),
+                onPressed: () => setState(() { _desc = !_desc; _apply(); }),
                 icon: Icon(_desc ? Icons.south : Icons.north),
               ),
               const SizedBox(width: 8),
               TextButton.icon(
                 onPressed: () {
                   _showFilters = !_showFilters;
-                  if (_showFilters) {
-                    _filterAC.forward();
-                  } else {
-                    _filterAC.reverse();
-                  }
+                  _showFilters ? _filterAC.forward() : _filterAC.reverse();
                   setState(() {});
                 },
                 icon: const Icon(Icons.tune),
@@ -389,13 +337,7 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
             DropdownMenuItem(value: 'Overdue Days', child: Text('Overdue Days')),
             DropdownMenuItem(value: 'Last Invoice', child: Text('Last Invoice')),
           ],
-          onChanged: (v) {
-            if (v == null) return;
-            setState(() {
-              _sort = v;
-              _apply();
-            });
-          },
+          onChanged: (v) { if (v != null) { setState(() { _sort = v; _apply(); }); } },
         ),
       ),
     );
@@ -414,72 +356,50 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
           Row(
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Amount range', style: TextStyle(color: Colors.white70)),
-                    RangeSlider(
-                      values: _amountRange,
-                      max: 500000,
-                      divisions: 50,
-                      labels: RangeLabels(
-                        _money(_amountRange.start),
-                        _money(_amountRange.end),
-                      ),
-                      onChanged: (v) => setState(() {
-                        _amountRange = v;
-                        _apply();
-                      }),
-                    ),
-                  ],
-                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Amount range', style: TextStyle(color: Colors.white70)),
+                  RangeSlider(
+                    values: _amountRange, max: 500000, divisions: 50,
+                    labels: RangeLabels(_money(_amountRange.start), _money(_amountRange.end)),
+                    onChanged: (v) => setState(() { _amountRange = v; _apply(); }),
+                  ),
+                ]),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Last invoice date', style: TextStyle(color: Colors.white70)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () async {
-                              final now = DateTime.now();
-                              final picked = await showDateRangePicker(
-                                context: context,
-                                firstDate: DateTime(now.year - 2),
-                                lastDate: DateTime(now.year + 1),
-                                initialDateRange: _dateRange,
-                              );
-                              if (picked != null) {
-                                setState(() {
-                                  _dateRange = picked;
-                                  _apply();
-                                });
-                              }
-                            },
-                            icon: const Icon(Icons.date_range),
-                            label: Text(_dateRange == null
-                                ? 'Pick range'
-                                : '${_date(_dateRange!.start)} → ${_date(_dateRange!.end)}'),
-                          ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Last invoice date', style: TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final now = DateTime.now();
+                            final picked = await showDateRangePicker(
+                              context: context,
+                              firstDate: DateTime(now.year - 2),
+                              lastDate: DateTime(now.year + 1),
+                              initialDateRange: _dateRange,
+                            );
+                            if (picked != null) { setState(() { _dateRange = picked; _apply(); }); }
+                          },
+                          icon: const Icon(Icons.date_range),
+                          label: Text(_dateRange == null
+                              ? 'Pick range'
+                              : '${_date(_dateRange!.start)} → ${_date(_dateRange!.end)}'),
                         ),
-                        const SizedBox(width: 8),
-                        if (_dateRange != null)
-                          IconButton(
-                            tooltip: 'Clear',
-                            onPressed: () => setState(() {
-                              _dateRange = null;
-                              _apply();
-                            }),
-                            icon: const Icon(Icons.close),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (_dateRange != null)
+                        IconButton(
+                          tooltip: 'Clear',
+                          onPressed: () => setState(() { _dateRange = null; _apply(); }),
+                          icon: const Icon(Icons.close),
+                        ),
+                    ],
+                  ),
+                ]),
               ),
             ],
           ),
@@ -511,6 +431,7 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
     );
   }
 
+  // ------------------ Bulk bar (Add Payment + Mark Paid + Clear) ------------------
   Widget _buildBulkBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -519,16 +440,20 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
         children: [
           Text('${_selected.length} selected', style: const TextStyle(color: Colors.white)),
           const SizedBox(width: 12),
-          ElevatedButton.icon(
+          FilledButton.tonalIcon(
+            onPressed: _addPaymentForSelected,
+            icon: const Icon(Icons.payments_outlined),
+            label: const Text('Add Payment'),
+          ),
+          const SizedBox(width: 8),
+          FilledButton.icon(
             onPressed: _markSelectedAsPaid,
             icon: const Icon(Icons.verified),
             label: const Text('Mark as Paid'),
           ),
           const SizedBox(width: 8),
           OutlinedButton.icon(
-            onPressed: () {
-              setState(() => _selected.clear());
-            },
+            onPressed: () => setState(() => _selected.clear()),
             icon: const Icon(Icons.clear_all),
             label: const Text('Clear Selection'),
           ),
@@ -537,30 +462,21 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
     );
   }
 
+  // ----------------------------- Views -----------------------------
   Widget _responsiveList() {
-    return LayoutBuilder(
-      builder: (context, c) {
-        if (c.maxWidth > 900) {
-          return _tableView();
-        } else {
-          return _cardList();
-        }
-      },
-    );
+    return LayoutBuilder(builder: (c, b) => b.maxWidth > 900 ? _tableView() : _cardList());
   }
 
-  Widget _emptyState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inbox, size: 64, color: Colors.white24),
-          SizedBox(height: 16),
-          Text('No creditors found.', style: TextStyle(color: Colors.white70, fontSize: 18)),
-        ],
-      ),
-    );
-  }
+  Widget _emptyState() => const Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.inbox, size: 64, color: Colors.white24),
+        SizedBox(height: 16),
+        Text('No creditors found.', style: TextStyle(color: Colors.white70, fontSize: 18)),
+      ],
+    ),
+  );
 
   Widget _tableView() {
     final hdrStyle = TextStyle(color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.w600);
@@ -592,19 +508,13 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
                   selected: selected,
                   onSelectChanged: (_) {
                     setState(() {
-                      if (selected) {
-                        _selected.remove(c.id);
-                      } else {
-                        _selected.add(c.id);
-                      }
+                      selected ? _selected.remove(c.id) : _selected.add(c.id);
                     });
                   },
                   cells: [
                     DataCell(Checkbox(
                       value: selected,
-                      onChanged: (v) {
-                        setState(() => v == true ? _selected.add(c.id) : _selected.remove(c.id));
-                      },
+                      onChanged: (v) => setState(() => v == true ? _selected.add(c.id) : _selected.remove(c.id)),
                     )),
                     DataCell(Text(c.id, style: const TextStyle(color: Colors.white70))),
                     DataCell(Text(c.name, style: const TextStyle(color: Colors.white))),
@@ -625,13 +535,18 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
                     DataCell(Row(
                       children: [
                         IconButton(
+                          tooltip: 'Add Payment',
+                          onPressed: () => _showAddPaymentDialog(c),
+                          icon: const Icon(Icons.payments_outlined, color: Colors.white70),
+                        ),
+                        IconButton(
                           tooltip: 'View details',
                           onPressed: () => _showDetails(c),
                           icon: const Icon(Icons.receipt_long, color: Colors.white70),
                         ),
                         IconButton(
                           tooltip: 'Call',
-                          onPressed: () => _snack('Call ${c.phone} (wire with url_launcher)'),
+                          onPressed: () => _snack('Call ${c.phone} (wire url_launcher)'),
                           icon: const Icon(Icons.call, color: Colors.white70),
                         ),
                         IconButton(
@@ -654,7 +569,9 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
   Widget _cardList() {
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemBuilder: (context, i) {
+      itemCount: _view.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, i) {
         final c = _view[i];
         final selected = _selected.contains(c.id);
         return GestureDetector(
@@ -669,31 +586,27 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(c.name, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 2),
-                          Text('${c.company} • ${c.id}', style: const TextStyle(color: Colors.white70)),
-                        ],
-                      ),
+                Row(children: [
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(c.name, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 2),
+                      Text('${c.company} • ${c.id}', style: const TextStyle(color: Colors.white70)),
+                    ],
+                  )),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _badgeColor(c.overdueDays).withOpacity(0.25),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _badgeColor(c.overdueDays).withOpacity(0.25),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        c.overdueDays == 0 ? 'Up-to-date' : '${c.overdueDays} d overdue',
-                        style: TextStyle(color: _badgeColor(c.overdueDays), fontWeight: FontWeight.w700),
-                      ),
+                    child: Text(
+                      c.overdueDays == 0 ? 'Up-to-date' : '${c.overdueDays} d overdue',
+                      style: TextStyle(color: _badgeColor(c.overdueDays), fontWeight: FontWeight.w700),
                     ),
-                  ],
-                ),
+                  ),
+                ]),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -704,6 +617,12 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
                 const SizedBox(height: 12),
                 Row(
                   children: [
+                    TextButton.icon(
+                      onPressed: () => _showAddPaymentDialog(c),
+                      icon: const Icon(Icons.payments_outlined),
+                      label: const Text('Add Payment'),
+                    ),
+                    const SizedBox(width: 8),
                     TextButton.icon(onPressed: () => _showDetails(c), icon: const Icon(Icons.receipt_long), label: const Text('Details')),
                     const SizedBox(width: 8),
                     TextButton.icon(onPressed: () => _snack('Call ${c.phone} (wire url_launcher)'), icon: const Icon(Icons.call), label: const Text('Call')),
@@ -720,21 +639,17 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
           ),
         );
       },
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemCount: _view.length,
     );
   }
 
-  Widget _kv(String k, String v) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(k, style: const TextStyle(color: Colors.white60, fontSize: 12)),
-        const SizedBox(height: 4),
-        Text(v, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
-      ],
-    );
-  }
+  Widget _kv(String k, String v) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(k, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+      const SizedBox(height: 4),
+      Text(v, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+    ],
+  );
 
   // ----------------------------- Actions -----------------------------
   Future<void> _markPaid(CreditorAccount c) async {
@@ -756,6 +671,65 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
     }
   }
 
+  Future<void> _showAddPaymentDialog(CreditorAccount c) async {
+    final amountCtrl = TextEditingController();
+    final noteCtrl = TextEditingController();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Add Payment • ${c.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Current Due: ${_money(c.dueAmount)}', style: const TextStyle(fontWeight: FontWeight.w600)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: amountCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Amount (Rs)',
+                prefixIcon: Icon(Icons.currency_rupee),
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))],
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: noteCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Note (optional)',
+                prefixIcon: Icon(Icons.note_alt_outlined),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+        ],
+      ),
+    );
+
+    if (ok == true) {
+      final amt = double.tryParse(amountCtrl.text.trim()) ?? 0;
+      if (amt <= 0) {
+        _snack('Enter a valid amount.');
+        return;
+      }
+      final pay = amt > c.dueAmount ? c.dueAmount : amt;
+      await _repo.addPayment(
+        creditorId: c.id,
+        amount: pay,
+        note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim(),
+      );
+      await _load();
+      _snack('Payment of ${_money(pay)} added to ${c.name}');
+    }
+  }
+
   void _showDetails(CreditorAccount c) {
     showModalBottomSheet(
       context: context,
@@ -766,103 +740,100 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
       ),
       builder: (_) => DraggableScrollableSheet(
         expand: false,
-        initialChildSize: 0.65,
-        minChildSize: 0.45,
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
         maxChildSize: 0.9,
         builder: (context, scroll) {
-          return SingleChildScrollView(
-            controller: scroll,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+          return FutureBuilder<List<CreditorPayment>>(
+            future: _repo.getPayments(c.id),
+            builder: (context, snap) {
+              final payments = snap.data ?? const <CreditorPayment>[];
+              return SingleChildScrollView(
+                controller: scroll,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(child: Text(c.name.substring(0, 1).toUpperCase())),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
+                      Row(children: [
+                        CircleAvatar(child: Text(c.name.substring(0, 1).toUpperCase())),
+                        const SizedBox(width: 12),
+                        Expanded(child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(c.name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
                             const SizedBox(height: 4),
                             Text('${c.company} • ${c.id}', style: const TextStyle(color: Colors.white70)),
                           ],
-                        ),
-                      ),
+                        )),
+                      ]),
+                      const SizedBox(height: 16),
+                      Row(children: [
+                        Expanded(child: _kv('Due Amount', _money(c.dueAmount))),
+                        Expanded(child: _kv('Paid Total', _money(c.paidAmount))),
+                      ]),
+                      const SizedBox(height: 12),
+                      _kv('Last Invoice', _date(c.lastInvoiceDate)),
+                      const SizedBox(height: 12),
+                      const Divider(color: Colors.white24),
+                      const SizedBox(height: 12),
+                      const Text('Payments', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: _badgeColor(c.overdueDays).withOpacity(0.25),
-                          borderRadius: BorderRadius.circular(20),
+                          color: Colors.white.withOpacity(0.04),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white.withOpacity(0.08)),
                         ),
-                        child: Text(
-                          c.overdueDays == 0 ? 'Up-to-date' : '${c.overdueDays} d overdue',
-                          style: TextStyle(color: _badgeColor(c.overdueDays), fontWeight: FontWeight.w700),
+                        child: Column(
+                          children: payments.isEmpty
+                              ? [const ListTile(
+                                  title: Text('No payments recorded', style: TextStyle(color: Colors.white70)),
+                                )]
+                              : payments.map((p) {
+                                  final dt = DateTime.fromMillisecondsSinceEpoch(p.paidAt);
+                                  return ListTile(
+                                    dense: true,
+                                    leading: const Icon(Icons.north_east, color: Colors.redAccent),
+                                    title: const Text('Payment', style: TextStyle(color: Colors.white)),
+                                    subtitle: Text(DateFormat('yyyy-MM-dd HH:mm').format(dt),
+                                        style: const TextStyle(color: Colors.white70)),
+                                    trailing: Text(
+                                      '- ${_money(p.amount)}',
+                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                                    ),
+                                  );
+                                }).toList(),
                         ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () => _showAddPaymentDialog(c),
+                            icon: const Icon(Icons.payments_outlined),
+                            label: const Text('Add Payment'),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton.icon(
+                            onPressed: c.dueAmount == 0 ? null : () => _markPaid(c),
+                            icon: const Icon(Icons.verified),
+                            label: const Text('Mark Paid'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(child: _kv('Due Amount', _money(c.dueAmount))),
-                      Expanded(child: _kv('Paid Total', _money(c.paidAmount))),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _kv('Last Invoice', _date(c.lastInvoiceDate)),
-                  const SizedBox(height: 12),
-                  const Divider(color: Colors.white24),
-                  const SizedBox(height: 12),
-                  const Text('Ledger (sample)', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  _fakeLedger(),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      OutlinedButton.icon(onPressed: () => _snack('Send reminder (wire email/SMS)'), icon: const Icon(Icons.sms_outlined), label: const Text('Send Reminder')),
-                      const SizedBox(width: 8),
-                      ElevatedButton.icon(onPressed: c.dueAmount == 0 ? null : () => _markPaid(c), icon: const Icon(Icons.verified), label: const Text('Mark Paid')),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           );
         },
       ),
     );
   }
 
-  Widget _fakeLedger() {
-    // Still a visual stub; wire to a real ledger table if/when you add one.
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
-      child: Column(
-        children: List.generate(4, (i) {
-          final d = DateTime.now().subtract(Duration(days: 7 * i + 2));
-          final amt = (i.isEven ? 25000 : -18000) * (i + 1);
-          return ListTile(
-            dense: true,
-            leading: Icon(amt >= 0 ? Icons.south_west : Icons.north_east, color: amt >= 0 ? Colors.lightGreenAccent : Colors.redAccent),
-            title: Text(amt >= 0 ? 'Purchase' : 'Payment', style: const TextStyle(color: Colors.white)),
-            subtitle: Text(_date(d), style: const TextStyle(color: Colors.white70)),
-            trailing: Text(
-              (amt >= 0 ? '+ ' : '- ') + _money(amt.abs()),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
+  // New creditor quick dialog (simple)
   Future<void> _showNewCreditorDialog() async {
     final nameCtrl = TextEditingController();
     final companyCtrl = TextEditingController();
@@ -876,7 +847,10 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
           children: [
             TextField(decoration: const InputDecoration(labelText: 'Name'), controller: nameCtrl),
             TextField(decoration: const InputDecoration(labelText: 'Company'), controller: companyCtrl),
-            TextField(decoration: const InputDecoration(labelText: 'Initial Due Amount (Rs)'), controller: amountCtrl, keyboardType: TextInputType.number),
+            TextField(
+              decoration: const InputDecoration(labelText: 'Initial Due Amount (Rs)'),
+              controller: amountCtrl, keyboardType: TextInputType.number,
+            ),
           ],
         ),
         actions: [
@@ -887,22 +861,31 @@ class _CreditorsReportPageState extends State<CreditorsReportPage>
     );
     if (ok == true) {
       final now = DateTime.now();
-      final row = CreditorAccount(
-        id: '', // auto-gen "CRxxxxxx"
+      final c = CreditorAccount(
+        id: '',
         name: nameCtrl.text.trim().isEmpty ? 'New Creditor' : nameCtrl.text.trim(),
         company: companyCtrl.text.trim().isEmpty ? '—' : companyCtrl.text.trim(),
         phone: '+94 70 000 0000',
         email: 'n/a',
         lastInvoiceDate: now,
-        dueAmount: double.tryParse(amountCtrl.text) ?? 0,
+        dueAmount: double.tryParse(amountCtrl.text.trim()) ?? 0,
         paidAmount: 0,
         overdueDays: 0,
         createdAt: now.millisecondsSinceEpoch,
         updatedAt: now.millisecondsSinceEpoch,
       );
-      await _repo.create(row);
+      await _repo.create(c);
       await _load();
       _snack('Creditor created');
     }
+  }
+
+  // Export CSV
+  void _exportCsv() {
+    final header = 'ID,Name,Company,Last Invoice,Due Amount,Overdue Days';
+    final rows = _view.map((c) =>
+        [c.id, c.name, c.company, _date(c.lastInvoiceDate), c.dueAmount.toStringAsFixed(2), c.overdueDays].join(','));
+    final csv = ([header, ...rows]).join('\n');
+    _snack('CSV generated (${csv.length} chars). Wire to File/Share.');
   }
 }

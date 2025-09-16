@@ -1,5 +1,6 @@
+// lib/data/models/manager/creditor_account.dart
 class CreditorAccount {
-  final String id;                 // e.g. "CR1001"
+  final String id;                // e.g. "CR044652"
   final String name;
   final String company;
   final String phone;
@@ -8,8 +9,8 @@ class CreditorAccount {
   final double dueAmount;
   final double paidAmount;
   final int overdueDays;
-  final int createdAt;             // epoch millis
-  final int updatedAt;             // epoch millis
+  final int createdAt;            // epoch millis
+  final int updatedAt;            // epoch millis
 
   CreditorAccount({
     required this.id,
@@ -53,35 +54,33 @@ class CreditorAccount {
     );
   }
 
-  factory CreditorAccount.fromMap(Map<String, Object?> m) {
-    return CreditorAccount(
-      id: (m['id'] ?? '') as String,
-      name: (m['name'] ?? '') as String,
-      company: (m['company'] ?? '') as String,
-      phone: (m['phone'] ?? '') as String,
-      email: (m['email'] ?? '') as String,
-      lastInvoiceDate: DateTime.fromMillisecondsSinceEpoch((m['last_invoice_date'] as int?) ?? 0),
-      dueAmount: ((m['due_amount'] ?? 0) as num).toDouble(),
-      paidAmount: ((m['paid_amount'] ?? 0) as num).toDouble(),
-      overdueDays: (m['overdue_days'] ?? 0) as int,
-      createdAt: (m['created_at'] ?? 0) as int,
-      updatedAt: (m['updated_at'] ?? 0) as int,
-    );
-  }
+  factory CreditorAccount.fromMap(Map<String, Object?> m) => CreditorAccount(
+        id: (m['id'] ?? '') as String,
+        name: (m['name'] ?? '') as String,
+        company: (m['company'] ?? '') as String,
+        phone: (m['phone'] ?? '') as String,
+        email: (m['email'] ?? '') as String,
+        lastInvoiceDate: DateTime.fromMillisecondsSinceEpoch(
+          (m['last_invoice_date'] ?? 0) as int,
+        ),
+        dueAmount: ((m['due_amount'] ?? 0) as num).toDouble(),
+        paidAmount: ((m['paid_amount'] ?? 0) as num).toDouble(),
+        overdueDays: (m['overdue_days'] ?? 0) as int,
+        createdAt: (m['created_at'] ?? 0) as int,
+        updatedAt: (m['updated_at'] ?? 0) as int,
+      );
 
-  Map<String, Object?> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'company': company,
-      'phone': phone,
-      'email': email,
-      'last_invoice_date': lastInvoiceDate.millisecondsSinceEpoch,
-      'due_amount': dueAmount,
-      'paid_amount': paidAmount,
-      'overdue_days': overdueDays,
-      'created_at': createdAt,
-      'updated_at': updatedAt,
-    };
-  }
+  Map<String, Object?> toMap() => {
+        'id': id,
+        'name': name,
+        'company': company,
+        'phone': phone,
+        'email': email,
+        'last_invoice_date': lastInvoiceDate.millisecondsSinceEpoch,
+        'due_amount': dueAmount,
+        'paid_amount': paidAmount,
+        'overdue_days': overdueDays,
+        'created_at': createdAt,
+        'updated_at': updatedAt,
+      };
 }
