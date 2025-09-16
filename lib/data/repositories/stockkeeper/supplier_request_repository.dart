@@ -1,4 +1,3 @@
-// lib/data/repositories/stockkeeper/supplier_request_repository.dart
 import 'package:sqflite/sqflite.dart';
 import 'package:pos_system/data/db/database_helper.dart';
 import 'package:pos_system/data/models/stockkeeper/supplier_request_model.dart';
@@ -35,6 +34,15 @@ class SupplierRequestRepository {
 
       return _getByIdTx(tx, reqId);
     });
+  }
+
+  /// Insert a single line into an existing request.
+  Future<int> addLine({
+    required int requestId,
+    required CreateSupplierRequestLine line,
+  }) async {
+    final db = await _db;
+    return db.insert('supplier_request_item', line.toInsertMap(requestId));
   }
 
   // ---------------- READ ----------------
@@ -147,6 +155,60 @@ class SupplierRequestRepository {
       status: (h['status'] as String?) ?? 'PENDING',
       items: items,
     );
+  }
+
+  /// List items that belong to the supplier of this request,
+  /// including current stock and whether they are already added to the request.
+  ///
+  /// Returns a list of mutable maps with keys:
+  /// - item_id (int)
+  /// - name (String)
+  /// - reorder_level (int)
+  /// - current_stock (int)
+  /// - already_added (int: 0/1)
+  Future<List<Map<String, Object?>>> listItemsForRequest({
+    required int requestId,
+    String? query,
+    int? limit,
+    int? offset,
+  }) async {
+    final db = await _db;
+
+    final where = <String>[];
+    final args = <Object?>[];
+
+    // match the supplier from the request
+    where.add('i.supplier_id = (SELECT supplier_id FROM supplier_request WHERE id = ?)');
+    args.add(requestId);
+
+    if ((query ?? '').trim().isNotEmpty) {
+      final q = '%${query!.trim()}%';
+      where.add('(i.name LIKE ? OR i.barcode LIKE ?)');
+      args..add(q)..add(q);
+    }
+
+    // Request id used twice in SELECT (EXISTS and supplier_id subselect)
+    final sql = '''
+      SELECT
+        i.id AS item_id,
+        i.name,
+        i.reorder_level,
+        COALESCE((SELECT SUM(st.quantity) FROM stock st WHERE st.item_id = i.id), 0) AS current_stock,
+        CASE WHEN EXISTS(
+          SELECT 1 FROM supplier_request_item sri
+          WHERE sri.request_id = ? AND sri.item_id = i.id
+        ) THEN 1 ELSE 0 END AS already_added
+      FROM item i
+      WHERE ${where.join(' AND ')}
+      ORDER BY i.name COLLATE NOCASE ASC
+      ${limit != null ? 'LIMIT $limit' : ''}
+      ${offset != null ? 'OFFSET $offset' : ''}
+    ''';
+
+    final rows = await db.rawQuery(sql, [requestId, ...args]);
+
+    // return a MUTABLE copy (so UI can safely edit/filter)
+    return rows.map((e) => Map<String, Object?>.from(e)).toList(growable: true);
   }
 
   // ---------------- UPDATE ----------------
