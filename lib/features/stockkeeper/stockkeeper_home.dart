@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pos_system/features/stockkeeper/category.dart';
 
 import 'package:provider/provider.dart';
 // ignore: unused_import
@@ -58,6 +59,17 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
         begin: Alignment.topLeft, end: Alignment.bottomRight,
       ),
       pageBuilder: () => const stockkeeper_supplier_request(),
+    ),
+    _TileSpec(
+      id: 'addnewcategory',
+      title: 'Add New Category',
+      subtitle: 'add newly Category',
+      icon: Icons.category_outlined,
+      gradientBuilder: (cs) => LinearGradient(
+        colors: [Color(0xFF11998E), Color.fromARGB(255, 241, 109, 43)], // Teal to Orange
+        begin: Alignment.topLeft, end: Alignment.bottomRight,
+      ),
+      pageBuilder: () => const AddCategoryPage(),
     ),
     _TileSpec(
       id: 'addnewitem',
