@@ -6,16 +6,10 @@ import 'package:sqflite/sqflite.dart';
 class CashierRepository {
   final _table = 'todos';
 
-  // Future<int> create(Todo todo) async {
-  //   final db = await DatabaseHelper.instance.database;
-  //   return db.insert(_table, todo.toMap(),
-  //       conflictAlgorithm: ConflictAlgorithm.replace);
-  // }
-
   Future<List<Map<String, dynamic>>> getCategoriesWithItemsAndBatches() async {
     final db = await DatabaseHelper.instance.database;
 
-    // Flat query (joins category, item, stock)
+    // Flat query (joins category, item, stock) with quantity > 0
     final res = await db.rawQuery('''
     SELECT
       c.id          AS category_id,
@@ -34,6 +28,7 @@ class CashierRepository {
     FROM category c
     JOIN item i ON i.category_id = c.id
     JOIN stock s ON s.item_id = i.id
+    WHERE s.quantity > 0
     ORDER BY c.id, i.id, s.id
   ''');
 
@@ -51,7 +46,7 @@ class CashierRepository {
           'category': row['category'],
           'colorCode': row['categoryColor'],
           'categoryImage': row['category_image'],
-          'items': <Map<String, dynamic>>[], // 👈 strongly type the list
+          'items': <Map<String, dynamic>>[],
         },
       );
 
@@ -70,7 +65,7 @@ class CashierRepository {
             'itemcode': row['itemcode'],
             'name': row['itemName'],
             'colorCode': row['itemColor'],
-            'batches': <Map<String, dynamic>>[], // 👈 also type batches
+            'batches': <Map<String, dynamic>>[],
           };
           items.add(newItem);
           return newItem;
@@ -92,68 +87,6 @@ class CashierRepository {
     return categoryMap.values.toList();
   }
 
-  // Future<Todo?> getById(int id) async {
-  //   final db = await DatabaseHelper.instance.database;
-  //   final res = await db.query(_table, where: 'id = ?', whereArgs: [id], limit: 1);
-  //   if (res.isEmpty) return null;
-  //   return Todo.fromMap(res.first);
-  // }
-
-  // Future<int> update(Todo todo) async {
-  //   final db = await DatabaseHelper.instance.database;
-  //   if (todo.id == null) throw ArgumentError('Todo id is null');
-  //   return db.update(_table, todo.toMap(), where: 'id = ?', whereArgs: [todo.id]);
-  // }
-
-  // Future<void> insertInvoices(Map<String, dynamic> data) async {
-  //   final db = await DatabaseHelper.instance.database;
-
-  //   final String saleInvoiceId = data['saleInvoiceId'].toString();
-  //   final List<dynamic> invoices = data['invoices'];
-
-  //   // Use a batch for better performance (all inserts in one transaction)
-  //   final batch = db.batch();
-
-  //   for (var invoice in invoices) {
-  //     batch.insert('invoice', {
-  //       'batch_id': invoice['batchId'].toString(),
-  //       'item_id': invoice['itemId'],
-  //       'quantity': invoice['quantity'],
-  //       'sale_invoice_id': saleInvoiceId,
-  //     }, conflictAlgorithm: ConflictAlgorithm.replace);
-  //   }
-
-  //   await batch.commit(noResult: true);
-  // }
-
-  // Future<int> insertPayment(Map<String, dynamic> data) async {
-  //   final db = await DatabaseHelper.instance.database;
-
-  //   // Convert date string into milliseconds since epoch
-  //   // (since your table stores date as INTEGER)
-  //   final DateTime parsedDate = DateTime.parse(
-  //     data['date'].replaceAll('.', '-'),
-  //   );
-  //   final int dateMillis = parsedDate.millisecondsSinceEpoch;
-
-  //   final paymentRow = {
-  //     'amount': data['amount'],
-  //     'remain_amount': data['remain_amount'],
-  //     'date': dateMillis,
-  //     'file_name': data['fileName'],
-  //     'type': data['type'],
-  //     'sale_invoice_id': data['salesInvoiceId'],
-  //     'user_id': data['user_id'],
-  //     'customer_contact': data['customer_contact'] ?? null,
-  //   };
-
-  //   return await db.insert(
-  //     'payment',
-  //     paymentRow,
-  //     conflictAlgorithm: ConflictAlgorithm.replace,
-  //   );
-  // }
-
   Future<List<Map<String, dynamic>>> getAllPayments() async {
     final db = await DatabaseHelper.instance.database;
 
@@ -165,89 +98,6 @@ class CashierRepository {
 
     return results;
   }
-
-  // Future<void> insertInvoices(Map<String, dynamic> data) async {
-  //   final db = await DatabaseHelper.instance.database;
-
-  //   final dynamic rawId = data['saleInvoiceId'];
-  //   final int saleId = (rawId is int)
-  //       ? rawId
-  //       : int.tryParse(rawId?.toString() ?? '') ??
-  //             (throw ArgumentError(
-  //               'saleInvoiceId must be int or numeric string',
-  //             ));
-  //   final List<dynamic> invoices = (data['invoices'] as List?) ?? const [];
-
-  //   final batch = db.batch();
-  //   for (var invoice in invoices) {
-  //     final Map inv = Map.from(invoice as Map);
-  //     final dynamic itemIdRaw = inv['itemId'];
-  //     final int? itemId = (itemIdRaw is int)
-  //         ? itemIdRaw
-  //         : int.tryParse(itemIdRaw?.toString() ?? '');
-  //     if (itemId == null) {
-  //       // Skip invalid lines silently or throw—here we skip to avoid crash
-  //       continue;
-  //     }
-  //     batch.insert('invoice', {
-  //       'batch_id': inv['batchId']?.toString() ?? '',
-  //       'item_id': itemId,
-  //       'quantity': inv['quantity'] ?? 0,
-  //       'sale_invoice_id': saleId, // INTEGER FK
-  //     }, conflictAlgorithm: ConflictAlgorithm.abort);
-  //   }
-  //   await batch.commit(noResult: true);
-  // }
-
-  // Future<int> insertPayment(Map<String, dynamic> data) async {
-  //   final db = await DatabaseHelper.instance.database;
-
-  //   // Coerce sale id
-  //   final dynamic rawSaleId = data['salesInvoiceId'];
-  //   final int saleId = (rawSaleId is int)
-  //       ? rawSaleId
-  //       : int.tryParse(rawSaleId?.toString() ?? '') ??
-  //             (throw ArgumentError(
-  //               'salesInvoiceId must be int or numeric string',
-  //             ));
-
-  //   // Coerce date
-  //   int dateMillis;
-  //   final dynamic rawDate = data['date'];
-  //   if (rawDate is int) {
-  //     dateMillis = rawDate;
-  //   } else if (rawDate is String) {
-  //     // Accept "yyyy-MM-dd" or full ISO; also normalize dots if any
-  //     final s = rawDate.replaceAll('.', '-');
-  //     DateTime dt;
-  //     try {
-  //       dt = DateTime.parse(s);
-  //     } catch (_) {
-  //       // last resort: try a simple formatter "yyyy-MM-dd"
-  //       dt = DateFormat('yyyy-MM-dd').parse(s);
-  //     }
-  //     dateMillis = dt.millisecondsSinceEpoch;
-  //   } else {
-  //     dateMillis = DateTime.now().millisecondsSinceEpoch;
-  //   }
-
-  //   final paymentRow = {
-  //     'amount': data['amount'],
-  //     'remain_amount': data['remain_amount'] ?? 0.0,
-  //     'date': dateMillis,
-  //     'file_name': data['fileName'] ?? '',
-  //     'type': data['type'] ?? 'Cash',
-  //     'sale_invoice_id': saleId, // INTEGER FK to sale(id)
-  //     'user_id': data['user_id'] ?? 1,
-  //     'customer_contact': data['customer_contact'],
-  //   };
-
-  //   return await db.insert(
-  //     'payment',
-  //     paymentRow,
-  //     conflictAlgorithm: ConflictAlgorithm.abort,
-  //   );
-  // }
 
   // CashierRepository.insertPayment
   Future<int> insertPayment(Map<String, dynamic> data) async {
@@ -299,7 +149,7 @@ class CashierRepository {
         final int qty = inv['quantity'] is num
             ? (inv['quantity'] as num).toInt()
             : int.tryParse('${inv['quantity']}') ?? 0;
-        final double finalUnitPrice = inv['unitsaledprice'];
+        final double finalUnitPrice = inv['unit_saled_price'];
 
         batch.insert('invoice', {
           'batch_id': (inv['batchId'] ?? inv['batch_id']).toString(),
@@ -380,7 +230,7 @@ class CashierRepository {
       inv.batch_id          AS batch_id,
       inv.item_id           AS item_id,
       inv.quantity          AS quantity,
-
+      inv.unit_saled_price   AS unit_saled_price,
       i.name                AS item_name,
       i.barcode             AS item_barcode,
 
@@ -452,4 +302,119 @@ class CashierRepository {
     final db = await DatabaseHelper.instance.database;
     await db.delete(_table);
   }
+}
+
+class StockApplyResult {
+  final List<Map<String, dynamic>> updated;   // rows successfully deducted
+  final List<Map<String, dynamic>> warnings;  // insufficient stock or bad input
+  final List<Map<String, dynamic>> missing;   // no stock row found
+
+  StockApplyResult({
+    required this.updated,
+    required this.warnings,
+    required this.missing,
+  });
+
+  bool get allOk => warnings.isEmpty && missing.isEmpty;
+
+  Map<String, dynamic> toJson() => {
+    "updated": updated,
+    "warnings": warnings,
+    "missing": missing,
+  };
+}
+
+
+Future<StockApplyResult> updateStockFromInvoicesPayload(
+  Map<String, dynamic> payload, {
+  bool allOrNothing = false, // set true to rollback if any line fails
+}) async {
+  final db = await DatabaseHelper.instance.database;
+
+  final updated = <Map<String, dynamic>>[];
+  final warnings = <Map<String, dynamic>>[];
+  final missing  = <Map<String, dynamic>>[];
+
+  // Expecting: { saleInvoiceId?: string, invoices: [ {...}, {...} ] }
+  final List invoices = (payload['invoices'] as List?) ?? const [];
+
+  // Run everything in ONE transaction so it’s atomic when allOrNothing=true
+  try {
+    await db.transaction((txn) async {
+      for (final raw in invoices) {
+        final inv = (raw as Map).map((k, v) => MapEntry('$k', v));
+
+        // accept both camelCase and snake_case
+        String batchId = (inv['batch_id'] ?? inv['batchId'] ?? '').toString().trim();
+        final dynamic itemIdRaw = inv['item_id'] ?? inv['itemId'];
+        final int itemId = itemIdRaw is int ? itemIdRaw : int.tryParse('${itemIdRaw ?? ''}') ?? 0;
+        final int qtyReq = inv['quantity'] is num
+            ? (inv['quantity'] as num).toInt()
+            : int.tryParse('${inv['quantity']}') ?? 0;
+
+        if (batchId.isEmpty || itemId <= 0 || qtyReq <= 0) {
+          warnings.add({
+            "batch_id": batchId,
+            "item_id": itemId,
+            "requested": qtyReq,
+            "available": null,
+            "reason": "invalid_input",
+          });
+          continue;
+        }
+
+        // Try atomic deduct only if enough stock
+        final int affected = await txn.rawUpdate(
+          '''
+          UPDATE stock
+          SET quantity = quantity - ?
+          WHERE batch_id = ? AND item_id = ? AND quantity >= ?
+          ''',
+          [qtyReq, batchId, itemId, qtyReq],
+        );
+
+        if (affected == 1) {
+          updated.add({
+            "batch_id": batchId,
+            "item_id": itemId,
+            "deducted": qtyReq,
+          });
+        } else {
+          // See what went wrong: missing row or insufficient stock
+          final rows = await txn.rawQuery(
+            'SELECT quantity FROM stock WHERE batch_id = ? AND item_id = ? LIMIT 1',
+            [batchId, itemId],
+          );
+          if (rows.isEmpty) {
+            missing.add({
+              "batch_id": batchId,
+              "item_id": itemId,
+              "requested": qtyReq,
+              "reason": "not_found",
+            });
+          } else {
+            final int avail = (rows.first['quantity'] as num?)?.toInt() ?? 0;
+            warnings.add({
+              "batch_id": batchId,
+              "item_id": itemId,
+              "requested": qtyReq,
+              "available": avail,
+              "reason": "insufficient_stock",
+            });
+          }
+        }
+      }
+
+      // If you want all-or-nothing, rollback when any issue exists
+      if (allOrNothing && (warnings.isNotEmpty || missing.isNotEmpty)) {
+        throw Exception('ROLLBACK_STOCK_UPDATE');
+      }
+    });
+  } catch (_) {
+    // Transaction rolled back if allOrNothing=true and there were issues.
+    // We still return the collected warnings/missing so you can display them.
+
+  }
+
+  return StockApplyResult(updated: updated, warnings: warnings, missing: missing);
 }
