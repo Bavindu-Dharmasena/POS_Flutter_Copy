@@ -605,8 +605,8 @@ class _CashierViewPageState extends State<CashierViewPage> {
       "fileName": "receipt_$saleInvoiceId.pdf",
       "salesInvoiceId": saleInvoiceId, // TEXT
       "user_id": userId != null && userId.isNotEmpty
-          ? int.tryParse(userId) ?? 1
-          : 1,
+          ? int.tryParse(userId) ?? 0
+          : 0,
       "date": now.millisecondsSinceEpoch, // INTEGER
       "remain_amount": balance,
       "discount_type": discount > 0
