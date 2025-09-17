@@ -1,11 +1,9 @@
 // lib/features/manager/users/add_user.dart
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pos_system/data/db/database_helper.dart';
-import 'package:sqflite/sqflite.dart';
 
+import 'package:pos_system/data/models/manager/adduser/user_model.dart';
+import 'package:pos_system/data/repositories/manager/adduser/user_repository.dart';
 
 class AddUserPage extends StatefulWidget {
   const AddUserPage({super.key, this.userData});
@@ -78,8 +76,6 @@ class _AddUserPageState extends State<AddUserPage> {
 
   // --- helpers ---------------------------------------------------------------
 
-  String _hash(String s) => sha256.convert(utf8.encode(s)).toString();
-
   String _hexFromColor(Color c) =>
       '#${c.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
 
@@ -126,7 +122,6 @@ class _AddUserPageState extends State<AddUserPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _saving = true);
-    final db = await DatabaseHelper.instance.database;
 
     try {
       final now = DateTime.now().millisecondsSinceEpoch;
@@ -136,54 +131,40 @@ class _AddUserPageState extends State<AddUserPage> {
       final role = _role;
       final colorCode = _hexFromColor(_swatch);
 
-      // Unique email check
-      final existing = await db.query(
-        'user',
-        where: _isEdit ? 'email = ? AND id != ?' : 'email = ?',
-        whereArgs: _isEdit ? [email, widget.userData!['id']] : [email],
-        columns: const ['id'],
-        limit: 1,
-      );
-      if (existing.isNotEmpty) {
-        throw Exception('Email already exists');
-      }
+      final repo = UserRepository.instance;
 
       if (_isEdit) {
-        final values = <String, Object?>{
-          'name': name,
-          'email': email,
-          'contact': contact,
-          'role': role,
-          'color_code': colorCode,
-          'updated_at': now,
-        };
-        if (_changePassword) {
-          values['password'] = _hash(_passwordCtrl.text.trim());
-        }
+        final current = widget.userData!;
+        final model = User(
+          id: (current['id'] as num).toInt(),
+          name: name,
+          email: email,
+          contact: contact,
+          passwordHash: (current['password'] ?? '') as String, // unchanged unless toggled
+          role: role,
+          colorCode: colorCode,
+          createdAt: (current['created_at'] as num?)?.toInt() ?? now,
+          updatedAt: now,
+          refreshTokenHash: current['refresh_token_hash'] as String?,
+        );
 
-        await db.update(
-          'user',
-          values,
-          where: 'id = ?',
-          whereArgs: [widget.userData!['id']],
-          conflictAlgorithm: ConflictAlgorithm.abort,
-        );
+        // Optional password change
+        final newPw = _changePassword ? _passwordCtrl.text.trim() : null;
+        await repo.update(model, newPlainPassword: newPw);
       } else {
-        await db.insert(
-          'user',
-          {
-            'name': name,
-            'email': email,
-            'contact': contact,
-            'password': _hash(_passwordCtrl.text.trim()),
-            'role': role,
-            'color_code': colorCode,
-            'created_at': now,
-            'updated_at': now,
-            'refresh_token_hash': null,
-          },
-          conflictAlgorithm: ConflictAlgorithm.abort,
+        final model = User(
+          name: name,
+          email: email,
+          contact: contact,
+          // Placeholder; repository will hash if plainPassword is provided
+          passwordHash: 'TO_BE_REPLACED',
+          role: role,
+          colorCode: colorCode,
+          createdAt: now,
+          updatedAt: now,
+          refreshTokenHash: null,
         );
+        await repo.create(model, plainPassword: _passwordCtrl.text.trim());
       }
 
       if (!mounted) return;
