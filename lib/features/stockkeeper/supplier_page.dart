@@ -1,6 +1,7 @@
 // lib/features/stockkeeper/supplier_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:pos_system/data/models/stockkeeper/supplier_model.dart' as model;
 import 'package:pos_system/data/models/stockkeeper/supplier_db_maps.dart'; // for toUiMap()
@@ -14,6 +15,9 @@ import 'package:pos_system/features/stockkeeper/supplier/supplier_products_page.
 // alias the supplier card import
 import 'package:pos_system/widget/suppliers/supplier_card.dart' as cards;
 
+// Secure Storage Service
+import 'package:pos_system/core/services/secure_storage_service.dart';
+
 class SupplierPage extends StatefulWidget {
   const SupplierPage({super.key});
   @override
@@ -23,13 +27,23 @@ class SupplierPage extends StatefulWidget {
 class _SupplierPageState extends State<SupplierPage> {
   final _repo = SupplierRepository.instance;
   final _searchCtrl = TextEditingController();
+  int? userId;  // Store the logged-in user's ID
 
   Future<List<model.Supplier>>? _future;
 
   @override
   void initState() {
     super.initState();
+    _loadUserId();  // Load the userId when the page is initialized
     _future = _repo.getAll(); // initial load
+  }
+
+  // Function to load the userId from secure storage
+  Future<void> _loadUserId() async {
+    final storedUserId = await SecureStorageService.instance.getUserId();
+    setState(() {
+      userId = storedUserId != null ? int.tryParse(storedUserId) : null;
+    });
   }
 
   @override
@@ -99,6 +113,37 @@ class _SupplierPageState extends State<SupplierPage> {
     // optional: no refresh needed here
   }
 
+  void _logout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Logout'),
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close dialog
+                await SecureStorageService.instance.clear(); // Clear secure storage
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/login', // Replace with your login route name
+                  (Route<dynamic> route) => false,
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.of(context).size.width >= 700;
@@ -110,6 +155,14 @@ class _SupplierPageState extends State<SupplierPage> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text('Suppliers', style: TextStyle(color: Colors.white)),
+        actions: [
+          IconButton(
+            onPressed: () => _logout(context),
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            color: Colors.white,
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openAddSupplier,        // ✅ wired
@@ -119,6 +172,19 @@ class _SupplierPageState extends State<SupplierPage> {
       ),
       body: Column(
         children: [
+          // User ID display
+          if (userId != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Text(
+                'User ID: $userId',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          
           // Search
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),

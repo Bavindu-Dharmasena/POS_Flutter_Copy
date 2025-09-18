@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../common/barcode_scanner_page.dart';
 import '../../data/repositories/stockkeeper/item_repository.dart';
@@ -9,9 +10,11 @@ import '../../data/models/stockkeeper/item_model.dart';
 import '../../data/models/stockkeeper/category_model.dart';
 import '../../data/models/stockkeeper/item_supplier_model.dart';
 
+// Secure Storage Service
+import '../../core/services/secure_storage_service.dart';
+
 class AddItemPage extends StatefulWidget {
   const AddItemPage({super.key});
-
   @override
   State<AddItemPage> createState() => _AddItemPageState();
 }
@@ -53,6 +56,9 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
   List<CategoryModel> _categories = [];
   List<SupplierModel> _suppliers = [];
 
+  // User authentication
+  int? userId;
+
   // Optional flat color (sent as colorCode)
   final List<Color> _colorPalette = const [
     Color(0xFF3B82F6),
@@ -77,7 +83,16 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
         .animate(CurvedAnimation(parent: _animationController, curve: Curves.easeInOut));
     _animationController.forward();
 
+    _loadUserId();  // Load the userId when the page is initialized
     _loadLookups();
+  }
+
+  // Function to load the userId from secure storage
+  Future<void> _loadUserId() async {
+    final storedUserId = await SecureStorageService.instance.getUserId();
+    setState(() {
+      userId = storedUserId != null ? int.tryParse(storedUserId) : null;
+    });
   }
 
   @override
@@ -234,6 +249,37 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
     });
   }
 
+  void _logout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Logout'),
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close dialog
+                await SecureStorageService.instance.clear(); // Clear secure storage
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/login', // Replace with your login route name
+                  (Route<dynamic> route) => false,
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showSnack({required IconData icon, required Color color, required String text}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -313,6 +359,27 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
                     icon: const Icon(Feather.arrow_left, color: Colors.white, size: 20),
                   ),
                 ),
+                actions: [
+                  if (userId != null)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16.0),
+                      child: Center(
+                        child: Text(
+                          'User ID: $userId',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  IconButton(
+                    onPressed: () => _logout(context),
+                    icon: const Icon(Icons.logout),
+                    tooltip: 'Logout',
+                    color: Colors.white,
+                  ),
+                ],
                 flexibleSpace: const FlexibleSpaceBar(
                   title: Text(
                     'Add Product',
@@ -703,33 +770,33 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
       decoration: _dashboardDecoration(
         'Barcode',
         suffixIcon: Padding(
-          padding: const EdgeInsets.all(4.0),
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: kInfo,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: kInfo.withOpacity(0.35), blurRadius: 8, offset: const Offset(0, 2))],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const BarcodeScannerPage()),
-                  );
-                  if (result != null && result is String) {
-                    setState(() => _barcodeCtrl.text = result);
-                  }
-                },
-                child: const Center(child: Icon(Feather.camera, color: Colors.white, size: 18)),
-              ),
-            ),
+      padding: const EdgeInsets.all(4.0),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: kInfo,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: kInfo.withOpacity(0.35), blurRadius: 8, offset: const Offset(0, 2))],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BarcodeScannerPage()),
+              );
+              if (result != null && result is String) {
+                setState(() => _barcodeCtrl.text = result);
+              }
+            },
+            child: const Center(child: Icon(Feather.camera, color: Colors.white, size: 18)),
           ),
         ),
+      ),
+    ),
       ),
       validator: _reqText,
     );
@@ -802,64 +869,65 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
     );
   }
 
-  Widget _dashboardPreview() {
-    final Color previewColor = _selectedColor ?? _categoryDefaultColor(_selectedCategoryId) ?? const Color(0xFF475569);
+Widget _dashboardPreview() {
+  final Color previewColor = _selectedColor ?? _categoryDefaultColor(_selectedCategoryId) ?? const Color(0xFF475569);
 
-    final String catName = (_selectedCategoryId == null)
-        ? 'Category'
-        : (_categories.firstWhere(
-              (e) => e.id == _selectedCategoryId,
-              orElse: () => const CategoryModel(category: 'Category', colorCode: '#475569'),
-            ).category);
+  final String catName = (_selectedCategoryId == null)
+      ? 'Category'
+      : (_categories.firstWhere(
+            (e) => e.id == _selectedCategoryId,
+            orElse: () => const CategoryModel(category: 'Category', colorCode: '#475569'),
+          ).category);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: const Border.fromBorderSide(BorderSide(color: kBorder)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: previewColor,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: previewColor.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
-            ),
-            child: const Icon(Feather.package, color: Colors.white, size: 20),
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.05),
+      borderRadius: BorderRadius.circular(16),
+      border: const Border.fromBorderSide(BorderSide(color: kBorder)),  // Corrected line
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: previewColor,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(color: previewColor.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4))],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(
-                _nameCtrl.text.isEmpty ? 'Product Preview' : _nameCtrl.text,
-                style: const TextStyle(color: kText, fontWeight: FontWeight.bold, fontSize: 16),
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '$catName • ${_barcodeCtrl.text.isEmpty ? "No Code" : _barcodeCtrl.text}',
-                style: const TextStyle(color: kTextMuted, fontSize: 13),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ]),
-          ),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          child: const Icon(Feather.package, color: Colors.white, size: 20),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(
-              'Color ${_colorToHex(previewColor)}',
-              style: const TextStyle(color: kText, fontWeight: FontWeight.bold, fontSize: 14),
+              _nameCtrl.text.isEmpty ? 'Product Preview' : _nameCtrl.text,
+              style: const TextStyle(color: kText, fontWeight: FontWeight.bold, fontSize: 16),
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Text(
-              _reorderCtrl.text.isEmpty ? '' : 'Reorder: ${_reorderCtrl.text}',
-              style: const TextStyle(color: kTextMuted, fontSize: 12),
+              '$catName • ${_barcodeCtrl.text.isEmpty ? "No Code" : _barcodeCtrl.text}',
+              style: const TextStyle(color: kTextMuted, fontSize: 13),
+              overflow: TextOverflow.ellipsis,
             ),
           ]),
-        ],
-      ),
-    );
-  }
+        ),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(
+            'Color ${_colorToHex(previewColor)}',
+            style: const TextStyle(color: kText, fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _reorderCtrl.text.isEmpty ? '' : 'Reorder: ${_reorderCtrl.text}',
+            style: const TextStyle(color: kTextMuted, fontSize: 12),
+          ),
+        ]),
+      ],
+    ),
+  );
+}
+
 }
