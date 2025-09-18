@@ -32,19 +32,6 @@ class _AddUserPageState extends State<AddUserPage> {
   bool _showPw = false;
   bool _showPw2 = false;
 
-  // Accent color (stored as #RRGGBB)
-  static const _palette = <Color>[
-    Color(0xFF3B82F6),
-    Color(0xFF10B981),
-    Color(0xFFF59E0B),
-    Color(0xFFEF4444),
-    Color(0xFF8B5CF6),
-    Color(0xFF06B6D4),
-    Color(0xFF64748B),
-    Color(0xFF000000),
-  ];
-  Color _swatch = const Color(0xFF3B82F6);
-
   final _roles = const ['Admin', 'Manager', 'Cashier', 'StockKeeper'];
 
   bool get _isEdit => widget.userData != null;
@@ -58,8 +45,6 @@ class _AddUserPageState extends State<AddUserPage> {
       _emailCtrl.text = (d['email'] ?? '').toString();
       _contactCtrl.text = (d['contact'] ?? '').toString();
       _role = (d['role'] ?? 'Cashier').toString();
-      final hex = (d['color_code'] ?? '#3B82F6').toString();
-      _swatch = _colorFromHex(hex);
       _changePassword = false;
     }
   }
@@ -74,16 +59,7 @@ class _AddUserPageState extends State<AddUserPage> {
     super.dispose();
   }
 
-  // --- helpers ---------------------------------------------------------------
-
-  String _hexFromColor(Color c) =>
-      '#${c.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
-
-  Color _colorFromHex(String hex) {
-    final clean = hex.replaceAll('#', '');
-    final value = int.tryParse('FF$clean', radix: 16) ?? 0xFF3B82F6;
-    return Color(value);
-  }
+  // --- validators ------------------------------------------------------------
 
   String? _req(String? v) =>
       (v == null || v.trim().isEmpty) ? 'Required' : null;
@@ -129,7 +105,9 @@ class _AddUserPageState extends State<AddUserPage> {
       final email = _emailCtrl.text.trim().toLowerCase();
       final contact = _contactCtrl.text.trim();
       final role = _role;
-      final colorCode = _hexFromColor(_swatch);
+
+      // Always save user color as black (hex)
+      const colorCode = '#000000';
 
       final repo = UserRepository.instance;
 
@@ -169,16 +147,21 @@ class _AddUserPageState extends State<AddUserPage> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isEdit ? 'User updated' : 'User created'),
-          backgroundColor: Colors.green,
+        const SnackBar(
+          content: Text('Saved successfully', style: TextStyle(color: Colors.black)),
+          backgroundColor: Colors.white,
+          behavior: SnackBarBehavior.floating,
         ),
       );
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('Failed to save: $e', style: const TextStyle(color: Colors.white)),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -192,17 +175,28 @@ class _AddUserPageState extends State<AddUserPage> {
     final isEdit = _isEdit;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(isEdit ? 'Edit User' : 'Add User'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0.5,
+        title: Text(
+          isEdit ? 'Edit User' : 'Add User',
+          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+        ),
         actions: [
           TextButton.icon(
             onPressed: _saving ? null : _save,
+            style: TextButton.styleFrom(foregroundColor: Colors.black),
             icon: _saving
                 ? const SizedBox(
-                    width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.check, color: Colors.white),
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check),
             label: Text(isEdit ? 'Update' : 'Save',
-                style: const TextStyle(color: Colors.white)),
+                style: const TextStyle(color: Colors.black)),
           ),
           const SizedBox(width: 6),
         ],
@@ -248,49 +242,12 @@ class _AddUserPageState extends State<AddUserPage> {
                         value: _role,
                         items: _roles
                             .map((r) =>
-                                DropdownMenuItem(value: r, child: Text(r)))
+                                DropdownMenuItem(value: r, child: Text(r, style: const TextStyle(color: Colors.black))))
                             .toList(),
                         onChanged: (v) => setState(() => _role = v ?? _role),
                         decoration: _decoration('Role'),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _card(
-                  title: 'Appearance',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Accent Color',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 13)),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: _palette.map((c) {
-                          final sel = c.value == _swatch.value;
-                          return GestureDetector(
-                            onTap: () => setState(() => _swatch = c),
-                            child: Container(
-                              width: 34,
-                              height: 34,
-                              decoration: BoxDecoration(
-                                color: c,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: sel ? Colors.black : Colors.black26,
-                                  width: sel ? 2 : 1,
-                                ),
-                              ),
-                              child: sel
-                                  ? const Icon(Icons.check,
-                                      color: Colors.white, size: 18)
-                                  : null,
-                            ),
-                          );
-                        }).toList(),
+                        dropdownColor: Colors.white,
+                        style: const TextStyle(color: Colors.black),
                       ),
                     ],
                   ),
@@ -303,11 +260,12 @@ class _AddUserPageState extends State<AddUserPage> {
                       if (isEdit)
                         SwitchListTile.adaptive(
                           contentPadding: EdgeInsets.zero,
-                          title:
-                              const Text('Change password for this account'),
+                          title: const Text('Change password for this account',
+                              style: TextStyle(color: Colors.black)),
                           value: _changePassword,
                           onChanged: (v) =>
                               setState(() => _changePassword = v),
+                          activeColor: Colors.black,
                         ),
                       if (!isEdit || _changePassword) ...[
                         _tf(
@@ -317,7 +275,9 @@ class _AddUserPageState extends State<AddUserPage> {
                           obscureText: !_showPw,
                           suffixIcon: IconButton(
                             icon: Icon(
-                                _showPw ? Icons.visibility_off : Icons.visibility),
+                              _showPw ? Icons.visibility_off : Icons.visibility,
+                              color: Colors.black,
+                            ),
                             onPressed: () => setState(() => _showPw = !_showPw),
                           ),
                         ),
@@ -328,9 +288,10 @@ class _AddUserPageState extends State<AddUserPage> {
                           validator: _pw2,
                           obscureText: !_showPw2,
                           suffixIcon: IconButton(
-                            icon: Icon(_showPw2
-                                ? Icons.visibility_off
-                                : Icons.visibility),
+                            icon: Icon(
+                              _showPw2 ? Icons.visibility_off : Icons.visibility,
+                              color: Colors.black,
+                            ),
                             onPressed: () =>
                                 setState(() => _showPw2 = !_showPw2),
                           ),
@@ -345,13 +306,26 @@ class _AddUserPageState extends State<AddUserPage> {
                   height: 52,
                   child: ElevatedButton.icon(
                     onPressed: _saving ? null : _save,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      side: const BorderSide(color: Colors.black54),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      shadowColor: Colors.black12,
+                      elevation: 1.5,
+                    ),
                     icon: _saving
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2))
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
                         : const Icon(Icons.save),
-                    label: Text(isEdit ? 'Update User' : 'Create User'),
+                    label: Text(isEdit ? 'Update User' : 'Create User',
+                        style: const TextStyle(
+                            color: Colors.black, fontWeight: FontWeight.w600)),
                   ),
                 ),
               ],
@@ -366,11 +340,28 @@ class _AddUserPageState extends State<AddUserPage> {
 
   InputDecoration _decoration(String label) => InputDecoration(
         labelText: label,
+        labelStyle: const TextStyle(color: Colors.black),
+        hintStyle: const TextStyle(color: Colors.black54),
         filled: true,
         fillColor: Colors.white,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.black26),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.black87, width: 1.2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade700),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.red.shade700, width: 1.2),
+        ),
       );
 
   Widget _tf({
@@ -385,11 +376,13 @@ class _AddUserPageState extends State<AddUserPage> {
   }) {
     return TextFormField(
       controller: controller,
+      style: const TextStyle(color: Colors.black),
       validator: validator,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
       textInputAction: textInputAction,
       obscureText: obscureText,
+      cursorColor: Colors.black,
       decoration: _decoration(label).copyWith(suffixIcon: suffixIcon),
     );
   }
@@ -401,11 +394,12 @@ class _AddUserPageState extends State<AddUserPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
+        border: Border.all(color: Colors.black12),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Color(0x11000000),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -414,7 +408,9 @@ class _AddUserPageState extends State<AddUserPage> {
         children: [
           Text(title,
               style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w700)),
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           child,
         ],
