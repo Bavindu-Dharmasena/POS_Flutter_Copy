@@ -206,6 +206,31 @@ class DatabaseHelper {
       );
     ''');
 
+     // 11) price_rule (NEW TABLE)
+    await db.execute('''
+      CREATE TABLE price_rule (
+        id                  TEXT    PRIMARY KEY,
+        name                TEXT    NOT NULL,
+        type                TEXT    NOT NULL 
+                            CHECK (type IN ('PERCENTAGE_DISCOUNT','FIXED_DISCOUNT','MARKUP','BOGO')),
+        scope_kind          TEXT    NOT NULL 
+                            CHECK (scope_kind IN ('ALL','CATEGORY','PRODUCT','CUSTOMER_GROUP')),
+        scope_value         TEXT    NOT NULL DEFAULT '',
+        value               REAL    NOT NULL DEFAULT 0,
+        stackable           INTEGER NOT NULL DEFAULT 1,
+        active              INTEGER NOT NULL DEFAULT 1,
+        priority            INTEGER NOT NULL DEFAULT 10,
+        per_customer_limit  INTEGER,
+        start_time          TEXT,   -- Format: "HH:MM"
+        end_time            TEXT,   -- Format: "HH:MM"
+        start_date          INTEGER, -- epoch millis
+        end_date            INTEGER, -- epoch millis
+        days_of_week        TEXT    DEFAULT '', -- comma-separated: "1,2,3" for Mon,Tue,Wed
+        created_at          INTEGER NOT NULL,
+        updated_at          INTEGER NOT NULL
+      );
+    ''');
+
     // -------------------------------------------------------------------------
     // Indexes
     // -------------------------------------------------------------------------
@@ -238,6 +263,19 @@ class DatabaseHelper {
     );
     await db.execute(
       'CREATE INDEX idx_ri_item                   ON supplier_request_item(item_id);',
+    );
+
+     await db.execute(
+      'CREATE INDEX idx_price_rule_active         ON price_rule(active);',
+    );
+    await db.execute(
+      'CREATE INDEX idx_price_rule_priority       ON price_rule(priority);',
+    );
+    await db.execute(
+      'CREATE INDEX idx_price_rule_scope          ON price_rule(scope_kind, scope_value);',
+    );
+    await db.execute(
+      'CREATE INDEX idx_price_rule_dates          ON price_rule(start_date, end_date);',
     );
 
     // -------------------------------------------------------------------------
@@ -720,7 +758,54 @@ class DatabaseHelper {
         'discount_amount': 50.00,
         'supplier_id': 1,
       });
+
+      // Price Rules (NEW SEED DATA)
+      await txn.insert('price_rule', {
+        'id': 'rule_001',
+        'name': 'Happy Hour Drinks',
+        'type': 'PERCENTAGE_DISCOUNT',
+        'scope_kind': 'CATEGORY',
+        'scope_value': 'Beverages',
+        'value': 20.0,
+        'stackable': 0,
+        'active': 1,
+        'priority': 10,
+        'per_customer_limit': null,
+        'start_time': '16:00',
+        'end_time': '18:00',
+        'start_date': null,
+        'end_date': null,
+        'days_of_week': '5,6,7', // Fri, Sat, Sun
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      
+
+     
+      await txn.insert('price_rule', {
+        'id': 'rule_004',
+        'name': 'VIP Customer Markup Waiver',
+        'type': 'MARKUP',
+        'scope_kind': 'CUSTOMER_GROUP',
+        'scope_value': 'VIP',
+        'value': -5.0, // Negative markup = discount
+        'stackable': 1,
+        'active': 0, // Inactive for demo
+        'priority': 50,
+        'per_customer_limit': null,
+        'start_time': null,
+        'end_time': null,
+        'start_date': null,
+        'end_date': null,
+        'days_of_week': '',
+        'created_at': now,
+        'updated_at': now,
+      });
     });
+    
+
+    
   }
 
   @override
