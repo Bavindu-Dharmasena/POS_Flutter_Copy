@@ -26,6 +26,10 @@ Future<Map<String, dynamic>> login(String email, String password) async {
   final storedHash = (row['password'] as String?) ?? '';
   final role = (row['role'] as String?) ?? 'Cashier';
   final foundEmail = row['email'] as String?;
+  final userId = row['id'] as int?;
+  print('User ID: $userId');
+  final name = row['name'] as String?;
+  print('User name: $name');
   
   print('Found user: $foundEmail, role: $role');
 
@@ -46,10 +50,11 @@ Future<Map<String, dynamic>> login(String email, String password) async {
   print('Login successful');
 
   final token = await LocalJwt.issue(sub: email, role: role);
+
   return {
     'access_token': token,
     'refresh_token': 'LOCAL-${DateTime.now().microsecondsSinceEpoch}',
-    'user': {'email': email, 'role': role},
+    'user': {'email': email, 'role': role, 'name': name, 'id': userId},
     'mode': 'offline',
   };
 }
