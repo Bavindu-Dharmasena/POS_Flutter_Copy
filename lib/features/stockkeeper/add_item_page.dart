@@ -92,6 +92,7 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
     final storedUserId = await SecureStorageService.instance.getUserId();
     setState(() {
       userId = storedUserId != null ? int.tryParse(storedUserId) : null;
+      print('Loaded userId: $userId');
     });
   }
 
