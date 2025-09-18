@@ -3,11 +3,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart' show ActivateIntent; // for the Shortcuts/Actions ActivateIntent
+import 'package:flutter/widgets.dart' show ActivateIntent;
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 // ✅ import your repository
 import 'package:pos_system/data/repositories/stockkeeper/item_repository.dart';
+// ✅ import secure storage service
+import 'package:pos_system/core/services/secure_storage_service.dart';
 
 class TotalItems extends StatefulWidget {
   const TotalItems({super.key});
@@ -18,23 +20,47 @@ class TotalItems extends StatefulWidget {
 
 class _TotalItemsState extends State<TotalItems> {
   final FocusNode _focusNode = FocusNode();
-
-  // Loaded from DB
   List<_Item> _items = <_Item>[];
-
-  // UI state
   String _search = '';
   int _sortColumnIndex = 1;
   bool _sortAscending = true;
   bool _loading = true;
   String? _error;
+  String? userId;  // Store the logged-in user's ID
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadUserId();  // Check if user is authenticated and load userId
+    _load(); // Load items from the database
   }
 
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  // Load user ID from SecureStorage and check if authenticated
+  Future<void> _loadUserId() async {
+    try {
+      final storedUserId = await SecureStorageService.instance.getUserId();
+      if (storedUserId != null && storedUserId.isNotEmpty) {
+        setState(() {
+          userId = storedUserId; // Set userId if found
+          print('total items Loaded userId: $userId');
+        });
+      } else {
+        // Redirect to login if no userId is found
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } catch (e) {
+      print('Error loading userId: $e');
+      _showSnack('Failed to load user information', icon: Feather.alert_triangle, color: Colors.red);
+    }
+  }
+
+  // Load items from the database
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -63,10 +89,63 @@ class _TotalItemsState extends State<TotalItems> {
     }
   }
 
-  @override
-  void dispose() {
-    _focusNode.dispose();
-    super.dispose();
+  // Log out the user
+  Future<void> _logout() async {
+    try {
+      // Clear all stored data and navigate to login screen
+      await SecureStorageService.instance.clear();
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } catch (e) {
+      print('Error during logout: $e');
+      if (mounted) {
+        _showSnack('Error during logout: $e', icon: Feather.alert_triangle, color: Colors.red);
+      }
+    }
+  }
+
+  // Show snack bar message
+  void _showSnack(String message, {Color color = Colors.green, IconData icon = Feather.check_circle}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.transparent,
+        behavior: SnackBarBehavior.floating,
+        elevation: 0,
+        margin: const EdgeInsets.all(16),
+        content: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.white, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
@@ -107,12 +186,9 @@ class _TotalItemsState extends State<TotalItems> {
       return _sortAscending ? cmp : -cmp;
     });
 
-    final totalItemsCount =
-        filtered.fold<int>(0, (s, e) => s + e.qty);
-    final totalCostValue =
-        filtered.fold<double>(0, (s, e) => s + (e.qty * e.unitCost));
-    final totalSalesValue =
-        filtered.fold<double>(0, (s, e) => s + (e.qty * e.salesPrice));
+    final totalItemsCount = filtered.fold<int>(0, (s, e) => s + e.qty);
+    final totalCostValue = filtered.fold<double>(0, (s, e) => s + (e.qty * e.unitCost));
+    final totalSalesValue = filtered.fold<double>(0, (s, e) => s + (e.qty * e.salesPrice));
 
     return Shortcuts(
       shortcuts: {
@@ -161,6 +237,13 @@ class _TotalItemsState extends State<TotalItems> {
                           );
                         },
                 ),
+                // Add logout button if user is authenticated
+                if (userId != null)
+                  IconButton(
+                    onPressed: _logout,
+                    icon: const Icon(Feather.log_out),
+                    tooltip: 'Logout',
+                  ),
               ],
             ),
             body: Container(
@@ -282,7 +365,7 @@ class _TotalItemsState extends State<TotalItems> {
                                               dataRowMinHeight: 48,
                                               dataRowMaxHeight: 56,
                                               headingRowColor:
-                                                  WidgetStatePropertyAll(
+                                                  MaterialStatePropertyAll(
                                                 cs.surfaceTint
                                                     .withOpacity(.07),
                                               ),
@@ -425,7 +508,7 @@ class _TotalItemsState extends State<TotalItems> {
 // ===== Models & UI helpers =====
 
 class _Item {
-  final String id;      // we’ll use item.id as string for display
+  final String id;
   final String name;
   final int qty;
   final double unitCost;
@@ -444,13 +527,12 @@ class _Item {
 
   /// Map row -> _Item
   factory _Item.fromRow(Map<String, Object?> r) {
-    // SQLite returns numbers as int or num; ensure double via (as num).toDouble()
     final qty = (r['qty'] as num?)?.toInt() ?? 0;
     final unitCost = (r['unit_cost'] as num?)?.toDouble() ?? 0.0;
     final salesPrice = (r['sales_price'] as num?)?.toDouble() ?? 0.0;
 
     return _Item(
-      id: (r['id'] as int?)?.toString() ?? '', // show numeric id as text
+      id: (r['id'] as int?)?.toString() ?? '',
       name: (r['name'] as String?) ?? '',
       qty: qty,
       unitCost: unitCost,
