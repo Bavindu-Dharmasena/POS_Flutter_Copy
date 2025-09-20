@@ -3,15 +3,50 @@ import 'package:intl/intl.dart';
 import 'cashier_history_page.dart';
 import '../../data/repositories/cashier/cashier_repository.dart';
 import '../cashier/sale_details_page.dart';
+import 'package:pos_system/core/services/secure_storage_service.dart';
 
-class CashierInsightsPage extends StatelessWidget {
+class CashierInsightsPage extends StatefulWidget {
   const CashierInsightsPage({super.key});
 
-  // Repo as static so const constructor is valid
-  static final CashierRepository _cashierrepo = CashierRepository();
+  @override
+  State<CashierInsightsPage> createState() => _CashierInsightsPageState();
+}
 
-  /// Load payments and map them into the "sales" shape that the UI uses.
-  /// sales item: { billId: String, date: DateTime, amount: double, cashier: String }
+class _CashierInsightsPageState extends State<CashierInsightsPage> {
+  // Repo instance
+  final CashierRepository _cashierrepo = CashierRepository();
+
+  // Logged-in user id
+  int? userId;
+  String? userName;
+
+  // Cache the future so we can refresh explicitly
+  late Future<List<Map<String, dynamic>>> _futureSales;
+
+  @override
+  void initState() {
+    super.initState();
+    _futureSales = _loadSales();
+    _loadUserId();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserId() async {
+    final id = await SecureStorageService.instance.getUserId();
+    setState(() {
+      userId = id != null ? int.tryParse(id) : null;
+    });
+  }
+
+  Future<void> _loadUserName() async {
+    final name = await SecureStorageService.instance.getName();
+    setState(() {
+      userName = name;
+    });
+  }
+
+  /// Load payments and map them into the "sales" shape that the UI uses:
+  /// { billId: String, date: DateTime, amount: double, cashier: String }
   Future<List<Map<String, dynamic>>> _loadSales() async {
     final payments = await _cashierrepo.getAllPayments();
     return payments.map<Map<String, dynamic>>((p) {
@@ -21,18 +56,23 @@ class CashierInsightsPage extends StatelessWidget {
         'billId': p['sale_invoice_id'].toString(),
         'date': dt,
         'amount': (p['amount'] as num).toDouble(),
-        'cashier': 'Unknown', // TODO: map from user_id if you can join
+        // TODO: if you can join user_id->user_name, replace 'Unknown'
+        'cashier': userName ?? 'Unknown',
+        'userId': p['user_id'],
       };
     }).toList();
+  }
+
+  void _refresh() {
+    setState(() {
+      _futureSales = _loadSales();
+    });
   }
 
   bool _isToday(DateTime dt) {
     final now = DateTime.now();
     return dt.year == now.year && dt.month == now.month && dt.day == now.day;
   }
-
-  // double _totalSales(List<Map<String, dynamic>> sales) =>
-  //     sales.fold(0.0, (sum, s) => sum + (s['amount'] as num).toDouble());
 
   double _todayTotalSales(List<Map<String, dynamic>> sales) {
     return sales
@@ -47,8 +87,7 @@ class CashierInsightsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const currentCashier = 'John Doe'; // replace with real cashier if available
-
+    // replace with real cashier if available
     return Theme(
       data: ThemeData.dark(),
       child: Scaffold(
@@ -56,12 +95,15 @@ class CashierInsightsPage extends StatelessWidget {
           title: const Text('Insights'),
           backgroundColor: const Color(0xFF0D1B2A),
           actions: [
-            // Manual refresh trigger by rebuilding FutureBuilder via setState is not available in StatelessWidget.
-            // For a quick test button, you can navigate away/back or convert to StatefulWidget.
+            IconButton(
+              tooltip: 'Refresh',
+              onPressed: _refresh,
+              icon: const Icon(Icons.refresh),
+            ),
           ],
         ),
-        body: FutureBuilder<List<Map<String, dynamic>>>(
-          future: _loadSales(),
+        body: FutureBuilder<List<Map<String, dynamic>>>( 
+          future: _futureSales,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -81,12 +123,13 @@ class CashierInsightsPage extends StatelessWidget {
             }
 
             final sales = snapshot.data ?? const <Map<String, dynamic>>[];
+            print(  'sales loaded: ${sales}');
             final todayTotal = _todayTotalSales(sales);
 
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // ===== Total Sales Card =====
+                // ===== Today Total Sales Card =====
                 Card(
                   elevation: 2,
                   child: Padding(
@@ -134,7 +177,7 @@ class CashierInsightsPage extends StatelessWidget {
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                           title: const Text(
-                            'History',
+                            'My History',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -148,7 +191,7 @@ class CashierInsightsPage extends StatelessWidget {
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => CashierHistoryPage(
-                                    currentCashier: currentCashier,
+                                    currentCashier: userName ?? 'Unknown',
                                     sales: sales,
                                   ),
                                 ),
@@ -160,7 +203,7 @@ class CashierInsightsPage extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (_) => CashierHistoryPage(
-                                  currentCashier: currentCashier,
+                                  currentCashier: userName ?? 'Unknown',
                                   sales: sales,
                                 ),
                               ),
@@ -178,101 +221,51 @@ class CashierInsightsPage extends StatelessWidget {
                             ),
                           )
                         else
-                          ...sales.take(3).map((s) {
-                            return ListTile(
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.receipt_long),
-                              title: Text(
-                                '${s['billId']}  •  ${_money(s['amount'])}',
-                              ),
-                              subtitle: Text(_fmt(s['date'] as DateTime)),
-                              // trailing: IconButton(
-                              //   icon: const Icon(Icons.visibility),
-                              //   onPressed: () {
-                              //     // TODO: open bill details if you have them
-                              //   },
-                              // ),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.visibility),
-                                onPressed: () {
-                                  final String saleId = (s['billId'] ?? '')
-                                      .toString();
-                                  if (saleId.isEmpty) return;
+                          ...sales
+                            .where((s) =>
+                                _isToday(s['date'] as DateTime) &&
+                                s['userId'] == userId) // Filter by today and userId
+                            .take(3)
+                            .map((s) {
+                              final dt = s['date'] as DateTime;
 
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => SaleDetailsPage(
-                                        saleInvoiceId: saleId,
+                              return ListTile(
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                                leading: const Icon(Icons.receipt_long),
+                                title: Text(
+                                  '${s['billId']}  •  ${_money(s['amount'])}',
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(_fmt(dt)),
+                                  ],
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.visibility),
+                                  onPressed: () {
+                                    final String saleId =
+                                        (s['billId'] ?? '').toString();
+                                    if (saleId.isEmpty) return;
+
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => SaleDetailsPage(
+                                          saleInvoiceId: saleId,
+                                        ),
                                       ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            );
-                          }).toList(),
+                                    );
+                                  },
+                                ),
+                              );
+                            })
+                            .toList(),
                       ],
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 16),
-
-                // ===== Reports Card =====
-                // Card(
-                //   elevation: 2,
-                //   child: Padding(
-                //     padding: const EdgeInsets.all(12),
-                //     child: Column(
-                //       crossAxisAlignment: CrossAxisAlignment.stretch,
-                //       children: [
-                //         const Text(
-                //           'Reports',
-                //           style: TextStyle(
-                //             fontSize: 16,
-                //             fontWeight: FontWeight.w600,
-                //           ),
-                //         ),
-                //         const SizedBox(height: 8),
-                //         Wrap(
-                //           spacing: 10,
-                //           runSpacing: 10,
-                //           children: [
-                //             OutlinedButton.icon(
-                //               icon: const Icon(Icons.today),
-                //               label: const Text('Today Report'),
-                //               onPressed: () {
-                //                 // TODO
-                //               },
-                //             ),
-                //             OutlinedButton.icon(
-                //               icon: const Icon(Icons.date_range),
-                //               label: const Text('This Week'),
-                //               onPressed: () {
-                //                 // TODO
-                //               },
-                //             ),
-                //             OutlinedButton.icon(
-                //               icon: const Icon(Icons.calendar_month),
-                //               label: const Text('This Month'),
-                //               onPressed: () {
-                //                 // TODO
-                //               },
-                //             ),
-                //             OutlinedButton.icon(
-                //               icon: const Icon(Icons.file_download),
-                //               label: const Text('Export CSV'),
-                //               onPressed: () {
-                //                 // TODO
-                //               },
-                //             ),
-                //           ],
-                //         ),
-                //       ],
-                //     ),
-                //   ),
-                // ),
               ],
             );
           },
