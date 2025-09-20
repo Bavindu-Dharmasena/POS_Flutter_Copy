@@ -26,8 +26,19 @@ class CashierInsightsPage extends StatelessWidget {
     }).toList();
   }
 
-  double _totalSales(List<Map<String, dynamic>> sales) =>
-      sales.fold(0.0, (sum, s) => sum + (s['amount'] as num).toDouble());
+  bool _isToday(DateTime dt) {
+    final now = DateTime.now();
+    return dt.year == now.year && dt.month == now.month && dt.day == now.day;
+  }
+
+  // double _totalSales(List<Map<String, dynamic>> sales) =>
+  //     sales.fold(0.0, (sum, s) => sum + (s['amount'] as num).toDouble());
+
+  double _todayTotalSales(List<Map<String, dynamic>> sales) {
+    return sales
+        .where((s) => _isToday(s['date'] as DateTime))
+        .fold(0.0, (sum, s) => sum + (s['amount'] as num).toDouble());
+  }
 
   String _fmt(DateTime dt) => DateFormat('yyyy-MM-dd • hh:mm a').format(dt);
 
@@ -70,7 +81,7 @@ class CashierInsightsPage extends StatelessWidget {
             }
 
             final sales = snapshot.data ?? const <Map<String, dynamic>>[];
-            final total = _totalSales(sales);
+            final todayTotal = _todayTotalSales(sales);
 
             return ListView(
               padding: const EdgeInsets.all(16),
@@ -88,7 +99,7 @@ class CashierInsightsPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Total Sales',
+                              'Today Total Sales',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -96,7 +107,7 @@ class CashierInsightsPage extends StatelessWidget {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              _money(total),
+                              _money(todayTotal),
                               style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
@@ -209,59 +220,59 @@ class CashierInsightsPage extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 // ===== Reports Card =====
-                Card(
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Text(
-                          'Reports',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            OutlinedButton.icon(
-                              icon: const Icon(Icons.today),
-                              label: const Text('Today Report'),
-                              onPressed: () {
-                                // TODO
-                              },
-                            ),
-                            OutlinedButton.icon(
-                              icon: const Icon(Icons.date_range),
-                              label: const Text('This Week'),
-                              onPressed: () {
-                                // TODO
-                              },
-                            ),
-                            OutlinedButton.icon(
-                              icon: const Icon(Icons.calendar_month),
-                              label: const Text('This Month'),
-                              onPressed: () {
-                                // TODO
-                              },
-                            ),
-                            OutlinedButton.icon(
-                              icon: const Icon(Icons.file_download),
-                              label: const Text('Export CSV'),
-                              onPressed: () {
-                                // TODO
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                // Card(
+                //   elevation: 2,
+                //   child: Padding(
+                //     padding: const EdgeInsets.all(12),
+                //     child: Column(
+                //       crossAxisAlignment: CrossAxisAlignment.stretch,
+                //       children: [
+                //         const Text(
+                //           'Reports',
+                //           style: TextStyle(
+                //             fontSize: 16,
+                //             fontWeight: FontWeight.w600,
+                //           ),
+                //         ),
+                //         const SizedBox(height: 8),
+                //         Wrap(
+                //           spacing: 10,
+                //           runSpacing: 10,
+                //           children: [
+                //             OutlinedButton.icon(
+                //               icon: const Icon(Icons.today),
+                //               label: const Text('Today Report'),
+                //               onPressed: () {
+                //                 // TODO
+                //               },
+                //             ),
+                //             OutlinedButton.icon(
+                //               icon: const Icon(Icons.date_range),
+                //               label: const Text('This Week'),
+                //               onPressed: () {
+                //                 // TODO
+                //               },
+                //             ),
+                //             OutlinedButton.icon(
+                //               icon: const Icon(Icons.calendar_month),
+                //               label: const Text('This Month'),
+                //               onPressed: () {
+                //                 // TODO
+                //               },
+                //             ),
+                //             OutlinedButton.icon(
+                //               icon: const Icon(Icons.file_download),
+                //               label: const Text('Export CSV'),
+                //               onPressed: () {
+                //                 // TODO
+                //               },
+                //             ),
+                //           ],
+                //         ),
+                //       ],
+                //     ),
+                //   ),
+                // ),
               ],
             );
           },

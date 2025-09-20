@@ -98,15 +98,17 @@ class _ManagerHomePageState extends State<ManagerHomePage> {
   }
 
   List<_Tile> get _allTiles => <_Tile>[
-        _Tile('User Management', 'Change own / reset staff passwords', Icons.key, '/manager/user-management', const Color.fromARGB(255, 117, 193, 91)),
-        _Tile('Sales Reports', 'Sales Summaries & revenue split', Icons.summarize, '/manager/reports/sales-summaries', Colors.blue),
-        _Tile('Trending Items', 'Popular products by qty/revenue', Icons.trending_up, '/manager/reports/trending-items', Colors.green),
-        _Tile('Profit Margins', 'Cash vs Card profit split', Icons.pie_chart, '/manager/reports/profit-margins', Colors.orange),
-        _Tile('Creditors', 'Outstanding, history & settlements', Icons.people_alt, '/manager/reports/creditors', Colors.teal),
-        _Tile('Audit Logs', 'Logins, stock edits, refunds, rules', Icons.fact_check, '/manager/audit-logs', Colors.indigo),
-        _Tile('Price Rules', 'Create / schedule promos', Icons.price_change, '/manager/price-rules', Colors.pink),
-        _Tile('Stock Keeper', 'Inventory, restock & POs', Icons.inventory_2, '/stockkeeper', Colors.amber),
-        _Tile('Cashier', 'Invoices, payments, refunds', Icons.receipt_long, '/cashier', Colors.cyan),
+        _Tile('Add User', 'Adding cashiers, stock keepers & suppliers', Icons.receipt_long, '/manager/add-user', const Color.fromARGB(255, 2, 95, 107)),
+        _Tile('User Management', 'Change own / reset staff passwords', Icons.key, '/manager/user-management', const Color.fromARGB(255, 42, 149, 6)),
+         _Tile('Creditors', 'Outstanding, history & settlements', Icons.people_alt, '/manager/reports/creditors', const Color.fromARGB(255, 176, 30, 4)),
+        _Tile('Sales Reports', 'Sales Summaries & revenue split', Icons.summarize, '/manager/reports/sales-summaries', const Color.fromARGB(255, 3, 135, 243)),
+        _Tile('Trending Items', 'Popular products by qty/revenue', Icons.trending_up, '/manager/reports/trending-items', const Color.fromARGB(255, 209, 176, 8)),
+        _Tile('Profit Margins', 'Cash vs Card profit split', Icons.pie_chart, '/manager/reports/profit-margins', const Color.fromARGB(255, 157, 96, 5)),
+       
+        _Tile('Audit Logs', 'Logins, stock edits, refunds, rules', Icons.fact_check, '/manager/audit-logs', const Color.fromARGB(255, 34, 58, 194)),
+        _Tile('Price Rules', 'Create / schedule promos', Icons.price_change, '/manager/price-rules', const Color.fromARGB(255, 162, 13, 63)),
+        _Tile('Stock Keeper', 'Inventory, restock & POs', Icons.inventory_2, '/stockkeeper', const Color.fromARGB(255, 171, 129, 1)),
+        _Tile('Cashier', 'Invoices, payments, refunds', Icons.receipt_long, '/cashier', const Color.fromARGB(255, 2, 118, 134)),
         // _Tile('Add Creditor', 'Create creditor record', Icons.person_add_alt_1, '/manager/create-creditor', Colors.red),
       ];
 
