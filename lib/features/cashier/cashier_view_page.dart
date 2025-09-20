@@ -37,7 +37,6 @@ import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import "package:pos_system/core/services/auth_service.dart";
 
-
 // ---- Keyboard Intents ----
 class ActivateSearchIntent extends Intent {
   const ActivateSearchIntent();
@@ -98,6 +97,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
   double discount = 0;
   int? _userId;
   String? userId;
+  String userName = 'User';
 
   // ----------------- FOCUS NODES -----------------
   final FocusNode _quickSaleBtnNode = FocusNode(debugLabel: 'QuickSaleBtn');
@@ -121,6 +121,7 @@ class _CashierViewPageState extends State<CashierViewPage> {
     super.initState();
     _loadCatalog();
     _loadUserId();
+    _loadUserName();
   }
 
   @override
@@ -471,6 +472,13 @@ class _CashierViewPageState extends State<CashierViewPage> {
     final id = await SecureStorageService.instance.getUserId();
     setState(() {
       _userId = id != null ? int.parse(id) : null;
+    });
+  }
+
+  Future<void> _loadUserName() async {
+    final name = await SecureStorageService.instance.getName();
+    setState(() {
+      userName = name ?? 'User';
     });
   }
 
@@ -1635,13 +1643,14 @@ class _CashierViewPageState extends State<CashierViewPage> {
                     const Text('Cashier'),
                     Row(
                       children: [
-                        const Text(
-                          'John Doe',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
+                        Text(
+  (userName != null && userName.isNotEmpty) ? userName : 'User',
+  style: TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+  ),
+)
+,
                         const SizedBox(width: 8),
                         IconButton(
                           focusNode: _headerMenuBtnNode,
