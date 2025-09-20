@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:pos_system/data/repositories/stockkeeper/low_stock_repository.dart';
 import 'package:pos_system/data/models/stockkeeper/low_stock_models.dart';
 
+// Secure Storage
+import 'package:pos_system/core/services/secure_storage_service.dart';
+
 /// Use the repository's UI model directly.
 typedef Product = LowStockProduct;
 
@@ -14,10 +17,10 @@ class BackIntent extends Intent {
 }
 
 /// ---- Dark table palette (same as before) ----
-const _kDarkCard     = Color(0xFF0F1318); // outer container / card
-const _kDarkHeader   = Color(0xFF1F2631); // header row
-const _kDarkRow      = Color(0xFF141A21); // body rows
-const _kDarkDivider  = Color(0xFF2A3240); // table grid lines
+const _kDarkCard = Color(0xFF0F1318); // outer container / card
+const _kDarkHeader = Color(0xFF1F2631); // header row
+const _kDarkRow = Color(0xFF141A21); // body rows
+const _kDarkDivider = Color(0xFF2A3240); // table grid lines
 const _kDarkTextMain = Color(0xFFE6EAF0); // main text
 const _kDarkTextMute = Color(0xFFB7C0CC); // secondary text
 
@@ -38,11 +41,12 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
   String _supplierFilter = 'All';
   int? _sortColumnIndex;
   bool _sortAscending = true;
+  String? userId; // Store the logged-in user's ID
 
   @override
   void initState() {
     super.initState();
-    _loadFromDb();
+    _loadUserId(); // Check if the user is authenticated
   }
 
   @override
@@ -54,6 +58,29 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
     super.dispose();
   }
 
+  // Load user ID from SecureStorage and check if authenticated
+  Future<void> _loadUserId() async {
+    try {
+      final storedUserId = await SecureStorageService.instance.getUserId();
+      if (storedUserId != null && storedUserId.isNotEmpty) {
+        setState(() {
+          userId = storedUserId;
+          print('low stock Loaded userId: $userId'); // Set userId if found
+        });
+        _loadFromDb(); // Load the low stock data after authentication
+      } else {
+        // Redirect to login if no userId is found
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } catch (e) {
+      print('Error loading userId: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load user information: $e')),
+      );
+    }
+  }
+
+  // Load low stock items from the database
   Future<void> _loadFromDb() async {
     final repo = LowStockRepository.instance;
     final rows = await repo.fetchLowStock(); // initial: no filters
@@ -82,9 +109,7 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
     final q = _searchCtrl.text.trim().toLowerCase();
     return _source.where((p) {
       final supplierOK = _supplierFilter == 'All' || p.supplier == _supplierFilter;
-      final textOK = q.isEmpty ||
-          p.name.toLowerCase().contains(q) ||
-          p.category.toLowerCase().contains(q);
+      final textOK = q.isEmpty || p.name.toLowerCase().contains(q) || p.category.toLowerCase().contains(q);
       return supplierOK && textOK;
     }).toList()
       ..sort((a, b) {
@@ -209,6 +234,15 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
   // --- UI ---
   @override
   Widget build(BuildContext context) {
+    // Show loading indicator while checking authentication
+    if (userId == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     final cs = Theme.of(context).colorScheme;
     final isWide = MediaQuery.of(context).size.width >= 900;
     final visible = _filtered;
@@ -227,7 +261,6 @@ class _LowStockRequestPageState extends State<LowStockRequestPage> {
             },
           ),
         },
-        // A Focus to ensure the Shortcuts are active immediately.
         child: Focus(
           autofocus: true,
           child: Scaffold(
@@ -696,7 +729,7 @@ class _FilterBar extends StatelessWidget {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // IMPORTANT: no Expanded here (fixes mobile “filter not showing”)
+                  // IMPORTANT: no Expanded here (fixes mobile "filter not showing")
                   searchField,
                   const SizedBox(height: 8),
                   supplierDrop,

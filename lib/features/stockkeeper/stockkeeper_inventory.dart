@@ -10,6 +10,9 @@ import 'package:pos_system/features/stockkeeper/inventory/restock.dart';
 // ===== REPOSITORY (SQLite) =====
 import 'package:pos_system/data/repositories/stockkeeper/item_repository.dart';
 
+// ===== Authentication Services =====
+import 'package:pos_system/core/services/secure_storage_service.dart';
+
 // ===== Small helpers: gradients derived from theme =====
 LinearGradient themedHeaderGradient(ColorScheme cs) => LinearGradient(
   colors: [cs.primary, cs.tertiary],
@@ -69,6 +72,7 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
   List<Product> products = const [];
 
   bool _mobileBannerShown = false;
+  String? userId;  // Store the logged-in user's ID
 
   List<Product> get _outOfStock =>
       products.where((p) => p.isOutOfStock).toList();
@@ -78,10 +82,12 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
   @override
   void initState() {
     super.initState();
+    _loadUserId();  // Check if user is authenticated and load userId
+    _loadProducts(); // Pull products from SQLite
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
-    _loadProducts(); // ← pull from SQLite
   }
 
   @override
@@ -94,6 +100,25 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _maybeShowMobileOutOfStockBanner();
+  }
+
+  // Load user ID from SecureStorage and check if authenticated
+  Future<void> _loadUserId() async {
+    try {
+      final storedUserId = await SecureStorageService.instance.getUserId();
+      if (storedUserId != null && storedUserId.isNotEmpty) {
+        setState(() {
+          userId = storedUserId; // Set userId if found
+          print('inventory Loaded userId: $userId');
+        });
+      } else {
+        // Redirect to login if no userId is found
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } catch (e) {
+      print('Error loading userId: $e');
+      _showSnack('Failed to load user information', icon: Feather.alert_triangle, color: Colors.red);
+    }
   }
 
   Future<void> _loadProducts() async {
@@ -245,6 +270,63 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
     }
   }
 
+  void _logout() async {
+    try {
+      // Clear all stored data and navigate to login screen
+      await SecureStorageService.instance.clear();
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+    } catch (e) {
+      print('Error during logout: $e');
+      if (mounted) {
+        _showSnack('Error during logout: $e', icon: Feather.alert_triangle, color: Colors.red);
+      }
+    }
+  }
+
+  void _showSnack(String message, {Color color = Colors.green, IconData icon = Feather.check_circle}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.transparent,
+        behavior: SnackBarBehavior.floating,
+        elevation: 0,
+        margin: const EdgeInsets.all(16),
+        content: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.white, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -255,6 +337,22 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
 
     final width = MediaQuery.of(context).size.width;
     final isDesktop = width >= 900;
+
+    // Check if user is authenticated
+    if (userId == null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text('Loading user information...'),
+            ],
+          ),
+        ),
+      );
+    }
 
     return KeyboardListener(
       focusNode: _focusNode,
@@ -275,12 +373,18 @@ class _InventoryStatsOnlyState extends State<InventoryStatsOnly> {
               ),
             ),
           ),
-          actions: const [
-            SizedBox(width: 12),
-            Icon(Feather.search),
-            SizedBox(width: 12),
-            Icon(Feather.download),
-            SizedBox(width: 12),
+          actions: [
+            const SizedBox(width: 12),
+            const Icon(Feather.search),
+            const SizedBox(width: 12),
+            const Icon(Feather.download),
+            const SizedBox(width: 12),
+            if (userId != null)
+              IconButton(
+                onPressed: _logout, // Logout when pressed
+                icon: const Icon(Feather.log_out),
+              ),
+            const SizedBox(width: 12),
           ],
         ),
         body: Container(

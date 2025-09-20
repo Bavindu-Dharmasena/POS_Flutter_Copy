@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:pos_system/features/stockkeeper/category.dart';
-
 import 'package:provider/provider.dart';
-// ignore: unused_import
-import 'package:pos_system/features/cashier/cashier_view_page.dart';
 import 'package:pos_system/features/stockkeeper/settings/settings_provider.dart';
-
-
-
-import '../stockkeeper/stockkeeper_inventory.dart';
-import '../stockkeeper/stockkeeper_reports.dart';
-import 'settings/stockkeeper_setting.dart';
+import 'package:pos_system/core/services/secure_storage_service.dart';
+import 'package:pos_system/features/stockkeeper/stockkeeper_inventory.dart';
+import 'package:pos_system/features/stockkeeper/stockkeeper_reports.dart';
+import 'package:pos_system/features/stockkeeper/settings/stockkeeper_setting.dart';
 import 'package:pos_system/features/stockkeeper/add_item_page.dart';
 import 'package:pos_system/features/stockkeeper/supplier_page.dart';
-import '../stockkeeper/stockkeeper_supplier_request.dart';
+import 'package:pos_system/features/stockkeeper/stockkeeper_supplier_request.dart';
 
+// Add your LogoutService import here (uncomment and adjust as needed)
+// import 'package:pos_system/core/services/logout_service.dart';
 
 /// Custom intents for extra keyboard actions
 class JumpToFirstIntent extends Intent { const JumpToFirstIntent(); }
@@ -30,6 +28,8 @@ class StockKeeperHome extends StatefulWidget {
 }
 
 class _StockKeeperHomeState extends State<StockKeeperHome> {
+  int? userId;  // Declare userId variable to store the logged-in user's ID
+  
   // Tiles the user can reorder
   late List<_TileSpec> _tiles;
 
@@ -43,8 +43,18 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
   @override
   void initState() {
     super.initState();
+    _loadUserId();  // Load the userId when the page is initialized
     _initializeTiles();
     _ensureNodes(_tiles.length, requestFirstFocus: true);
+  }
+
+  // Function to load the userId from secure storage
+  Future<void> _loadUserId() async {
+    final storedUserId = await SecureStorageService.instance.getUserId();
+    setState(() {
+      userId = storedUserId != null ? int.tryParse(storedUserId) : null;
+      print("user: $userId");
+    });
   }
 
   void _initializeTiles() {
@@ -126,17 +136,6 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
       ),
       pageBuilder: () => const StockKeeperSetting(),
     ),
-    // _TileSpec(
-    //   id: 'back',
-    //   title: 'Back',
-    //   subtitle: 'Go Back',
-    //   icon: Icons.arrow_back_outlined,
-    //   gradientBuilder: (cs) => LinearGradient(
-    //     colors: [Color(0xFFDA22FF), Color(0xFF9733EE)], // Pink to Purple
-    //     begin: Alignment.topLeft, end: Alignment.bottomRight,
-    //   ),
-    //   onTap: () => Navigator.of(context).maybePop(),
-    // ),
   ];
 }
   // Ensure we have exactly [count] focus nodes; optionally focus first
@@ -221,13 +220,18 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
             ),
             TextButton(
               child: const Text('Logout'),
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).pop(); // Close dialog
-                // Navigate to login page and clear navigation stack
+                // Add your LogoutService call here (uncomment and adjust as needed)
+                // await LogoutService(ApiClient()).signOut(); // Call signOut method
+                await SecureStorageService.instance.clear();
+                 // Clear secure storage
                 Navigator.of(context).pushNamedAndRemoveUntil(
                   '/login', // Replace with your login route name
                   (Route<dynamic> route) => false,
+                  
                 );
+                print("user: $userId");
               },
             ),
           ],
@@ -489,6 +493,21 @@ class _StockKeeperHomeState extends State<StockKeeperHome> {
                       ),
                     );
                   },
+                ),
+              ),
+              // Display userId at the bottom of the screen
+              Positioned(
+                bottom: 16,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Text(
+                    'User ID: ${userId ?? "Loading..."}',
+                    style: TextStyle(
+                      color: cs.onSurface.withOpacity(0.6),
+                      fontSize: 14 * settings.textScaleFactor,
+                    ),
+                  ),
                 ),
               ),
             ],
