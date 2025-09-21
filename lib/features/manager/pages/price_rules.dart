@@ -1,102 +1,7 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:pos_system/data/models/manager/price_rules_model.dart';
+import 'package:pos_system/data/repositories/manager/price_rules_repository.dart';
 
-enum RuleType { percentageDiscount, fixedDiscount, markup, bogo }
-
-extension RuleTypeLabel on RuleType {
-  String get label {
-    switch (this) {
-      case RuleType.percentageDiscount:
-        return 'Percentage Discount';
-      case RuleType.fixedDiscount:
-        return 'Fixed Discount';
-      case RuleType.markup:
-        return 'Markup';
-      case RuleType.bogo:
-        return 'BOGO';
-    }
-  }
-
-  IconData get icon {
-    switch (this) {
-      case RuleType.percentageDiscount:
-        return Icons.percent;
-      case RuleType.fixedDiscount:
-        return Icons.price_check;
-      case RuleType.markup:
-        return Icons.trending_up;
-      case RuleType.bogo:
-        return Icons.local_offer;
-    }
-  }
-}
-
-enum ScopeKind { all, category, product, customerGroup }
-
-class PriceRule {
-  String id;
-  String name;
-  RuleType type;
-  ScopeKind scopeKind;
-  String scopeValue; // e.g. "Beverages" or "SKU-123" or "VIP"
-  double value; // % for percentage/markup; amount for fixed
-  bool stackable;
-  bool active;
-  int priority; // lower runs first
-  int? perCustomerLimit;
-  TimeOfDay? startTime; // optional daily window
-  TimeOfDay? endTime;
-  DateTime? startDate; // optional date window
-  DateTime? endDate;
-  Set<int> daysOfWeek; // 1=Mon..7=Sun, empty = all days
-
-  PriceRule({
-    required this.id,
-    required this.name,
-    required this.type,
-    required this.scopeKind,
-    required this.scopeValue,
-    required this.value,
-    required this.stackable,
-    required this.active,
-    required this.priority,
-    this.perCustomerLimit,
-    this.startTime,
-    this.endTime,
-    this.startDate,
-    this.endDate,
-    Set<int>? daysOfWeek,
-  }) : daysOfWeek = daysOfWeek ?? <int>{};
-
-  bool get isScheduled =>
-      startDate != null || endDate != null || startTime != null || endTime != null || daysOfWeek.isNotEmpty;
-
-  bool get isCurrentlyEffective {
-    final now = DateTime.now();
-    if (!active) return false;
-
-    if (startDate != null && now.isBefore(startDate!)) return false;
-    if (endDate != null && now.isAfter(endDate!)) return false;
-
-    if (daysOfWeek.isNotEmpty) {
-      final dow = now.weekday; // 1..7
-      if (!daysOfWeek.contains(dow)) return false;
-    }
-
-    if (startTime != null && endTime != null) {
-      final nowTOD = TimeOfDay(hour: now.hour, minute: now.minute);
-      bool afterStart = _compareTOD(nowTOD, startTime!) >= 0;
-      bool beforeEnd = _compareTOD(nowTOD, endTime!) <= 0;
-      if (!(afterStart && beforeEnd)) return false;
-    }
-    return true;
-  }
-}
-
-int _compareTOD(TimeOfDay a, TimeOfDay b) {
-  if (a.hour != b.hour) return a.hour.compareTo(b.hour);
-  return a.minute.compareTo(b.minute);
-}
 
 class PriceRulesPage extends StatefulWidget {
   const PriceRulesPage({super.key});
@@ -107,13 +12,16 @@ class PriceRulesPage extends StatefulWidget {
 
 class _PriceRulesPageState extends State<PriceRulesPage> with TickerProviderStateMixin {
   final TextEditingController _search = TextEditingController();
-  final List<PriceRule> _rules = [];
+  final PriceRuleRepository _repository = PriceRuleRepository();
+  
+  List<PriceRule> _rules = [];
+  bool _isLoading = true;
   String _statusFilter = 'All'; // All / Active / Scheduled / Inactive
   RuleType? _typeFilter;
   bool _sortAscending = true;
   String _sortBy = 'priority'; // priority | name | type | status
 
-  // FAB anim
+  // FAB animation
   late final AnimationController _fabCtrl;
   late final Animation<double> _fabScale;
 
@@ -124,7 +32,7 @@ class _PriceRulesPageState extends State<PriceRulesPage> with TickerProviderStat
   @override
   void initState() {
     super.initState();
-    _seedData();
+    _loadRules();
     _fabCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     _fabScale = CurvedAnimation(parent: _fabCtrl, curve: Curves.easeOutBack);
     _fabCtrl.forward();
@@ -146,58 +54,22 @@ class _PriceRulesPageState extends State<PriceRulesPage> with TickerProviderStat
     super.dispose();
   }
 
-  void _seedData() {
-    _rules.addAll([
-      PriceRule(
-        id: 'r1',
-        name: 'Happy Hour - Drinks',
-        type: RuleType.percentageDiscount,
-        scopeKind: ScopeKind.category,
-        scopeValue: 'Beverages',
-        value: 20,
-        stackable: false,
-        active: true,
-        priority: 10,
-        startTime: const TimeOfDay(hour: 16, minute: 0),
-        endTime: const TimeOfDay(hour: 18, minute: 0),
-        daysOfWeek: {5, 6, 7}, // Fri-Sun
-      ),
-      PriceRule(
-        id: 'r2',
-        name: 'Clearance - SKU-AX12',
-        type: RuleType.fixedDiscount,
-        scopeKind: ScopeKind.product,
-        scopeValue: 'SKU-AX12',
-        value: 250.0,
-        stackable: true,
-        active: true,
-        priority: 5,
-        startDate: DateTime.now().subtract(const Duration(days: 2)),
-        endDate: DateTime.now().add(const Duration(days: 10)),
-      ),
-      PriceRule(
-        id: 'r3',
-        name: 'VIP Markup Waiver',
-        type: RuleType.markup,
-        scopeKind: ScopeKind.customerGroup,
-        scopeValue: 'VIP',
-        value: -5,
-        stackable: true,
-        active: false,
-        priority: 50,
-      ),
-      PriceRule(
-        id: 'r4',
-        name: 'Buy 1 Get 1 Free - Soap',
-        type: RuleType.bogo,
-        scopeKind: ScopeKind.product,
-        scopeValue: 'SKU-SOAP',
-        value: 0,
-        stackable: false,
-        active: true,
-        priority: 15,
-      ),
-    ]);
+  Future<void> _loadRules() async {
+    try {
+      setState(() => _isLoading = true);
+      final rules = await _repository.getAll();
+      setState(() {
+        _rules = rules;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading rules: $e')),
+        );
+      }
+    }
   }
 
   List<PriceRule> get _filtered {
@@ -249,17 +121,24 @@ class _PriceRulesPageState extends State<PriceRulesPage> with TickerProviderStat
     );
     if (result == null) return;
 
-    setState(() {
+    try {
       if (existing == null) {
-        _rules.add(result);
+        await _repository.create(result);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Rule created successfully')),
+        );
       } else {
-        final i = _rules.indexWhere((r) => r.id == existing.id);
-        if (i != -1) _rules[i] = result;
+        await _repository.update(result);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Rule updated successfully')),
+        );
       }
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(existing == null ? 'Rule created' : 'Rule updated')),
-    );
+      _loadRules(); // Refresh the list
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error saving rule: $e')),
+      );
+    }
   }
 
   void _deleteRule(PriceRule r) async {
@@ -267,7 +146,7 @@ class _PriceRulesPageState extends State<PriceRulesPage> with TickerProviderStat
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Delete rule?'),
-        content: Text('Are you sure you want to delete “${r.name}”?'),
+        content: Text('Are you sure you want to delete "${r.name}"?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           FilledButton.tonalIcon(
@@ -279,8 +158,26 @@ class _PriceRulesPageState extends State<PriceRulesPage> with TickerProviderStat
       ),
     );
     if (ok == true) {
-      setState(() => _rules.removeWhere((e) => e.id == r.id));
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rule deleted')));
+      try {
+        await _repository.delete(r.id);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rule deleted')));
+        _loadRules(); // Refresh the list
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting rule: $e')),
+        );
+      }
+    }
+  }
+
+  void _toggleRuleActive(PriceRule rule) async {
+    try {
+      await _repository.toggleActive(rule.id);
+      _loadRules(); // Refresh the list
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating rule: $e')),
+      );
     }
   }
 
@@ -292,6 +189,11 @@ class _PriceRulesPageState extends State<PriceRulesPage> with TickerProviderStat
       appBar: AppBar(
         title: const Text('Price Rules'),
         actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _loadRules,
+            icon: const Icon(Icons.refresh),
+          ),
           PopupMenuButton<String>(
             tooltip: 'Sort',
             onSelected: (v) => setState(() {
@@ -336,7 +238,11 @@ class _PriceRulesPageState extends State<PriceRulesPage> with TickerProviderStat
               _search.clear();
             }),
           ),
-          Expanded(child: _buildRulesList(context, cs)),
+          Expanded(
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator())
+              : _buildRulesList(context, cs)
+          ),
         ],
       ),
     );
@@ -371,7 +277,7 @@ class _PriceRulesPageState extends State<PriceRulesPage> with TickerProviderStat
         itemCount: list.length,
         itemBuilder: (_, i) => _RuleCard(
           rule: list[i],
-          onToggle: (on) => setState(() => list[i].active = on),
+          onToggle: (on) => _toggleRuleActive(list[i]),
           onEdit: () => _upsertRule(existing: list[i]),
           onDelete: () => _deleteRule(list[i]),
         ),
@@ -396,7 +302,7 @@ class _PriceRulesPageState extends State<PriceRulesPage> with TickerProviderStat
                     constraints: const BoxConstraints(maxWidth: 560),
                     child: _RuleCard(
                       rule: list[i],
-                      onToggle: (on) => setState(() => list[i].active = on),
+                      onToggle: (on) => _toggleRuleActive(list[i]),
                       onEdit: () => _upsertRule(existing: list[i]),
                       onDelete: () => _deleteRule(list[i]),
                     ),
@@ -617,7 +523,7 @@ class _RuleCard extends StatelessWidget {
                 if (rule.type == RuleType.percentageDiscount || rule.type == RuleType.markup)
                   _chip(context, 'Value: ${rule.value.toStringAsFixed(2)}%', icon: Icons.percent),
                 if (rule.type == RuleType.fixedDiscount)
-                  _chip(context, 'Value: ${rule.value.toStringAsFixed(2)}', icon: Icons.attach_money),
+                  _chip(context, 'Value: Rs ${rule.value.toStringAsFixed(2)}', icon: Icons.currency_rupee),
                 _chip(context, 'Priority: ${rule.priority}', icon: Icons.low_priority),
                 _chip(context, rule.stackable ? 'Stackable' : 'Not stackable', icon: Icons.layers),
                 if (rule.perCustomerLimit != null)
@@ -803,7 +709,7 @@ class _RuleEditorSheetState extends State<_RuleEditorSheet> {
     if (!_form.currentState!.validate()) return;
 
     final rule = PriceRule(
-      id: widget.existing?.id ?? 'r${Random().nextInt(999999)}',
+      id: widget.existing?.id ?? '', // Repository will generate ID if empty
       name: _name.text.trim(),
       type: _type,
       scopeKind: _scopeKind,
@@ -922,8 +828,8 @@ class _RuleEditorSheetState extends State<_RuleEditorSheet> {
                       controller: _value,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: InputDecoration(
-                        labelText: _type == RuleType.fixedDiscount ? 'Amount' : 'Value (%)',
-                        prefixIcon: Icon(_type == RuleType.fixedDiscount ? Icons.attach_money : Icons.percent),
+                        labelText: _type == RuleType.fixedDiscount ? 'Amount (Rs)' : 'Value (%)',
+                        prefixIcon: Icon(_type == RuleType.fixedDiscount ? Icons.currency_rupee : Icons.percent),
                       ),
                       validator: (v) {
                         final d = double.tryParse((v ?? '').trim());
