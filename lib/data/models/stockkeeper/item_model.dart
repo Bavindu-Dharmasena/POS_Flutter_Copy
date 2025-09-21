@@ -8,6 +8,7 @@ class ItemModel {
   final String? gradient;
   final String? remark;
   final String colorCode;    // #RRGGBB
+  final int createdBy;       // 👈 NEW
 
   const ItemModel({
     this.id,
@@ -19,9 +20,9 @@ class ItemModel {
     this.gradient,
     this.remark,
     required this.colorCode,
+    required this.createdBy, // 👈 NEW
   });
 
-  // ✅ Needed by your repository (create -> copyWith(id))
   ItemModel copyWith({
     int? id,
     String? name,
@@ -32,6 +33,7 @@ class ItemModel {
     String? gradient,
     String? remark,
     String? colorCode,
+    int? createdBy, // 👈 NEW
   }) {
     return ItemModel(
       id: id ?? this.id,
@@ -43,6 +45,7 @@ class ItemModel {
       gradient: gradient ?? this.gradient,
       remark: remark ?? this.remark,
       colorCode: colorCode ?? this.colorCode,
+      createdBy: createdBy ?? this.createdBy, // 👈
     );
   }
 
@@ -56,6 +59,7 @@ class ItemModel {
         gradient: m['gradient'] as String?,
         remark: m['remark'] as String?,
         colorCode: m['color_code'] as String,
+        createdBy: (m['created_by'] as int?) ?? 1, // 👈 safe fallback if migrating
       );
 
   Map<String, Object?> toMap() => {
@@ -68,5 +72,6 @@ class ItemModel {
         'gradient': gradient,
         'remark': remark,
         'color_code': colorCode,
+        'created_by': createdBy, // 👈 NEW
       };
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../core/services/secure_storage_service.dart';
 
 import '../../common/barcode_scanner_page.dart';
 import '../../data/repositories/stockkeeper/item_repository.dart';
@@ -171,70 +172,73 @@ class _AddItemPageState extends State<AddItemPage> with TickerProviderStateMixin
   }
 
   // ========= SUBMIT (SQLite) =========
-  Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) {
-      _scrollToFirstError();
-      return;
-    }
-    if (_loadingLookups) {
-      _showSnack(icon: Feather.alert_triangle, color: kWarn, text: 'Lookups are still loading…');
-      return;
-    }
-    if (_categories.isEmpty) {
-      _showSnack(icon: Feather.alert_triangle, color: kDanger, text: 'No categories found in DB');
-      return;
-    }
-    if (_selectedCategoryId == null || _selectedSupplierId == null) {
-      _showSnack(icon: Feather.alert_triangle, color: kDanger, text: 'Select category & supplier');
-      return;
-    }
-
-    final repo = ItemRepository.instance;
-
-    // Unique barcode guard
-    final barcode = _barcodeCtrl.text.trim();
-    final exists = await repo.barcodeExists(barcode);
-    if (exists) {
-      _showSnack(
-        icon: Feather.alert_triangle,
-        color: kDanger,
-        text: 'Barcode already exists',
-      );
-      return;
-    }
-
-    final Color fallback = _selectedColor ?? _categoryDefaultColor(_selectedCategoryId) ?? const Color(0xFF000000);
-    final String colorHex = _colorToHex(fallback);
-
-    final item = ItemModel(
-      name: _nameCtrl.text.trim(),
-      barcode: barcode,
-      categoryId: _selectedCategoryId!,
-      supplierId: _selectedSupplierId!,
-      reorderLevel: int.tryParse(_reorderCtrl.text.trim()) ?? 0,
-      gradient: _gradientCtrl.text.trim().isEmpty ? null : _gradientCtrl.text.trim(),
-      remark: _remarkCtrl.text.trim().isEmpty ? null : _remarkCtrl.text.trim(),
-      colorCode: colorHex,
-    );
-
-    try {
-      final id = await repo.insertItem(item);
-      _showSnack(
-        icon: Feather.check_circle,
-        color: kSuccess,
-        text: 'Item saved (ID: $id)',
-      );
-      _resetForm();
-    } on Exception catch (e) {
-      // Handle UNIQUE constraint or FK failures nicely
-      final msg = e.toString().contains('UNIQUE constraint')
-          ? 'Barcode already exists'
-          : e.toString();
-      _showSnack(icon: Feather.alert_triangle, color: kDanger, text: msg);
-    } catch (e) {
-      _showSnack(icon: Feather.alert_triangle, color: kDanger, text: 'Save failed: $e');
-    }
+ Future<void> _submitForm() async {
+  if (!_formKey.currentState!.validate()) {
+    _scrollToFirstError();
+    return;
   }
+
+  // 👇 Ensure we have a logged-in user
+  if (userId == null) {
+    _showSnack(
+      icon: Feather.alert_triangle,
+      color: kDanger,
+      text: 'No user session. Please log in again.',
+    );
+    return;
+  }
+
+  if (_loadingLookups) {
+    _showSnack(icon: Feather.alert_triangle, color: kWarn, text: 'Lookups are still loading…');
+    return;
+  }
+  if (_categories.isEmpty) {
+    _showSnack(icon: Feather.alert_triangle, color: kDanger, text: 'No categories found in DB');
+    return;
+  }
+  if (_selectedCategoryId == null || _selectedSupplierId == null) {
+    _showSnack(icon: Feather.alert_triangle, color: kDanger, text: 'Select category & supplier');
+    return;
+  }
+
+  final repo = ItemRepository.instance;
+
+  // Unique barcode guard
+  final barcode = _barcodeCtrl.text.trim();
+  final exists = await repo.barcodeExists(barcode);
+  if (exists) {
+    _showSnack(icon: Feather.alert_triangle, color: kDanger, text: 'Barcode already exists');
+    return;
+  }
+
+  final Color fallback = _selectedColor ?? _categoryDefaultColor(_selectedCategoryId) ?? const Color(0xFF000000);
+  final String colorHex = _colorToHex(fallback);
+
+  final item = ItemModel(
+    name: _nameCtrl.text.trim(),
+    barcode: barcode,
+    categoryId: _selectedCategoryId!,
+    supplierId: _selectedSupplierId!,
+    reorderLevel: int.tryParse(_reorderCtrl.text.trim()) ?? 0,
+    gradient: _gradientCtrl.text.trim().isEmpty ? null : _gradientCtrl.text.trim(),
+    remark: _remarkCtrl.text.trim().isEmpty ? null : _remarkCtrl.text.trim(),
+    colorCode: colorHex,
+    createdBy: userId!, // 👈 PASS THE LOGGED USER
+  );
+
+  try {
+    final id = await repo.insertItem(item);
+    _showSnack(icon: Feather.check_circle, color: kSuccess, text: 'Item saved (ID: $id)');
+    _resetForm();
+  } on Exception catch (e) {
+    final msg = e.toString().contains('UNIQUE constraint') ? 'Barcode already exists' : e.toString();
+    _showSnack(icon: Feather.alert_triangle, color: kDanger, text: msg);
+  } catch (e) {
+    _showSnack(icon: Feather.alert_triangle, color: kDanger, text: 'Save failed: $e');
+  }
+}
+
+
 
   void _resetForm() {
     _formKey.currentState?.reset();
