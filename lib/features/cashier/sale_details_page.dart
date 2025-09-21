@@ -78,6 +78,10 @@ class _SaleDetailsPageState extends State<SaleDetailsPage> {
                 .toString();
 
             final double subtotal = _sumLineTotals(items);
+            final double discountValue =
+                (header['discount_value'] as num?)?.toDouble() ?? 0.0;
+            final String discountType = (header['discount_type'] ?? 'no')
+                .toString();
 
             return ListView(
               padding: const EdgeInsets.all(16),
@@ -107,6 +111,17 @@ class _SaleDetailsPageState extends State<SaleDetailsPage> {
                         _listTile('Customer', contact.isEmpty ? '-' : contact),
                         _listTile('File', fileName),
                         const Divider(height: 24),
+                        if (discountValue > 0)
+                          if (discountType == 'percentage')
+                            _listTile(
+                              'Overall Discount (%)',
+                              _fmtMoney(discountValue),
+                            )
+                          else
+                            _listTile(
+                              'Overall Discount (Rs)',
+                              _fmtMoney(discountValue),
+                          ),
                         _listTile(
                           'Subtotal (items total)',
                           _fmtMoney(subtotal),
@@ -211,30 +226,30 @@ class _SaleDetailsPageState extends State<SaleDetailsPage> {
                               'Promotion Discount',
                               _fmtMoney(discount),
                             ),
-                            _listTile('Line Total', _fmtMoney(lineTotal)),
+                            _listTile('Line Total', _fmtMoney(saledUnitPrice * qty)),
 
                             // Return Button for each item
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.center,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  // Handle the item return action here
-                                  // For example, you could navigate back or handle item-specific logic
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Item $name returned'),
-                                    ),
-                                  );
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      const Color.fromARGB(255, 237, 23, 16), // Background color
-                                  foregroundColor: Colors.white, // Text color
-                                ),
-                                child: const Text('Return Item'), // Button text
-                              ),
-                            ),
+                            // const SizedBox(height: 8),
+                            // Align(
+                            //   alignment: Alignment.center,
+                            //   child: ElevatedButton(
+                            //     onPressed: () {
+                            //       // Handle the item return action here
+                            //       // For example, you could navigate back or handle item-specific logic
+                            //       ScaffoldMessenger.of(context).showSnackBar(
+                            //         SnackBar(
+                            //           content: Text('Item $name returned'),
+                            //         ),
+                            //       );
+                            //     },
+                            //     style: ElevatedButton.styleFrom(
+                            //       backgroundColor:
+                            //           const Color.fromARGB(255, 237, 23, 16), // Background color
+                            //       foregroundColor: Colors.white, // Text color
+                            //     ),
+                            //     child: const Text('Return Item'), // Button text
+                            //   ),
+                            // ),
                           ],
                         ),
                       ),

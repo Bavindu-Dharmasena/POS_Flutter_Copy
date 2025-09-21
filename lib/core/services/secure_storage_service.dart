@@ -16,6 +16,8 @@ class SecureStorageService {
   static const _kRole = 'auth_role';
   static const _kEmail = 'auth_email';
   static const _kMode  = 'auth_mode'; // 'online' | 'offline'
+  static const _kUserId = 'userId';
+  static const _kName = 'name';
 
   final _secure = const FlutterSecureStorage();
 
@@ -28,20 +30,35 @@ class SecureStorageService {
     required String refreshToken,
     String? role,
     String? email,
+    String? name,
+    String? userId,
   }) async {
     if (_canUseSecure) {
       await _secure.write(key: _kAccess, value: accessToken);
       await _secure.write(key: _kRefresh, value: refreshToken);
       if (role != null)  await _secure.write(key: _kRole, value: role);
       if (email != null) await _secure.write(key: _kEmail, value: email);
+      if (name != null)  await _secure.write(key: _kName, value: name);
+      if (userId != null)    await _secure.write(key: _kUserId, value: userId.toString());
     } else {
       final sp = await SharedPreferences.getInstance();
       await sp.setString(_kAccess, accessToken);
       await sp.setString(_kRefresh, refreshToken);
       if (role != null)  await sp.setString(_kRole, role);
       if (email != null) await sp.setString(_kEmail, email);
+      if (name != null)  await sp.setString(_kName, name);
+      if (userId != null)    await sp.setString(_kUserId, userId.toString());
     }
   }
+  Future<String?> getName() async =>
+      _canUseSecure
+          ? _secure.read(key: _kName)
+          : (await SharedPreferences.getInstance()).getString(_kName);
+
+  Future<String?> getUserId() async =>
+      _canUseSecure
+          ? _secure.read(key: _kUserId)
+          : (await SharedPreferences.getInstance()).getString(_kUserId);
 
   Future<String?> getAccessToken() async =>
       _canUseSecure
@@ -73,6 +90,8 @@ class SecureStorageService {
       await sp.remove(_kRole);
       await sp.remove(_kEmail);
       await sp.remove(_kMode);
+      await sp.remove(_kName);
+      await sp.remove(_kUserId);
     }
   }
 

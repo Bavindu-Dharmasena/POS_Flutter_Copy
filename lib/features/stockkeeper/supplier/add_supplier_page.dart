@@ -6,7 +6,6 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:pos_system/data/models/stockkeeper/supplier_model.dart';
 import 'package:pos_system/data/repositories/stockkeeper/supplier_repository.dart';
 
-
 class AddSupplierPage extends StatefulWidget {
   const AddSupplierPage({super.key, required this.supplierData});
   /// Pass {} for add, or a filled map for edit
@@ -43,9 +42,18 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
 
   bool _active = true;
   List<String> _locations = [];
+
+  /// UI value shown in the dropdown (e.g., "Credit 30 Days")
   String? _paymentTerms;
 
-  final _paymentOptions = const ['Cash', 'Credit 7 Days', 'Credit 15 Days', 'Credit 30 Days', 'Credit 60 Days'];
+  /// Labels shown in the dropdown
+  final _paymentOptions = const [
+    'Cash',
+    'Credit 7 Days',
+    'Credit 15 Days',
+    'Credit 30 Days',
+    'Credit 60 Days',
+  ];
 
   // Accent gradients
   static const _gradBluePurple = LinearGradient(colors: [Color(0xFF60A5FA), Color(0xFFA855F7)], begin: Alignment.topLeft, end: Alignment.bottomRight);
@@ -72,7 +80,14 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
           : (d['location'] != null ? <String>[d['location'].toString()] : <String>[]);
       _locations = locs;
 
-      _paymentTerms = d['paymentTerms']?.toString();
+      // FIX: Convert DB code to UI label for the dropdown (e.g., "NET 30" -> "Credit 30 Days")
+      _paymentTerms = _mapPaymentTermsForUi(d['paymentTerms']?.toString());
+
+      // If value still not recognized, keep it null to avoid the assertion
+      if (_paymentTerms != null && !_paymentOptions.contains(_paymentTerms)) {
+        _paymentTerms = null;
+      }
+
       _active = d['active'] is bool ? d['active'] as bool : (d['status']?.toString().toUpperCase() == 'ACTIVE');
     }
   }
@@ -95,6 +110,7 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
     return '#${c.value.toRadixString(16).padLeft(8, '0').substring(2)}'.toUpperCase();
   }
 
+  /// UI -> DB
   String _mapPaymentTermsForDb(String? ui) {
     switch ((ui ?? '').toLowerCase()) {
       case 'cash': return 'CASH';
@@ -103,6 +119,21 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
       case 'credit 30 days': return 'NET 30';
       case 'credit 60 days': return 'NET 60';
       default: return 'CASH';
+    }
+  }
+
+  /// FIX: DB -> UI
+  String? _mapPaymentTermsForUi(String? db) {
+    if (db == null) return null;
+    // normalize (strip dots etc.)
+    final s = db.trim().toUpperCase().replaceAll('.', '');
+    switch (s) {
+      case 'CASH': return 'Cash';
+      case 'NET 7': return 'Credit 7 Days';
+      case 'NET 15': return 'Credit 15 Days';
+      case 'NET 30': return 'Credit 30 Days';
+      case 'NET 60': return 'Credit 60 Days';
+      default: return null;
     }
   }
 
@@ -139,6 +170,7 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
       location: _locations.isNotEmpty ? _locations.first : 'N/A',
       status: _active ? 'ACTIVE' : 'INACTIVE',
       preferred: false,
+      // FIX: write DB code
       paymentTerms: _mapPaymentTermsForDb(_paymentTerms),
       notes: _remarkCtrl.text.trim().isEmpty ? null : _remarkCtrl.text.trim(),
       createdAt: isEdit ? (widget.supplierData['created_at'] as int? ?? now) : now,
@@ -186,8 +218,6 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
 
       if (mounted) Navigator.pop(context, saved);
     } catch (e) {
-      // log if needed
-      // debugPrint('Save supplier failed: $e\n$st');
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
     }
   }
@@ -466,10 +496,27 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
     );
   }
 
-  Widget _dropdown<T>({required String label, required T? value, required List<T> items, required void Function(T?) onChanged, String? Function(T?)? validator}) {
+  // FIX: safe dropdown—uses null if the current value isn’t in items
+  Widget _dropdown<T>({
+    required String label,
+    required T? value,
+    required List<T> items,
+    required void Function(T?) onChanged,
+    String? Function(T?)? validator,
+  }) {
+    final T? safeValue = items.contains(value) ? value : null;
     return DropdownButtonFormField<T>(
-      value: value,
-      items: items.map((e) => DropdownMenuItem<T>(value: e, child: Text(e.toString(), style: const TextStyle(color: kText), overflow: TextOverflow.ellipsis))).toList(),
+      value: safeValue,
+      items: items
+          .map((e) => DropdownMenuItem<T>(
+                value: e,
+                child: Text(
+                  e.toString(),
+                  style: const TextStyle(color: kText),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ))
+          .toList(),
       onChanged: onChanged,
       validator: validator,
       dropdownColor: kSurface,

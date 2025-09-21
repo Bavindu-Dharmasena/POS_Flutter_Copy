@@ -13,6 +13,7 @@ dependencies:
   sqflite_common_ffi_web: ^1.0.1+1   # <-- not 0.4.x
   path: ^1.9.0
   crypto: ^3.0.3
+  file_picker: ^8.0.0
 
 
 
@@ -35,6 +36,10 @@ dependencies:
   dio: ^5.7.0
   drift: ^2.20.0
   flutter_secure_storage: ^9.2.2
+  file_saver: ^0.2.11 
+  pdf: ^3.11.0
+  printing: ^5.13.0 
+  open_filex: ^4.5.0 
 
   # url_launcher: ^6.3.2
 
@@ -56,7 +61,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
-    - assets/item/
+    # - assets/item/      <-- remove this if you don't have this folder
     - assets/cat/
     - assets/cat/beverages.png
     - assets/cat/snacks.png
@@ -65,6 +70,7 @@ flutter:
     - assets/cat/household.png
     - assets/cat/dairy.png
     - assets/cat/bakery.png
+
 
 
 flutter_launcher_icons:

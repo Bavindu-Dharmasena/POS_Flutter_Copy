@@ -5,7 +5,7 @@ import 'dart:async';
 
 // import 'package:pos_system/features/stockkeeper/stockkeeper_home.dart';
 // import './home/pos_home.dart';
-// import './auth//login_page.dart';
+ import './auth/login_page.dart';
 // import './cashier/billingview.dart';
 
 
@@ -25,7 +25,7 @@ class _SplashScreenState extends State<SplashScreen> {
     // Delay for 3 seconds before navigating to POSHomePage
     Timer(const Duration(seconds: 1), () {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const ManagerHomePage()),
+        MaterialPageRoute(builder: (context) => const LoginPage()),
       );
     });
   }
