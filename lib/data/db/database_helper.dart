@@ -12,7 +12,7 @@ class DatabaseHelper {
   static const _dbName = 'pos.db';
 
   /// Bump this when schema changes (triggers onUpgrade).
-  static const _dbVersion = 2; // 👈 bumped to 2
+  static const _dbVersion = 3; // 👈 bumped to 3
 
   Database? _db;
   Future<Database> get database async => _db ??= await _initDB();
@@ -71,23 +71,26 @@ class DatabaseHelper {
 
     // 3) supplier
     await db.execute('''
-      CREATE TABLE supplier (
-        id             INTEGER PRIMARY KEY AUTOINCREMENT,
-        name           TEXT    NOT NULL,
-        contact        TEXT    NOT NULL,
-        email          TEXT,
-        address        TEXT,
-        brand          TEXT    NOT NULL,
-        color_code     TEXT    NOT NULL DEFAULT '#000000',
-        location       TEXT    NOT NULL,
-        status         TEXT    CHECK (status IN ('ACTIVE','INACTIVE','PENDING')) DEFAULT 'ACTIVE',
-        preferred      INTEGER NOT NULL DEFAULT 0,
-        payment_terms  TEXT,
-        notes          TEXT,
-        created_at     INTEGER NOT NULL,
-        updated_at     INTEGER NOT NULL
-      );
-    ''');
+  CREATE TABLE supplier (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    name           TEXT    NOT NULL,
+    contact        TEXT    NOT NULL,
+    email          TEXT,
+    address        TEXT,
+    brand          TEXT    NOT NULL,
+    color_code     TEXT    NOT NULL DEFAULT '#000000',
+    location       TEXT    NOT NULL,
+    status         TEXT    CHECK (status IN ('ACTIVE','INACTIVE','PENDING')) DEFAULT 'ACTIVE',
+    preferred      INTEGER NOT NULL DEFAULT 0,
+    payment_terms  TEXT,
+    notes          TEXT,
+    created_at     INTEGER NOT NULL,
+    updated_at     INTEGER NOT NULL,
+    created_by     INTEGER,                               -- 👈 NEW
+    FOREIGN KEY (created_by) REFERENCES user(id)
+      ON DELETE SET NULL ON UPDATE CASCADE
+  );
+''');
 
     // 4) category
     await db.execute('''
@@ -213,7 +216,7 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_req_supplier            ON supplier_request(supplier_id);');
     await db.execute('CREATE INDEX idx_ri_request              ON supplier_request_item(request_id);');
     await db.execute('CREATE INDEX idx_ri_item                 ON supplier_request_item(item_id);');
-
+    await db.execute('CREATE INDEX idx_supplier_created_by ON supplier(created_by);'); // 👈 NEW
     // Seed data
     await db.transaction((txn) async {
       final now = DateTime.now().millisecondsSinceEpoch;
@@ -266,22 +269,22 @@ class DatabaseHelper {
       }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
       await txn.insert('supplier', {
-        'id': 1,
-        'name': 'Default Supplier',
-        'contact': '+94 77 000 0000',
-        'email': 'supplier@demo.lk',
-        'address': 'Colombo',
-        'brand': 'Generic',
-        'color_code': '#000000',
-        'location': 'LK',
-        'status': 'ACTIVE',
-        'preferred': 1,
-        'payment_terms': 'NET 30',
-        'notes': 'Seed supplier',
-        'created_at': now,
-        'updated_at': now,
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
+  'id': 1,
+  'name': 'Default Supplier',
+  'contact': '+94 77 000 0000',
+  'email': 'supplier@demo.lk',
+  'address': 'Colombo',
+  'brand': 'Generic',
+  'color_code': '#000000',
+  'location': 'LK',
+  'status': 'ACTIVE',
+  'preferred': 1,
+  'payment_terms': 'NET 30',
+  'notes': 'Seed supplier',
+  'created_at': now,
+  'updated_at': now,
+  'created_by': 3, // 👈 StockKeeper
+}, conflictAlgorithm: ConflictAlgorithm.ignore);
       // Categories (same as before)
       await txn.insert('category', {
         'id': 1,
@@ -700,18 +703,16 @@ class DatabaseHelper {
   @override
   FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     // v1 -> v2: add created_by to item and index it
-    if (oldVersion < 2) {
-      await db.execute('ALTER TABLE item ADD COLUMN created_by INTEGER;');
-      // Backfill existing rows to a sensible default (Stockkeeper = 3 if exists, else 1)
-      final countStockkeeper = Sqflite.firstIntValue(
-            await db.rawQuery("SELECT COUNT(*) FROM user WHERE id = 3"),
-          ) ??
-          0;
-      final defaultCreator = (countStockkeeper ?? 0) > 0 ? 3 : 1;
-      await db.rawUpdate('UPDATE item SET created_by = ? WHERE created_by IS NULL;', [defaultCreator]);
-
-      await db.execute('CREATE INDEX IF NOT EXISTS idx_item_created_by ON item(created_by);');
-    }
+    if (oldVersion < 3) {
+  await db.execute('ALTER TABLE supplier ADD COLUMN created_by INTEGER;');
+  // backfill to sensible default (prefer StockKeeper=3 if exists, else 1)
+  final countStockkeeper = Sqflite.firstIntValue(
+        await db.rawQuery("SELECT COUNT(*) FROM user WHERE id = 3"),
+      ) ?? 0;
+  final defaultCreator = countStockkeeper > 0 ? 3 : 1;
+  await db.rawUpdate('UPDATE supplier SET created_by = ? WHERE created_by IS NULL;', [defaultCreator]);
+  await db.execute('CREATE INDEX IF NOT EXISTS idx_supplier_created_by ON supplier(created_by);');
+}
   }
 
   Future<void> clearDatabase() async {

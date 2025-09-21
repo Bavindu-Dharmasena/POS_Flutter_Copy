@@ -16,6 +16,7 @@ class Supplier {
   final String? notes;
   final int createdAt;
   final int updatedAt;
+  final int createdBy;        // 👈 NEW
 
   const Supplier({
     this.id,
@@ -32,6 +33,7 @@ class Supplier {
     this.notes,
     required this.createdAt,
     required this.updatedAt,
+    required this.createdBy, // 👈 NEW
   });
 
   Supplier copyWith({
@@ -49,6 +51,7 @@ class Supplier {
     String? notes,
     int? createdAt,
     int? updatedAt,
+    int? createdBy, // 👈 NEW
   }) {
     return Supplier(
       id: id ?? this.id,
@@ -65,6 +68,7 @@ class Supplier {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      createdBy: createdBy ?? this.createdBy, // 👈
     );
   }
 
@@ -83,11 +87,12 @@ class Supplier {
         notes: row['notes'] as String?,
         createdAt: (row['created_at'] ?? 0) as int,
         updatedAt: (row['updated_at'] ?? 0) as int,
+        createdBy: (row['created_by'] as int?) ?? 1, // 👈 fallback if migrating
       );
 
   get phone => null;
 
-  /// Map for INSERT. Includes both created_at & updated_at.
+  /// Map for INSERT. Includes created_by.
   Map<String, Object?> toInsertMap() => {
         'name': name,
         'contact': contact,
@@ -102,9 +107,10 @@ class Supplier {
         'notes': notes,
         'created_at': createdAt,
         'updated_at': updatedAt,
+        'created_by': createdBy, // 👈 NEW
       };
 
-  /// Map for UPDATE. Does **not** touch created_at.
+  /// Map for UPDATE. Does **not** touch created_at / created_by.
   Map<String, Object?> toUpdateMap() => {
         'name': name,
         'contact': contact,
