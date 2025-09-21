@@ -94,7 +94,6 @@ class AuthService with ChangeNotifier {
   Future<void> login(String email, String password) async {
     // --- Force OFFLINE path in dev if desired ---
     if (kPreferOfflineDev) {
-      debugPrint('[AuthService] Using OFFLINE login (dev flag).');
       final resp = await _local.login(email, password);
       await _save(resp, preferred: 'offline');
       return;

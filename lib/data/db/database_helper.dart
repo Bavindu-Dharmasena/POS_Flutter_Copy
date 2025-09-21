@@ -4,6 +4,9 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class DatabaseHelper {
   DatabaseHelper._internal();
@@ -206,7 +209,7 @@ class DatabaseHelper {
       );
     ''');
 
-     // 11) price_rule (NEW TABLE)
+    // 11) price_rule (NEW TABLE)
     await db.execute('''
       CREATE TABLE price_rule (
         id                  TEXT    PRIMARY KEY,
@@ -265,7 +268,7 @@ class DatabaseHelper {
       'CREATE INDEX idx_ri_item                   ON supplier_request_item(item_id);',
     );
 
-     await db.execute(
+    await db.execute(
       'CREATE INDEX idx_price_rule_active         ON price_rule(active);',
     );
     await db.execute(
@@ -779,10 +782,6 @@ class DatabaseHelper {
         'created_at': now,
         'updated_at': now,
       });
-
-      
-
-     
       await txn.insert('price_rule', {
         'id': 'rule_004',
         'name': 'VIP Customer Markup Waiver',
@@ -803,9 +802,6 @@ class DatabaseHelper {
         'updated_at': now,
       });
     });
-    
-
-    
   }
 
   @override
@@ -831,5 +827,58 @@ class DatabaseHelper {
   ) async {
     final db = await database;
     return db.transaction<T>(action);
+  }
+
+  Future<void> exportDatabase() async {
+    // 1. Find the actual DB file inside app's database folder
+    String databasesPath = await getDatabasesPath();
+    String sourcePath = p.join(databasesPath, _dbName);
+    File sourceFile = File(sourcePath);
+
+    if (!await sourceFile.exists()) {
+      throw Exception("Database file not found at $sourcePath");
+    }
+
+    // 2. Destination: Downloads folder
+    String targetPath = "/storage/emulated/0/Download/pos.db";
+
+    // 3. Copy
+    await sourceFile.copy(targetPath);
+
+  }
+
+  Future<void> importDatabase() async {
+    // Let user pick a .db file
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.any, // ✅ no extension filter
+    );
+
+    if (result == null || result.files.isEmpty) {
+      // user cancelled
+      return;
+    }
+
+    final String? pickedPath = result.files.single.path;
+    if (pickedPath == null) return;
+
+    // Close current DB to release file lock
+    if (_db != null) {
+      await _db!.close();
+      _db = null;
+    }
+
+    final Directory docsDir = await getApplicationDocumentsDirectory();
+    final String dstPath = p.join(docsDir.path, _dbName);
+
+    final File src = File(pickedPath);
+    final File dst = File(dstPath);
+
+    if (await dst.exists()) {
+      await dst.delete();
+    }
+    await src.copy(dstPath);
+
+    // Re-open the DB
+    await database;
   }
 }
