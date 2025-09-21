@@ -49,14 +49,15 @@ class ItemRepository {
   }
 
   /// Inserts an item and returns the new row id.
-  Future<int> insertItem(ItemModel item) async {
-    final db = await _db;
-    return db.insert(
-      'item',
-      item.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.abort, // barcode is UNIQUE
-    );
-  }
+Future<int> insertItem(ItemModel item) async {
+  final db = await _db;
+  return db.insert(
+    'item',
+    item.toMap(),                     // now includes created_by
+    conflictAlgorithm: ConflictAlgorithm.abort,
+  );
+}
+
 
   /// Convenience: insert and return the full model with id set.
   Future<ItemModel> createItem(ItemModel item) async {

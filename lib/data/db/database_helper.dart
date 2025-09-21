@@ -11,22 +11,19 @@ class DatabaseHelper {
 
   static const _dbName = 'pos.db';
 
-  /// Bump this number when schema changes (forces onCreate/onUpgrade).
-  static const _dbVersion = 1;
+  /// Bump this when schema changes (triggers onUpgrade).
+  static const _dbVersion = 2; // 👈 bumped to 2
 
   Database? _db;
   Future<Database> get database async => _db ??= await _initDB();
 
   Future<Database> _initDB() async {
-    final String dbPath = kIsWeb
-        ? _dbName
-        : p.join(await getDatabasesPath(), _dbName);
+    final String dbPath = kIsWeb ? _dbName : p.join(await getDatabasesPath(), _dbName);
 
     return openDatabase(
       dbPath,
       version: _dbVersion,
       onConfigure: (db) async {
-        // Enforce foreign keys
         await db.execute('PRAGMA foreign_keys = ON;');
       },
       onCreate: _onCreate,
@@ -46,10 +43,6 @@ class DatabaseHelper {
   // ---------------------------------------------------------------------------
 
   FutureOr<void> _onCreate(Database db, int version) async {
-    // -------------------------------------------------------------------------
-    // Tables
-    // -------------------------------------------------------------------------
-
     // 1) user
     await db.execute('''
       CREATE TABLE user (
@@ -118,8 +111,10 @@ class DatabaseHelper {
         gradient      TEXT,
         remark        TEXT,
         color_code    TEXT    NOT NULL DEFAULT '#000000',
+        created_by    INTEGER,                          -- 👈 NEW (nullable in SQLite to allow simple migration)
         FOREIGN KEY (category_id) REFERENCES category(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-        FOREIGN KEY (supplier_id) REFERENCES supplier(id) ON DELETE RESTRICT ON UPDATE CASCADE
+        FOREIGN KEY (supplier_id) REFERENCES supplier(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+        FOREIGN KEY (created_by)  REFERENCES user(id)     ON DELETE SET NULL  ON UPDATE CASCADE
       );
     ''');
 
@@ -140,16 +135,16 @@ class DatabaseHelper {
       );
     ''');
 
-    // 7) payment (before invoice)
+    // 7) payment
     await db.execute('''
       CREATE TABLE payment (
         id               INTEGER PRIMARY KEY AUTOINCREMENT,
         amount           REAL    NOT NULL,
         remain_amount    REAL    NOT NULL,
-        date             INTEGER NOT NULL,           -- epoch millis
+        date             INTEGER NOT NULL,
         file_name        TEXT    NOT NULL,
         type             TEXT    NOT NULL,
-        sale_invoice_id  TEXT    NOT NULL,           -- unique bill id
+        sale_invoice_id  TEXT    NOT NULL,
         user_id          INTEGER NOT NULL,
         customer_contact TEXT,
         discount_type    TEXT    NOT NULL DEFAULT 'no'
@@ -175,7 +170,7 @@ class DatabaseHelper {
       );
     ''');
 
-    // 9) supplier_request (master)
+    // 9) supplier_request
     await db.execute('''
       CREATE TABLE supplier_request (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -189,7 +184,7 @@ class DatabaseHelper {
       );
     ''');
 
-    // 10) supplier_request_item (lines)
+    // 10) supplier_request_item
     await db.execute('''
       CREATE TABLE supplier_request_item (
         id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -206,47 +201,23 @@ class DatabaseHelper {
       );
     ''');
 
-    // -------------------------------------------------------------------------
     // Indexes
-    // -------------------------------------------------------------------------
-    await db.execute(
-      'CREATE INDEX idx_item_category             ON item(category_id);',
-    );
-    await db.execute(
-      'CREATE INDEX idx_item_supplier             ON item(supplier_id);',
-    );
-    await db.execute(
-      'CREATE INDEX idx_stock_item                ON stock(item_id);',
-    );
-    await db.execute(
-      'CREATE INDEX idx_stock_supplier            ON stock(supplier_id);',
-    );
-    await db.execute(
-      'CREATE INDEX idx_payment_user              ON payment(user_id);',
-    );
-    await db.execute(
-      'CREATE INDEX idx_payment_sale_invoice_id   ON payment(sale_invoice_id);',
-    );
-    await db.execute(
-      'CREATE INDEX idx_invoice_sale_invoice_id   ON invoice(sale_invoice_id);',
-    );
-    await db.execute(
-      'CREATE INDEX idx_req_supplier              ON supplier_request(supplier_id);',
-    );
-    await db.execute(
-      'CREATE INDEX idx_ri_request                ON supplier_request_item(request_id);',
-    );
-    await db.execute(
-      'CREATE INDEX idx_ri_item                   ON supplier_request_item(item_id);',
-    );
+    await db.execute('CREATE INDEX idx_item_category           ON item(category_id);');
+    await db.execute('CREATE INDEX idx_item_supplier           ON item(supplier_id);');
+    await db.execute('CREATE INDEX idx_item_created_by         ON item(created_by);'); // 👈 NEW
+    await db.execute('CREATE INDEX idx_stock_item              ON stock(item_id);');
+    await db.execute('CREATE INDEX idx_stock_supplier          ON stock(supplier_id);');
+    await db.execute('CREATE INDEX idx_payment_user            ON payment(user_id);');
+    await db.execute('CREATE INDEX idx_payment_sale_invoice_id ON payment(sale_invoice_id);');
+    await db.execute('CREATE INDEX idx_invoice_sale_invoice_id ON invoice(sale_invoice_id);');
+    await db.execute('CREATE INDEX idx_req_supplier            ON supplier_request(supplier_id);');
+    await db.execute('CREATE INDEX idx_ri_request              ON supplier_request_item(request_id);');
+    await db.execute('CREATE INDEX idx_ri_item                 ON supplier_request_item(item_id);');
 
-    // -------------------------------------------------------------------------
     // Seed data
-    // -------------------------------------------------------------------------
     await db.transaction((txn) async {
       final now = DateTime.now().millisecondsSinceEpoch;
 
-      // Users
       await txn.insert('user', {
         'id': 1,
         'name': 'Cashier 1',
@@ -283,7 +254,6 @@ class DatabaseHelper {
         'updated_at': now,
       }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
-      // Customers
       await txn.insert('customer', {
         'id': 1,
         'name': 'John Doe',
@@ -295,7 +265,6 @@ class DatabaseHelper {
         'contact': '0779876543',
       }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
-      // Supplier
       await txn.insert('supplier', {
         'id': 1,
         'name': 'Default Supplier',
@@ -313,7 +282,7 @@ class DatabaseHelper {
         'updated_at': now,
       }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
-      // Categories
+      // Categories (same as before)
       await txn.insert('category', {
         'id': 1,
         'category': 'Beverages',
@@ -375,129 +344,148 @@ class DatabaseHelper {
         'category_image': 'baby.png',
       });
 
-      // Items
-      await txn.insert('item', {
+      // Items (seed) — with created_by = 3 (Stockkeeper)
+      Future<void> seedItem(Map<String, Object?> row) async {
+        await txn.insert('item', row, conflictAlgorithm: ConflictAlgorithm.ignore);
+      }
+
+      await seedItem({
         'id': 1,
         'name': 'Coca Cola 500ml',
         'barcode': 'BARC0001',
         'category_id': 1,
         'supplier_id': 1,
         'color_code': '#FF0000',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 2,
         'name': 'Potato Chips 100g',
         'barcode': 'BARC0002',
         'category_id': 2,
         'supplier_id': 1,
         'color_code': '#FFD700',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 3,
         'name': 'A4 Paper Ream',
         'barcode': 'BARC0003',
         'category_id': 3,
         'supplier_id': 1,
         'color_code': '#FFFFFF',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 4,
         'name': 'Fresh Milk 1L',
         'barcode': 'BARC0004',
         'category_id': 4,
         'supplier_id': 1,
         'color_code': '#FFF9C4',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 5,
         'name': 'Cheddar Cheese 200g',
         'barcode': 'BARC0005',
         'category_id': 4,
         'supplier_id': 1,
         'color_code': '#FFECB3',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 6,
         'name': 'White Bread Loaf',
         'barcode': 'BARC0006',
         'category_id': 5,
         'supplier_id': 1,
         'color_code': '#FFE0B2',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 7,
         'name': 'Chocolate Donut',
         'barcode': 'BARC0007',
         'category_id': 5,
         'supplier_id': 1,
         'color_code': '#D7CCC8',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 8,
         'name': 'Frozen Peas 500g',
         'barcode': 'BARC0008',
         'category_id': 6,
         'supplier_id': 1,
         'color_code': '#A5D6A7',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 9,
         'name': 'Vanilla Ice Cream 1L',
         'barcode': 'BARC0009',
         'category_id': 6,
         'supplier_id': 1,
         'color_code': '#FFFDE7',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 10,
         'name': 'Bananas 1kg',
         'barcode': 'BARC0010',
         'category_id': 7,
         'supplier_id': 1,
         'color_code': '#FFF59D',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 11,
         'name': 'Tomatoes 500g',
         'barcode': 'BARC0011',
         'category_id': 7,
         'supplier_id': 1,
         'color_code': '#FF8A80',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 12,
         'name': 'Laundry Detergent 1kg',
         'barcode': 'BARC0012',
         'category_id': 8,
         'supplier_id': 1,
         'color_code': '#B0BEC5',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 13,
         'name': 'Dishwashing Liquid 500ml',
         'barcode': 'BARC0013',
         'category_id': 8,
         'supplier_id': 1,
         'color_code': '#B2EBF2',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 14,
         'name': 'Shampoo 400ml',
         'barcode': 'BARC0014',
         'category_id': 9,
         'supplier_id': 1,
         'color_code': '#CE93D8',
+        'created_by': 3,
       });
-      await txn.insert('item', {
+      await seedItem({
         'id': 15,
         'name': 'Baby Diapers M (20 pcs)',
         'barcode': 'BARC0015',
         'category_id': 10,
         'supplier_id': 1,
         'color_code': '#F8BBD0',
+        'created_by': 3,
       });
 
-      // Payments
+      // Payments (unchanged)
       await txn.insert('payment', {
         'id': 1,
         'amount': 1500.00,
@@ -538,7 +526,7 @@ class DatabaseHelper {
         'discount_value': 0.0,
       });
 
-      // Invoices
+      // Invoices (unchanged)
       await txn.insert('invoice', {
         'batch_id': 'BATCH-COCA-002',
         'item_id': 1,
@@ -561,10 +549,10 @@ class DatabaseHelper {
         'sale_invoice_id': 'INV-002',
       });
 
-      // Stock
+      // Stock (unchanged)
       await txn.insert('stock', {
         'batch_id': 'BATCH001',
-        'item_id': 1, // Coca Cola 500ml
+        'item_id': 1,
         'quantity': 50,
         'unit_price': 80.00,
         'sell_price': 120.00,
@@ -573,147 +561,133 @@ class DatabaseHelper {
       });
       await txn.insert('stock', {
         'batch_id': 'BATCH002',
-        'item_id': 1, // Coca Cola 500ml
+        'item_id': 1,
         'quantity': 50,
         'unit_price': 80.00,
         'sell_price': 120.00,
         'discount_amount': 10.00,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH002',
-        'item_id': 2, // Potato Chips 100g
+        'item_id': 2,
         'quantity': 40,
         'unit_price': 60.00,
         'sell_price': 100.00,
         'discount_amount': 0,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH003',
-        'item_id': 3, // A4 Paper Ream
+        'item_id': 3,
         'quantity': 30,
         'unit_price': 450.00,
         'sell_price': 600.00,
         'discount_amount': 50.00,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH004',
-        'item_id': 4, // Fresh Milk 1L
+        'item_id': 4,
         'quantity': 100,
         'unit_price': 180.00,
         'sell_price': 250.00,
         'discount_amount': 0,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH005',
-        'item_id': 5, // Cheddar Cheese 200g
+        'item_id': 5,
         'quantity': 20,
         'unit_price': 400.00,
         'sell_price': 550.00,
         'discount_amount': 20.00,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH006',
-        'item_id': 6, // White Bread Loaf
+        'item_id': 6,
         'quantity': 70,
         'unit_price': 100.00,
         'sell_price': 160.00,
         'discount_amount': 0,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH007',
-        'item_id': 7, // Chocolate Donut
+        'item_id': 7,
         'quantity': 50,
         'unit_price': 80.00,
         'sell_price': 120.00,
         'discount_amount': 10.00,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH008',
-        'item_id': 8, // Frozen Peas 500g
+        'item_id': 8,
         'quantity': 60,
         'unit_price': 200.00,
         'sell_price': 300.00,
         'discount_amount': 0,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH009',
-        'item_id': 9, // Vanilla Ice Cream 1L
+        'item_id': 9,
         'quantity': 25,
         'unit_price': 450.00,
         'sell_price': 600.00,
         'discount_amount': 50.00,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH010',
-        'item_id': 10, // Bananas 1kg
+        'item_id': 10,
         'quantity': 80,
         'unit_price': 120.00,
         'sell_price': 180.00,
         'discount_amount': 0,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH011',
-        'item_id': 11, // Tomatoes 500g
+        'item_id': 11,
         'quantity': 90,
         'unit_price': 80.00,
         'sell_price': 130.00,
         'discount_amount': 0,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH012',
-        'item_id': 12, // Laundry Detergent 1kg
+        'item_id': 12,
         'quantity': 35,
         'unit_price': 600.00,
         'sell_price': 800.00,
         'discount_amount': 0,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH013',
-        'item_id': 13, // Dishwashing Liquid 500ml
+        'item_id': 13,
         'quantity': 45,
         'unit_price': 150.00,
         'sell_price': 250.00,
         'discount_amount': 20.00,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH014',
-        'item_id': 14, // Shampoo 400ml
+        'item_id': 14,
         'quantity': 50,
         'unit_price': 300.00,
         'sell_price': 450.00,
         'discount_amount': 30.00,
         'supplier_id': 1,
       });
-
       await txn.insert('stock', {
         'batch_id': 'BATCH015',
-        'item_id': 15, // Baby Diapers M (20 pcs)
+        'item_id': 15,
         'quantity': 20,
         'unit_price': 700.00,
         'sell_price': 950.00,
@@ -725,13 +699,25 @@ class DatabaseHelper {
 
   @override
   FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Empty for now; add migrations and bump _dbVersion when needed.
+    // v1 -> v2: add created_by to item and index it
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE item ADD COLUMN created_by INTEGER;');
+      // Backfill existing rows to a sensible default (Stockkeeper = 3 if exists, else 1)
+      final countStockkeeper = Sqflite.firstIntValue(
+            await db.rawQuery("SELECT COUNT(*) FROM user WHERE id = 3"),
+          ) ??
+          0;
+      final defaultCreator = (countStockkeeper ?? 0) > 0 ? 3 : 1;
+      await db.rawUpdate('UPDATE item SET created_by = ? WHERE created_by IS NULL;', [defaultCreator]);
+
+      await db.execute('CREATE INDEX IF NOT EXISTS idx_item_created_by ON item(created_by);');
+    }
   }
 
   Future<void> clearDatabase() async {
     final dbPath = p.join(await getDatabasesPath(), _dbName);
-    await deleteDatabase(dbPath); // deletes the file
-    _db = null; // reset the instance
+    await deleteDatabase(dbPath);
+    _db = null;
   }
 
   Future<void> resetDatabase() async {
@@ -740,10 +726,7 @@ class DatabaseHelper {
     _db = null;
   }
 
-  // Utility: wrap an action in a transaction
-  Future<T> runInTransaction<T>(
-    Future<T> Function(Transaction tx) action,
-  ) async {
+  Future<T> runInTransaction<T>(Future<T> Function(Transaction tx) action) async {
     final db = await database;
     return db.transaction<T>(action);
   }
