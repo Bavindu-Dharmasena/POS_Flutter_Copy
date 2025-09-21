@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pos_system/features/auth/logout_service.dart';
 import '../../core/services/api_client.dart';
+import 'package:pos_system/core/services/secure_storage_service.dart';
 
 class ManagerHomePage extends StatefulWidget {
   const ManagerHomePage({super.key});
@@ -11,104 +12,148 @@ class ManagerHomePage extends StatefulWidget {
 }
 
 class _ManagerHomePageState extends State<ManagerHomePage> {
+  // Controllers / Focus
   final TextEditingController _search = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+
+  // State
   int _focusedIndex = 0;
   int _cols = 2; // updated in LayoutBuilder
   bool _compact = false;
+
+  // Optional (currently unused)
   LogoutService? _logoutService; // Made nullable to avoid initialization issues
   bool _isLoggingOut = false;
+
+  // You used userId without declaring it before
+  int? userId;
 
   @override
   void initState() {
     super.initState();
-    // LogoutService will be initialized lazily in _handleLogout method
+    _loadUserId(); // Load the userId when the page is initialized
   }
 
   @override
   void dispose() {
     _search.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogout() async {
-    if (_isLoggingOut) return;
+  // Function to load the userId from secure storage
+  Future<void> _loadUserId() async {
+    final storedUserId = await SecureStorageService.instance.getUserId();
+    setState(() {
+      userId = storedUserId != null ? int.tryParse(storedUserId) : null;
+      print("user: $userId");
+    });
+  }
 
-    // Initialize logout service lazily to handle nullable ApiClient
-    if (ApiClient.instance == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to logout: API client not available'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    
-    _logoutService ??= LogoutService(ApiClient.instance!);
-
-    // Show confirmation dialog
-    final shouldLogout = await showDialog<bool>(
+  void _logout(BuildContext context) {
+    showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldLogout == true) {
-      setState(() => _isLoggingOut = true);
-
-      try {
-        await _logoutService!.signOut();
-        
-        // Navigate to login screen - adjust route name as needed
-        if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            '/login', // Adjust this route name based on your app
-            (route) => false,
-          );
-        }
-      } catch (e) {
-        // Handle logout error
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Logout failed: ${e.toString()}'),
-              backgroundColor: Colors.red,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.of(context).pop(),
             ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() => _isLoggingOut = false);
-        }
-      }
-    }
+            TextButton(
+              child: const Text('Logout'),
+              onPressed: () async {
+                Navigator.of(context).pop(); // Close dialog
+                // await LogoutService(ApiClient()).signOut(); // If you want server sign-out
+                await SecureStorageService.instance.clear(); // Clear secure storage
+                if (mounted) {
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    '/login', // Replace with your login route name
+                    (Route<dynamic> route) => false,
+                  );
+                }
+                print("user: $userId");
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   List<_Tile> get _allTiles => <_Tile>[
-        _Tile('Add User', 'Adding cashiers, stock keepers & suppliers', Icons.receipt_long, '/manager/add-user', const Color.fromARGB(255, 2, 95, 107)),
-        _Tile('User Management', 'Change own / reset staff passwords', Icons.key, '/manager/user-management', const Color.fromARGB(255, 42, 149, 6)),
-         _Tile('Creditors', 'Outstanding, history & settlements', Icons.people_alt, '/manager/reports/creditors', const Color.fromARGB(255, 176, 30, 4)),
-        _Tile('Sales Reports', 'Sales Summaries & revenue split', Icons.summarize, '/manager/reports/sales-summaries', const Color.fromARGB(255, 3, 135, 243)),
-        _Tile('Trending Items', 'Popular products by qty/revenue', Icons.trending_up, '/manager/reports/trending-items', const Color.fromARGB(255, 209, 176, 8)),
-        _Tile('Profit Margins', 'Cash vs Card profit split', Icons.pie_chart, '/manager/reports/profit-margins', const Color.fromARGB(255, 157, 96, 5)),
-       
-        _Tile('Audit Logs', 'Logins, stock edits, refunds, rules', Icons.fact_check, '/manager/audit-logs', const Color.fromARGB(255, 34, 58, 194)),
-        _Tile('Price Rules', 'Create / schedule promos', Icons.price_change, '/manager/price-rules', const Color.fromARGB(255, 162, 13, 63)),
-        _Tile('Stock Keeper', 'Inventory, restock & POs', Icons.inventory_2, '/stockkeeper', const Color.fromARGB(255, 171, 129, 1)),
-        _Tile('Cashier', 'Invoices, payments, refunds', Icons.receipt_long, '/cashier', const Color.fromARGB(255, 2, 118, 134)),
+        _Tile(
+          'Add User',
+          'Adding cashiers, stock keepers & suppliers',
+          Icons.receipt_long,
+          '/manager/add-user',
+          const Color.fromARGB(255, 2, 95, 107),
+        ),
+        _Tile(
+          'User Management',
+          'Change own / reset staff passwords',
+          Icons.key,
+          '/manager/user-management',
+          const Color.fromARGB(255, 42, 149, 6),
+        ),
+        _Tile(
+          'Creditors',
+          'Outstanding, history & settlements',
+          Icons.people_alt,
+          '/manager/reports/creditors',
+          const Color.fromARGB(255, 176, 30, 4),
+        ),
+        _Tile(
+          'Sales Reports',
+          'Sales Summaries & revenue split',
+          Icons.summarize,
+          '/manager/reports/sales-summaries',
+          const Color.fromARGB(255, 3, 135, 243),
+        ),
+        _Tile(
+          'Trending Items',
+          'Popular products by qty/revenue',
+          Icons.trending_up,
+          '/manager/reports/trending-items',
+          const Color.fromARGB(255, 209, 176, 8),
+        ),
+        _Tile(
+          'Profit Margins',
+          'Cash vs Card profit split',
+          Icons.pie_chart,
+          '/manager/reports/profit-margins',
+          const Color.fromARGB(255, 157, 96, 5),
+        ),
+        _Tile(
+          'Audit Logs',
+          'Logins, stock edits, refunds, rules',
+          Icons.fact_check,
+          '/manager/audit-logs',
+          const Color.fromARGB(255, 34, 58, 194),
+        ),
+        _Tile(
+          'Price Rules',
+          'Create / schedule promos',
+          Icons.price_change,
+          '/manager/price-rules',
+          const Color.fromARGB(255, 162, 13, 63),
+        ),
+        _Tile(
+          'Stock Keeper',
+          'Inventory, restock & POs',
+          Icons.inventory_2,
+          '/stockkeeper',
+          const Color.fromARGB(255, 171, 129, 1),
+        ),
+        _Tile(
+          'Cashier',
+          'Invoices, payments, refunds',
+          Icons.receipt_long,
+          '/cashier',
+          const Color.fromARGB(255, 2, 118, 134),
+        ),
         // _Tile('Add Creditor', 'Create creditor record', Icons.person_add_alt_1, '/manager/create-creditor', Colors.red),
       ];
 
@@ -129,7 +174,11 @@ class _ManagerHomePageState extends State<ManagerHomePage> {
       appBar: AppBar(
         title: const Text(
           'Owner / Manager',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        titleTextStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          fontSize: 20,
         ),
         backgroundColor: Colors.deepPurple,
         elevation: 0,
@@ -147,28 +196,20 @@ class _ManagerHomePageState extends State<ManagerHomePage> {
           IconButton(
             tooltip: _compact ? 'Comfortable size' : 'Compact size',
             onPressed: () => setState(() => _compact = !_compact),
-            icon: Icon(_compact ? Icons.grid_view_rounded : Icons.dashboard_customize_rounded, color: Colors.white),
+            icon: Icon(
+              _compact
+                  ? Icons.grid_view_rounded
+                  : Icons.dashboard_customize_rounded,
+              color: Colors.white,
+            ),
           ),
           const SizedBox(width: 8),
-          // Logout button
-          _isLoggingOut
-              ? const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                )
-              : IconButton(
-                  tooltip: 'Logout',
-                  onPressed: _handleLogout,
-                  icon: const Icon(Icons.logout, color: Colors.white),
-                ),
-          const SizedBox(width: 6),
+          // If you want logout in the AppBar:
+          IconButton(
+            tooltip: 'Logout',
+            onPressed: () => _logout(context),
+            icon: const Icon(Icons.logout, color: Colors.white),
+          ),
         ],
       ),
       body: SafeArea(
@@ -198,6 +239,8 @@ class _ManagerHomePageState extends State<ManagerHomePage> {
                         child: _SearchField(
                           controller: _search,
                           hint: 'Search features…',
+                          focusNode:
+                              _searchFocusNode, // <-- use the shared focus node
                           onChanged: (_) => setState(() {}),
                           onClear: () {
                             _search.clear();
@@ -219,7 +262,8 @@ class _ManagerHomePageState extends State<ManagerHomePage> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       'Tips: Use arrow keys to navigate • Enter to open • / to focus search',
-                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.black54),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: Colors.black54),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -229,54 +273,73 @@ class _ManagerHomePageState extends State<ManagerHomePage> {
                     child: Shortcuts(
                       shortcuts: <LogicalKeySet, Intent>{
                         // navigation
-                        LogicalKeySet(LogicalKeyboardKey.arrowRight): const _MoveIntent(Offset(1, 0)),
-                        LogicalKeySet(LogicalKeyboardKey.arrowLeft): const _MoveIntent(Offset(-1, 0)),
-                        LogicalKeySet(LogicalKeyboardKey.arrowDown): const _MoveIntent(Offset(0, 1)),
-                        LogicalKeySet(LogicalKeyboardKey.arrowUp): const _MoveIntent(Offset(0, -1)),
+                        LogicalKeySet(LogicalKeyboardKey.arrowRight):
+                            const _MoveIntent(Offset(1, 0)),
+                        LogicalKeySet(LogicalKeyboardKey.arrowLeft):
+                            const _MoveIntent(Offset(-1, 0)),
+                        LogicalKeySet(LogicalKeyboardKey.arrowDown):
+                            const _MoveIntent(Offset(0, 1)),
+                        LogicalKeySet(LogicalKeyboardKey.arrowUp):
+                            const _MoveIntent(Offset(0, -1)),
                         // open
-                        LogicalKeySet(LogicalKeyboardKey.enter): const _OpenIntent(),
-                        LogicalKeySet(LogicalKeyboardKey.numpadEnter): const _OpenIntent(),
+                        LogicalKeySet(LogicalKeyboardKey.enter):
+                            const _OpenIntent(),
+                        LogicalKeySet(LogicalKeyboardKey.numpadEnter):
+                            const _OpenIntent(),
                         // focus search quickly
-                        LogicalKeySet(LogicalKeyboardKey.slash): const _FocusSearchIntent(),
+                        LogicalKeySet(LogicalKeyboardKey.slash):
+                            const _FocusSearchIntent(),
                       },
                       child: Actions(
                         actions: <Type, Action<Intent>>{
-                          _MoveIntent: CallbackAction<_MoveIntent>(onInvoke: (intent) {
-                            setState(() {
-                              final row = _focusedIndex ~/ _cols;
-                              final col = _focusedIndex % _cols;
-                              int newRow = row + intent.delta.dy.toInt();
-                              int newCol = col + intent.delta.dx.toInt();
-                              if (newRow < 0) newRow = 0;
-                              if (newCol < 0) newCol = 0;
-                              final maxRow = (tiles.length - 1) ~/ _cols;
-                              if (newRow > maxRow) newRow = maxRow;
+                          _MoveIntent: CallbackAction<_MoveIntent>(
+                            onInvoke: (intent) {
+                              setState(() {
+                                final row = _focusedIndex ~/ _cols;
+                                final col = _focusedIndex % _cols;
+                                int newRow = row + intent.delta.dy.toInt();
+                                int newCol = col + intent.delta.dx.toInt();
+                                if (newRow < 0) newRow = 0;
+                                if (newCol < 0) newCol = 0;
+                                final maxRow = (tiles.length - 1) ~/ _cols;
+                                if (newRow > maxRow) newRow = maxRow;
 
-                              // clamp by row length
-                              final rowLen = (newRow == maxRow) ? ((tiles.length - 1) % _cols) + 1 : _cols;
-                              if (newCol >= rowLen) newCol = rowLen - 1;
+                                // clamp by row length
+                                final rowLen = (newRow == maxRow)
+                                    ? ((tiles.length - 1) % _cols) + 1
+                                    : _cols;
+                                if (newCol >= rowLen) newCol = rowLen - 1;
 
-                              _focusedIndex = (newRow * _cols) + newCol;
-                            });
-                            return null;
-                          }),
-                          _OpenIntent: CallbackAction<_OpenIntent>(onInvoke: (intent) {
-                            if (tiles.isEmpty) return null;
-                            final t = tiles[_focusedIndex.clamp(0, tiles.length - 1)];
-                            Navigator.pushNamed(context, t.route);
-                            return null;
-                          }),
-                          _FocusSearchIntent: CallbackAction<_FocusSearchIntent>(onInvoke: (_) {
-                            FocusScope.of(context).requestFocus(_searchFocusNode);
-                            return null;
-                          }),
+                                _focusedIndex = (newRow * _cols) + newCol;
+                              });
+                              return null;
+                            },
+                          ),
+                          _OpenIntent: CallbackAction<_OpenIntent>(
+                            onInvoke: (intent) {
+                              if (tiles.isEmpty) return null;
+                              final t = tiles[_focusedIndex
+                                  .clamp(0, tiles.length - 1)];
+                              Navigator.pushNamed(context, t.route);
+                              return null;
+                            },
+                          ),
+                          _FocusSearchIntent:
+                              CallbackAction<_FocusSearchIntent>(
+                            onInvoke: (_) {
+                              FocusScope.of(context)
+                                  .requestFocus(_searchFocusNode);
+                              return null;
+                            },
+                          ),
                         },
                         child: Focus(
                           autofocus: true,
                           child: GridView.builder(
                             itemCount: tiles.length,
                             physics: const BouncingScrollPhysics(),
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: cols,
                               childAspectRatio: aspect,
                               crossAxisSpacing: 12,
@@ -291,7 +354,8 @@ class _ManagerHomePageState extends State<ManagerHomePage> {
                                 icon: t.icon,
                                 color: t.color,
                                 focused: focused,
-                                onTap: () => Navigator.pushNamed(context, t.route),
+                                onTap: () =>
+                                    Navigator.pushNamed(context, t.route),
                               );
                             },
                           ),
@@ -307,18 +371,19 @@ class _ManagerHomePageState extends State<ManagerHomePage> {
       ),
     );
   }
-
-  final FocusNode _searchFocusNode = FocusNode();
 }
 
 class _SearchField extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
+  final FocusNode? focusNode; // <-- accept a focus node
   final ValueChanged<String>? onChanged;
   final VoidCallback? onClear;
+
   const _SearchField({
     required this.controller,
     required this.hint,
+    this.focusNode,
     this.onChanged,
     this.onClear,
   });
@@ -326,7 +391,7 @@ class _SearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextField(
-      focusNode: FocusNode(),
+      focusNode: focusNode, // <-- use the provided node (so '/' can focus it)
       controller: controller,
       onChanged: onChanged,
       decoration: InputDecoration(
@@ -334,8 +399,12 @@ class _SearchField extends StatelessWidget {
         hintText: hint,
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
         suffixIcon: controller.text.isEmpty
             ? const SizedBox.shrink()
             : IconButton(
@@ -389,7 +458,8 @@ class _ManagerCard extends StatefulWidget {
   State<_ManagerCard> createState() => _ManagerCardState();
 }
 
-class _ManagerCardState extends State<_ManagerCard> with SingleTickerProviderStateMixin {
+class _ManagerCardState extends State<_ManagerCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   bool _isPressed = false;
@@ -397,8 +467,11 @@ class _ManagerCardState extends State<_ManagerCard> with SingleTickerProviderSta
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(duration: const Duration(milliseconds: 140), vsync: this);
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _controller =
+        AnimationController(duration: const Duration(milliseconds: 140), vsync: this);
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
   }
 
   @override
@@ -477,7 +550,11 @@ class _ManagerCardState extends State<_ManagerCard> with SingleTickerProviderSta
                                 color: Colors.white.withOpacity(0.20),
                                 borderRadius: BorderRadius.circular(16),
                               ),
-                              child: Icon(widget.icon, size: isMobile ? 28 : 36, color: Colors.white),
+                              child: Icon(
+                                widget.icon,
+                                size: isMobile ? 28 : 36,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                           SizedBox(height: isMobile ? 8 : 12),
