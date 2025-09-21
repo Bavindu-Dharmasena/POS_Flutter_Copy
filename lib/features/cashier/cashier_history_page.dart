@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../cashier/sale_details_page.dart';
+import 'package:pos_system/core/services/secure_storage_service.dart';
 
-class CashierHistoryPage extends StatelessWidget {
+class CashierHistoryPage extends StatefulWidget {
   /// Current cashier name to filter "My History"
   final String currentCashier;
 
@@ -16,9 +17,36 @@ class CashierHistoryPage extends StatelessWidget {
     required this.sales,
   });
 
+  @override
+  State<CashierHistoryPage> createState() => _CashierHistoryPageState();
+}
+
+class _CashierHistoryPageState extends State<CashierHistoryPage> {
+  int? userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserId();
+  }
+
+  Future<void> _loadUserId() async {
+    final id = await SecureStorageService.instance.getUserId();
+    setState(() {
+      userId = id != null ? int.tryParse(id) : null;
+    });
+  }
+
+  // Updated to show all payments or only payments by the logged-in cashier and userId
   List<Map<String, dynamic>> _filter(bool myOnly) {
-    if (!myOnly) return sales;
-    return sales.where((s) => (s['cashier'] ?? '') == currentCashier).toList();
+    if (!myOnly) return List<Map<String, dynamic>>.from(widget.sales);
+
+
+    // Return only the sales by the current cashier and userId
+    return widget.sales
+        .where((s) => s['userId'] == userId) // Filter based on user_id
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
 
   String _fmtDate(dynamic d) {
@@ -36,6 +64,7 @@ class CashierHistoryPage extends StatelessWidget {
 
   Widget _buildHistoryList(bool myOnly) {
     final list = _filter(myOnly);
+
     if (list.isEmpty) {
       return const Center(
         child: Padding(
@@ -48,7 +77,7 @@ class CashierHistoryPage extends StatelessWidget {
       );
     }
 
-    // (Optional) sort newest first
+    // Sort newest first (work on the copied list)
     list.sort((a, b) {
       final da = a['date'] is DateTime
           ? a['date'] as DateTime
@@ -70,7 +99,6 @@ class CashierHistoryPage extends StatelessWidget {
           title: Text('${s['billId'] ?? '-'}  •  ${_money(s['amount'])}'),
           subtitle: Text(
             '${_fmtDate(s['date'])}'
-            '${(s['cashier'] != null && s['cashier'].toString().isNotEmpty) ? ' • ${s['cashier']}' : ''}',
           ),
           trailing: IconButton(
             icon: const Icon(Icons.visibility),
@@ -99,7 +127,7 @@ class CashierHistoryPage extends StatelessWidget {
         length: 2,
         child: Scaffold(
           appBar: AppBar(
-            title: const Text('History'),
+            title: const Text('My History'),
             backgroundColor: const Color(0xFF0D1B2A),
             bottom: const TabBar(
               tabs: [
@@ -108,31 +136,16 @@ class CashierHistoryPage extends StatelessWidget {
               ],
             ),
           ),
-          body: const TabBarView(
+          body: TabBarView(
             children: [
-              // My History
-              _HistoryTab(myOnly: true),
-              // All
-              _HistoryTab(myOnly: false),
+              // My History - filter by current cashier and userId
+              _buildHistoryList(true),
+              // All - display all sales
+              _buildHistoryList(false),
             ],
           ),
         ),
       ),
     );
-  }
-}
-
-/// Internal tab widget so we can access the parent InheritedWidget (CashierHistoryPage)
-class _HistoryTab extends StatelessWidget {
-  final bool myOnly;
-  const _HistoryTab({required this.myOnly});
-
-  @override
-  Widget build(BuildContext context) {
-    // Access the nearest CashierHistoryPage to reuse its helpers/data
-    final element = context
-        .findAncestorWidgetOfExactType<CashierHistoryPage>()!;
-    // Reuse its list builder
-    return element._buildHistoryList(myOnly);
   }
 }
