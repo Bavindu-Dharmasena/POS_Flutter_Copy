@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import '../../../core/services/secure_storage_service.dart';
 
 import 'package:pos_system/data/models/stockkeeper/supplier_model.dart';
 import 'package:pos_system/data/repositories/stockkeeper/supplier_repository.dart';
@@ -63,9 +64,11 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
   static const _gradSlate = LinearGradient(colors: [Color(0xFF475569), Color(0xFF334155)], begin: Alignment.topLeft, end: Alignment.bottomRight);
   LinearGradient _selectedGradient = _gradBluePurple;
 
+int? _userId;
   @override
   void initState() {
     super.initState();
+    _loadUserId();
     final d = widget.supplierData;
     if (d.isNotEmpty) {
       _idCtrl.text = (d['id'] ?? '').toString();
@@ -91,6 +94,13 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
       _active = d['active'] is bool ? d['active'] as bool : (d['status']?.toString().toUpperCase() == 'ACTIVE');
     }
   }
+  Future<void> _loadUserId() async {
+  final stored = await SecureStorageService.instance.getUserId();
+  setState(() {
+    _userId = stored != null ? int.tryParse(stored) : null;
+  });
+}
+
 
   @override
   void dispose() {
@@ -149,78 +159,90 @@ class _AddSupplierPageState extends State<AddSupplierPage> with TickerProviderSt
 
   void _removeLocation(int index) => setState(() => _locations.removeAt(index));
 
-  Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) {
-      _scrollToTop();
-      return;
+Future<void> _submitForm() async {
+  if (!_formKey.currentState!.validate()) {
+    _scrollToTop();
+    return;
+  }
+
+  // Require a logged-in user for creator stamping
+  if (_userId == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No user session. Please log in again.')),
+    );
+    return;
+  }
+
+  final now = DateTime.now().millisecondsSinceEpoch;
+  final isEdit = widget.supplierData.isNotEmpty;
+  final id = int.tryParse(_idCtrl.text.trim());
+
+  final supplier = Supplier(
+    id: isEdit ? id : null,
+    name: _nameCtrl.text.trim(),
+    contact: _contactCtrl.text.trim(),
+    email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
+    address: null,
+    brand: _brandCtrl.text.trim(),
+    colorCode: _hexFromGradient(_selectedGradient),
+    location: _locations.isNotEmpty ? _locations.first : 'N/A',
+    status: _active ? 'ACTIVE' : 'INACTIVE',
+    preferred: false,
+    paymentTerms: _mapPaymentTermsForDb(_paymentTerms),
+    notes: _remarkCtrl.text.trim().isEmpty ? null : _remarkCtrl.text.trim(),
+    createdAt: isEdit ? (widget.supplierData['created_at'] as int? ?? now) : now,
+    updatedAt: now,
+    // 👇 NEW: stamp creator
+    createdBy: isEdit
+        ? (widget.supplierData['created_by'] as int? ?? _userId!) // preserve original on edit
+        : _userId!,                                              // set on create
+  );
+
+  final repo = SupplierRepository.instance;
+
+  try {
+    Supplier saved;
+    if (isEdit && supplier.id != null) {
+      await repo.update(supplier);
+      saved = supplier;
+    } else {
+      saved = await repo.create(supplier);
     }
 
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final isEdit = widget.supplierData.isNotEmpty;
-    final id = int.tryParse(_idCtrl.text.trim());
-
-    final supplier = Supplier(
-      id: isEdit ? id : null,
-      name: _nameCtrl.text.trim(),
-      contact: _contactCtrl.text.trim(),
-      email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
-      address: null,
-      brand: _brandCtrl.text.trim(),
-      colorCode: _hexFromGradient(_selectedGradient),
-      location: _locations.isNotEmpty ? _locations.first : 'N/A',
-      status: _active ? 'ACTIVE' : 'INACTIVE',
-      preferred: false,
-      // FIX: write DB code
-      paymentTerms: _mapPaymentTermsForDb(_paymentTerms),
-      notes: _remarkCtrl.text.trim().isEmpty ? null : _remarkCtrl.text.trim(),
-      createdAt: isEdit ? (widget.supplierData['created_at'] as int? ?? now) : now,
-      updatedAt: now,
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.transparent,
+        behavior: SnackBarBehavior.floating,
+        elevation: 0,
+        content: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          decoration: BoxDecoration(
+            color: kSuccess,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(color: kSuccess.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Feather.check_circle, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Text(
+                '${isEdit ? "Updated" : "Saved"}: ${saved.name}',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ]),
+        ),
+        duration: const Duration(seconds: 2),
+      ),
     );
 
-    final repo = SupplierRepository.instance;
-
-    try {
-      Supplier saved;
-      if (isEdit && supplier.id != null) {
-        await repo.update(supplier);
-        saved = supplier;
-      } else {
-        saved = await repo.create(supplier);
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.transparent,
-          behavior: SnackBarBehavior.floating,
-          elevation: 0,
-          content: Container(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-            decoration: BoxDecoration(
-              color: kSuccess,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: kSuccess.withOpacity(0.35), blurRadius: 12, offset: const Offset(0, 4))],
-            ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Feather.check_circle, color: Colors.white, size: 20),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Text(
-                  '${isEdit ? "Updated" : "Saved"}: ${saved.name}',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ]),
-          ),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-
-      if (mounted) Navigator.pop(context, saved);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
-    }
+    if (mounted) Navigator.pop(context, saved);
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
   }
+}
+
 
   void _resetForm() {
     _formKey.currentState!.reset();
