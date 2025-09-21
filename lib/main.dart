@@ -58,9 +58,9 @@
 // lib/main.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/services.dart';
-import 'core/services/auth_service.dart';
 
 import 'dart:io' show Platform;
 
@@ -69,10 +69,15 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 import 'package:provider/provider.dart';
-import '../features/stockkeeper/settings/settings_provider.dart';
-import '../features/splashscreen.dart';
-// Add this import for your routes
+
+import 'core/services/auth_service.dart';
+import 'features/stockkeeper/settings/settings_provider.dart';
+// import 'features/splashscreen.dart';
 import 'routes/app_routes.dart';
+
+// ✅ import your database helper and installation page
+import 'data/db/database_helper.dart';
+import 'features/installation/installation_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,9 +85,9 @@ Future<void> main() async {
   // Show all errors
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.dumpErrorToConsole(details);
-    Zone.current.handleUncaughtError(details.exception, details.stack ?? StackTrace.current);
+    Zone.current.handleUncaughtError(
+        details.exception, details.stack ?? StackTrace.current);
   };
-  // ✅ Use the binding's dispatcher (works cross-platform)
   WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
     debugPrint('UNCAUGHT (PlatformDispatcher): $error\n$stack');
     return true;
@@ -92,48 +97,48 @@ Future<void> main() async {
   if (kIsWeb) {
     databaseFactory = databaseFactoryFfiWeb;
   } else if (defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux||
-        defaultTargetPlatform == TargetPlatform.macOS) {
-    
+      defaultTargetPlatform == TargetPlatform.linux ||
+      defaultTargetPlatform == TargetPlatform.macOS) {
     sqfliteFfiInit();
-
-    databaseFactory = databaseFactoryFfi; // desktop (Windows/Linux)
-
+    databaseFactory = databaseFactoryFfi; // desktop
   }
-  // Android/iOS/macOS -> default sqflite
+  // Android/iOS → default sqflite
 
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   final settings = SettingsController();
   await settings.load();
 
+  // ✅ Check if user exists in DB
+  final db = await DatabaseHelper.instance.database;
+  final users = await db.query('user');
+  final bool hasUser = users.isNotEmpty;
+
   runZonedGuarded(() {
-   runApp(
-  MultiProvider(
-    providers: [
-      ChangeNotifierProvider<SettingsController>.value(value: settings),
-
-      // ✅ add this line back
-      ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
-    ],
-    child: const App(),
-  ),
-);
-
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsController>.value(value: settings),
+          ChangeNotifierProvider<AuthService>(create: (_) => AuthService()),
+        ],
+        child: App(hasUser: hasUser),
+      ),
+    );
   }, (error, stack) {
     debugPrint('UNCAUGHT (Zone): $error\n$stack');
   });
 }
 
 class App extends StatelessWidget {
-  const App({super.key});
+  final bool hasUser;
+  const App({super.key, required this.hasUser});
 
   @override
   Widget build(BuildContext context) {
     return Consumer<SettingsController>(
       builder: (context, settings, _) {
         return MaterialApp(
-          title: 'Flutter SQLite CRUD',
+          title: 'AASA POS',
           debugShowCheckedModeBanner: false,
           themeMode: settings.themeMode,
           theme: ThemeData(
@@ -153,20 +158,20 @@ class App extends StatelessWidget {
             brightness: Brightness.dark,
           ),
           builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(settings.textScaleFactor)),
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.linear(settings.textScaleFactor),
+            ),
             child: child!,
           ),
-          
-          // ✅ Add route configuration here
-          initialRoute: '/',
-          
-          // ✅ Configure the route generator
-          onGenerateRoute: (RouteSettings settings) {
-            return AppRoutes.generateRoute(settings, context);
-          },
-          
-          // ✅ Optional: Handle unknown routes gracefully
-          onUnknownRoute: (RouteSettings settings) {
+
+          // ✅ if no user → go to installation
+          home: const InstallationPage(),
+
+          // ✅ routes
+          onGenerateRoute: (RouteSettings s) =>
+              AppRoutes.generateRoute(s, context),
+
+          onUnknownRoute: (settings) {
             return MaterialPageRoute(
               builder: (context) => Scaffold(
                 appBar: AppBar(title: const Text('Page Not Found')),
@@ -174,7 +179,8 @@ class App extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                      const Icon(Icons.error_outline,
+                          size: 64, color: Colors.red),
                       const SizedBox(height: 16),
                       Text(
                         'Route "${settings.name}" not found',
@@ -182,7 +188,8 @@ class App extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () => Navigator.of(context).pushReplacementNamed('/'),
+                        onPressed: () =>
+                            Navigator.of(context).pushReplacementNamed('/'),
                         child: const Text('Go Home'),
                       ),
                     ],
@@ -191,8 +198,6 @@ class App extends StatelessWidget {
               ),
             );
           },
-          
-          // home: const SplashScreen(),
         );
       },
     );
